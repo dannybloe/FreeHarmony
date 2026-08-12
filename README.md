@@ -16,7 +16,24 @@ those servers for everything, and there is no recovery path if a remote is wiped
 outright is now a device you cannot change.
 
 FreeHarmony is meant to be a full replacement for that software, running entirely on your own
-machine. No account, no cloud, no network access at all.
+machine. No account, and no server it needs in order to work.
+
+## About the network
+
+**Everything works with no network at all.** Reading your remote, seeing what is on it, changing it and
+writing it back are local operations, and they will keep working when every server involved is gone.
+That is the whole point, so it is not a preference that can be traded away later.
+
+**One thing will be offered on top of that, and only if you ask for it.** Logitech's current service is
+still running, and while it is, it can still tell you what infrared codes your television or amplifier
+uses. Rather than pretend that is worthless, FreeHarmony will be able to fetch a device you own, convert
+it into its own format and keep it on your machine, so it outlives the service. You decide whether to do
+that, you supply your own account if it turns out one is needed, and you can see what was fetched.
+Somebody who never uses it gets exactly the same application.
+
+**What is fetched stays yours and stays local.** If a shared database of devices is built later, only
+definitions **learned from a real remote** can go into it. Anything that came from Logitech's data stays
+on the machine that fetched it, because it is their data and not ours to hand around.
 
 ## Licence
 

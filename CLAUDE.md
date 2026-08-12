@@ -61,6 +61,29 @@ hardware path as something that gets one chance.
   `bin/check-publishable.py` pre-commit hook, which checks **staged content** and so catches a rename
   or a `git add -f` that `.gitignore` misses.
 
+## The network, and the one field that has to exist before the rest is designed
+
+**Offline is the floor.** Reading a remote, showing a config, editing it and writing it back are local
+operations and must never acquire a runtime dependency on anything remote. No account is ever required.
+A build with the network unplugged is a working application, and that is testable: it should be tested.
+
+**Logitech's service is an optional import, by the user's own hand.** It is still running, and while it
+is, it can still say which infrared codes a given television uses. So FreeHarmony offers fetching a
+device the user owns, converting it into this project's own device definition format, and storing it
+locally so it outlives the service. The user decides, supplies their own credentials if it needs them,
+and can see what was fetched. Two routes exist and the cheap one needs no new protocol work: base slot
+5 is fully read, so a config Logitech compiled can be read off the remote and converted with the codec
+as it stands. A direct client against `svcs.myharmony.com` is the other route, and nobody has looked at
+what it serves; that is reconnaissance for the other repository, where a client sourced fact belongs in
+`docs/host-client.md`.
+
+**A device definition carries its provenance, from the first version of the format.** Learned from
+hardware, derived from Logitech's data, or from a shared database. Only the first may ever be shared:
+anything derived from Logitech's data stays on the machine that fetched it, for the same reason the
+other repository refuses to commit a config. Everything else about a community database is undecided
+and can stay that way, but **this field cannot be added later**: retrofitting provenance means auditing
+a database whose origins nobody kept, and the only safe thing to do with that is discard it.
+
 ## Conventions carried over
 
 * **Every dependency pinned exactly. No `^`, no `~`, ever**, including transitive additions, and the
