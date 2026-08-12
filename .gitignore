@@ -1,0 +1,41 @@
+# This repository is PUBLIC, and it will hold an application that reads people's own equipment.
+# The rules below are the same ones harmony-explorations enforces, kept in the same order so the
+# two files can be compared at a glance. See CLAUDE.md for why each one matters.
+
+# Proprietary Logitech firmware and config binaries. A config is Logitech generated data including
+# an infrared database compiled from theirs, so it is a copyright matter and not a privacy one, and
+# a remote's info output carries serial GUIDs, which is the privacy one. Share checksums, not files.
+# Listed before this repository holds a single test fixture, because the first fixture anybody
+# reaches for is exactly one of these.
+*.bin
+*.hfw
+*.EZHex
+*.EZUp
+*.EzHex
+*.EzUpgrade
+*-info.txt
+
+# Rendered screens and anything else drawn from somebody's config. A picture of a remote's screen
+# is a picture of their equipment list.
+screens/
+renders/
+
+# Per-machine Claude Code settings. They accumulate absolute paths from whoever's machine they
+# were written on. Shared configuration belongs in .claude/settings.json, which is committed.
+.claude/settings.local.json
+
+# Node and Electron. A lock file is committed on purpose, since dependencies are pinned exactly in
+# package.json and the lock file pins the transitive tree the same way.
+node_modules/
+dist/
+out/
+release/
+*.tsbuildinfo
+
+# IDE project state. WebStorm's workspace.xml carries local paths and a per-install GUID.
+.idea/
+.vscode/
+
+# Build and tool noise.
+.DS_Store
+*.log
