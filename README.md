@@ -30,6 +30,13 @@ concordance and harmony-decompiler, are both GPLv3, and staying compatible with 
 work available rather than off limits. It also means that whatever this becomes stays open, which
 is the whole point of rebuilding something a vendor walked away from.
 
+Compatible in both directions, and that is why it is plain GPLv3 rather than the Affero variant.
+Their code can come here either way, but only this way round can anything found here go back to
+them: a GPLv3 project cannot absorb Affero licensed code without changing its own licence. This
+project owes both of them a great deal, so being able to give something back is worth more than
+Affero's extra clause, which covers software offered to users over a network and therefore covers
+nothing this application does.
+
 ## Not affiliated with Logitech
 
 Harmony is a trademark of Logitech. This is an independent, unofficial project, not endorsed by or
