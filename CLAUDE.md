@@ -6,10 +6,15 @@ and the libraries live in [harmony-explorations](https://github.com/dannybloe/ha
 checked out beside this one. Read its `README.md` and `docs/status.md` before working here, because
 almost every question about what a config contains is answered there and nowhere else.
 
-**Status: placeholder.** Two documents and a licence. The application starts once there is enough
-format knowledge to build it on, and there nearly is: a config reads off a remote byte for byte, every
-byte of it is attributed, and a config's devices, activities, button bindings and drawn screens all
-come back by name. What is missing is this repository.
+**Status: the boundary works and there is no interface.** It stopped being a placeholder on 14 August
+2026: `bin/inventory.ts` takes a config file, hands it to `@harmony/codec` and prints the architecture,
+the build date, the devices with the route that named each one, and the activities with the devices each
+drives. Run against a real Harmony 600 config it names four devices and three activities. That is the
+whole application so far, and it is deliberately a script rather than a window.
+
+The format knowledge it stands on is in the other repository: a config reads off a remote byte for byte,
+every byte of it is attributed, and a config's devices, activities, button bindings and drawn screens all
+come back by name.
 
 ## The boundary, and the one rule that protects it
 
@@ -23,20 +28,39 @@ this split is arranged to avoid.
 If distribution ever demands vendoring, vendor a **generated** copy with a check that it matches a
 commit. That is a dependency wearing a hat, not a second source.
 
-**How it is consumed, today**: a path dependency on the sibling checkout, which is measured working.
+**How it is consumed, today**: a link dependency on the sibling checkout.
 
 ```json
-{ "dependencies": { "@harmony/codec": "file:../harmony-explorations/packages/codec" } }
+{ "packageManager": "pnpm@11.20.0", "dependencies": { "@harmony/codec": "link:../harmony-explorations/packages/codec" } }
 ```
 
-So the sibling layout is load bearing rather than a convention. **Later**, when that API stops moving,
-the libraries get published and this repository pins an exact version. A **git dependency was tried and
-does not work**: Node refuses to strip types for any file inside `node_modules`, so a source only
-package cannot be consumed that way on any version.
+**This said `file:` until 14 August 2026 and that spelling does not work here.**<!--superseded--> The
+mechanism in the old wording was right and the spelling was wrong for the package manager this project
+uses. All four combinations were measured the day the dependency was first installed for real:
 
-**The first thing to write here is not the interface.** It is that dependency plus one script that
-opens a config and prints its inventory, so the boundary is proven before there is an Electron shell
-to hide a problem in.
+| tool | spelling | result |
+|---|---|---|
+| npm | `file:` | works, a direct symlink to the sibling |
+| npm | `link:` | installs nothing at all |
+| pnpm | `file:` | fails: the package is copied into `node_modules/.pnpm`, so its real path is inside `node_modules` |
+| pnpm | `link:` | works, a direct symlink to the sibling |
+
+So **no single spelling works under both tools**, which is why `packageManager` is stated in
+`package.json` and `test/boundary.test.ts` asserts that the spelling matches it. The earlier measurement
+was taken with npm and generalised. The failure under pnpm reports
+`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`, which names types and `node_modules` and says nothing
+about the real cause, so the test asserts the **resolved real path is outside `node_modules`**: the
+mechanism, not the symptom.
+
+The sibling layout is load bearing rather than a convention. **Later**, when that API stops moving, the
+libraries get published and this repository pins an exact version. A **git dependency was tried and does
+not work** for the same underlying reason: Node refuses to strip types for any file whose real path is
+inside `node_modules`, whatever the flag.
+
+**The first thing to write here was not the interface**, and that is done: the dependency plus one
+script that opens a config and prints its inventory, so the boundary was proven before there is an
+Electron shell to hide a problem in. It earned its keep immediately, since installing it for real is what
+refuted the spelling above.
 
 ## Never write to a remote
 

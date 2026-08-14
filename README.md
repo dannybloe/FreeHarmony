@@ -4,9 +4,15 @@ A local, offline application for configuring Logitech Harmony remotes.
 
 ## Status
 
-**Nothing to install yet.** This repository is a placeholder. The groundwork is happening first, in
-a separate repository, and the application starts here once there is enough format knowledge to
-build it on. No releases, no packages, no promises about dates.
+**Nothing to install yet, but no longer nothing at all.** There is one script. Given a configuration
+file read off your own remote, it prints what that configuration contains: when it was built, which
+devices it drives, and which activities it offers with the devices each of those uses. On a real Harmony
+600 that is four devices and three activities, by name.
+
+There is no window, no packaging and no release. What that script proves is the seam: this repository
+reads a configuration only through the libraries in the
+[harmony-explorations](https://github.com/dannybloe/harmony-explorations) repository next door, and never
+by parsing bytes of its own. No releases, no packages, no promises about dates.
 
 ## Why
 

@@ -1,0 +1,24 @@
+{
+  "name": "freeharmony",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A local, offline application for configuring Logitech Harmony remotes",
+  "license": "GPL-3.0-only",
+  "packageManager": "pnpm@11.20.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "inventory": "node bin/inventory.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@harmony/codec": "link:../harmony-explorations/packages/codec"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "5.9.3"
+  }
+}

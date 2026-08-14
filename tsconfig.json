@@ -1,0 +1,22 @@
+{
+  // Matched to the sibling repository's settings on purpose, so that a file typechecks the same way on
+  // either side of the boundary. `erasableSyntaxOnly` is the one that bites: no enums, no namespaces, no
+  // parameter properties, because Node strips types rather than compiling them.
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["es2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["bin", "test"]
+}
