@@ -14,6 +14,9 @@ reads a configuration only through the libraries in the
 [harmony-explorations](https://github.com/dannybloe/harmony-explorations) repository next door, and never
 by parsing bytes of its own. No releases, no packages, no promises about dates.
 
+`docs/roadmap.md` says what is planned and in which order, including the part most worth knowing in
+advance: **the first version will read your remote and not change it.**
+
 ## Why
 
 Logitech shut down the Harmony service. The remotes still work, but they cannot be reconfigured:

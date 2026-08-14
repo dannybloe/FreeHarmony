@@ -6,6 +6,10 @@ and the libraries live in [harmony-explorations](https://github.com/dannybloe/ha
 checked out beside this one. Read its `README.md` and `docs/status.md` before working here, because
 almost every question about what a config contains is answered there and nowhere else.
 
+**`docs/roadmap.md` is this repository's plan of record**, and it covers the product only. The format and
+the library plan is the roadmap next door, with its own milestone numbers; where the two touch, the product
+plan names the milestone rather than restating it.
+
 **Status: the boundary works and there is no interface.** It stopped being a placeholder on 14 August
 2026: `bin/inventory.ts` takes a config file, hands it to `@harmony/codec` and prints the architecture,
 the build date, the devices with the route that named each one, and the activities with the devices each
@@ -97,9 +101,12 @@ device the user owns, converting it into this project's own device definition fo
 locally so it outlives the service. The user decides, supplies their own credentials if it needs them,
 and can see what was fetched. Two routes exist and the cheap one needs no new protocol work: base slot
 5 is fully read, so a config Logitech compiled can be read off the remote and converted with the codec
-as it stands. A direct client against `svcs.myharmony.com` is the other route, and nobody has looked at
-what it serves; that is reconnaissance for the other repository, where a client sourced fact belongs in
-`docs/host-client.md`.
+as it stands. A direct client against `svcs.myharmony.com` is the other route, and it **has** been looked
+at since this paragraph was written: the service advertises hundreds of operations, its device database
+opens for a plain login with no registered remote, and what it serves is **symbolic** rather than pulses,
+a protocol name and a frame value. So that route needs an infrared encoder per protocol family, which is a
+work item the cheap route does not have. The measurement and every client sourced fact live in the other
+repository's `docs/host-client.md`.
 
 **A device definition carries its provenance, from the first version of the format.** Learned from
 hardware, derived from Logitech's data, or from a shared database. Only the first may ever be shared:
