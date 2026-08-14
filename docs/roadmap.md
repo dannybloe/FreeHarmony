@@ -16,8 +16,8 @@ that keeps a reader out of this repository: a summary is a copy of a fact with n
 a repository boundary is a copy nothing can compare. So the rows in "What this stands on" below are
 pointers, and when one of them is wrong the fix is next door.
 
-**Written on 14 August 2026, after the first code, on purpose.** The owner's decision, taken when the
-question was whether to combine the two plans or split them: a product roadmap written before any product
+**Written on 14 August 2026, after the first code, on purpose.** Decided when the question was whether
+to combine the two plans or split them: a product roadmap written before any product
 code is a list of guesses about what the hard parts are, and the first thing written here immediately
 refuted a claim both repositories had carried for weeks. So P0 came first and this document came second.
 
@@ -198,7 +198,7 @@ consumable by somebody who does not have the sibling checkout, which is what pub
   anything but a Harmony One.
 * **A length-changing editor becoming possible.** It moves P3's limit and it is the one row in the table
   above with no owner.
-* **Somebody else contributing.** The licence is settled while the owner is the only author, and both
+* **Somebody else contributing.** The licence is settled while there is one author, and both
   repositories are pinned and gated so that a first contribution lands in a place with checks in it. What
   changes is this document's tone: it is currently written for one person who knows why every rail is
   there.
