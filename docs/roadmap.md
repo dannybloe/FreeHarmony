@@ -1,204 +1,163 @@
-# Roadmap: from a codec to an application
+# Roadmap
 
-## What this document is
+What FreeHarmony will be able to do, in the order it will be able to do it.
 
-The plan of record for **the product**. The plan of record for the format and the libraries is
-`docs/roadmap.md` in [harmony-explorations](https://github.com/dannybloe/harmony-explorations), and the
-two are deliberately different documents with different units of progress:
+Each step below is something you can see appear. There is no code in this document and no jargon: if
+a step mentions a limit, it is because the limit is something you would run into, not because it is
+technically interesting. The technical plan, which milestone depends on which piece of reverse
+engineering, lives in the
+[harmony-explorations](https://github.com/dannybloe/harmony-explorations) repository next door and is
+written for whoever is building this.
 
-| | moves when | milestones |
-|---|---|---|
-| harmony-explorations | something about the format becomes provable | M0 to M6 |
-| this document | somebody can do something with their remote | P0 to P6 |
-
-**Where they touch, this document names the M number and does not restate it.** That is the same rule
-that keeps a reader out of this repository: a summary is a copy of a fact with no test, and a copy across
-a repository boundary is a copy nothing can compare. So the rows in "What this stands on" below are
-pointers, and when one of them is wrong the fix is next door.
-
-**Written on 14 August 2026, after the first code, on purpose.** Decided when the question was whether
-to combine the two plans or split them: a product roadmap written before any product
-code is a list of guesses about what the hard parts are, and the first thing written here immediately
-refuted a claim both repositories had carried for weeks. So P0 came first and this document came second.
-
-## The shape of it, in one paragraph
-
-The libraries can already read a config off a remote and say almost everything about it. What they cannot
-yet do is put one back. So the honest shape of this application's life is: **an inspector first, an editor
-second**, with the boundary between them being a milestone next door rather than a design choice here.
-That is not a limitation to work around; it is the sequence the hardware demands, because the first write
-to an irreplaceable remote should happen after everything about the config is understood, not before.
-
-## What this stands on
-
-Every row is work in the other repository, and the status column carries **no figures on purpose**. That
-repository computes its numbers from the corpus and fails a check when a document disagrees with the code;
-this one has no such check, so a percentage copied into this table is a number that can only rot. Read the
-figures next door, from `docs/status.md` or `make coverage`, and read this table for what depends on what.
-
-| what the product needs | where it comes from | status there |
-|---|---|---|
-| read a whole config off a remote | M1, `@harmony/usb` | done, and verified against each unit's own dump |
-| know what every byte of it means | M2 parts 1 and 2 | done, on every architecture the corpus covers |
-| put an unchanged config back together | M2 part 3, `emit.ts` | done, byte identical across the corpus |
-| name the devices and the activities | sections 120, 121, 125, 126 | done, every one of both |
-| say what each button sends | section 126 | done, and every binding in the corpus is a press |
-| draw a config's screens | section 129, `render.ts` | done, every mode page of every container |
-| change a field without changing a length | `edit.ts`, with `FIELD_RULES` | done, and it refuses to resize anything |
-| change a length | not scheduled | open, and it is what an insert needs |
-| write to a remote | M4 | not started, and the Harmony One is the only write target |
-| learn an infrared code | M5 | not started, and it needs an encoder nobody has written |
-
-**Two rows carry the whole difference between an inspector and an editor**, and neither is a product
-task. Changing a length relocates every picture above it, and writing to a remote has one legal target on
-one architecture.
+**Nothing here has a date.** The steps are in order and each one waits on the one before it. How fast
+they arrive depends on how fast a remote's configuration file gives up its secrets, and that is not
+something anybody can schedule.
 
 ## Where it stands
 
-**P0 is done and nothing else is started.** There is one script and four tests. `bin/inventory.ts` takes
-a config file and prints what it holds; `test/boundary.test.ts` asserts that the library imports, that its
-resolved real path is outside `node_modules`, that the dependency's spelling matches the stated package
-manager, and that nothing here parses a byte itself.
+**Step 1 has started.** There is one command line script and no window yet. Give it a configuration
+file taken off your own remote and it tells you what is on it: when it was made, which devices it
+drives, which activities it offers and which devices each of those uses.
 
-## Milestones
+That is not something to install. It is the first proof that the hard part, understanding the file,
+actually reaches the application.
 
-Each one is written as something a person could say, because that is this document's unit. The library
-work each depends on is named rather than described.
+## The steps
 
-### P0 The boundary, proven by something that runs. Done, 14 August 2026
+### 1. See what is on your remote
 
-The dependency, one script, and the probe that exercises it. It is here rather than folded into P1
-because a shell hides a resolution problem and a script cannot, which is exactly what happened: the
-`file:` spelling both repositories stated as fact fails under this project's own package manager, and
-installing it for real is what said so. `CLAUDE.md` carries the four measured combinations.
+You open FreeHarmony, plug your remote in, and it shows you what is on it. Your devices. Your
+activities, and which devices each one switches on. What every button sends, including the buttons on
+the screen. And the screens themselves, drawn the way the remote draws them.
 
-### P1 "Plug in my remote and show me what is on it"
+Nothing is changed. This step is a window onto a remote you already own, and it is the step that has
+to be trustworthy before any other one is allowed to exist.
 
-The first thing a user can do, and it is the second library rather than an interface. `@harmony/usb`
-becomes a second link dependency, `listHarmony` says what is attached, `readConfig` reads it, and the
-inventory printer already exists.
+**What has to be true first:** reading a remote works and is proven byte for byte, and almost
+everything in the file can be explained. Both are done. What is missing is the window.
 
-**The first thing to measure is whether the native dependency resolves across the link.** `@harmony/usb`
-imports `node-hid` dynamically, from a file whose real path is inside the sibling checkout, so the
-resolution happens there and the prebuilt binary that checkout already has should be found. Should is not
-measured. If it is not, the answer is not to install `node-hid` here: it is one more thing about the
-boundary that a test has to state, and approving a native build in this repository is a separate decision
-with its own commit.
+### 2. Keep your remotes in one place
 
-Two rails, both inherited and neither reimplemented here: enumeration must not open a device, and every
-command goes through the library so that its refusals are in the path. See `CLAUDE.md`.
+You have more than one remote, or you had one and bought another second hand. So FreeHarmony keeps a
+list: add a remote, give it a name you recognise, remove one you no longer have.
 
-**Deliberately still a terminal.** The risk in P1 is the USB path and the resolution of a native module,
-and neither is easier to see through a window.
+The reason this is its own step, rather than a detail of step 1, is **backups**. The first time
+FreeHarmony reads a remote it keeps a complete copy of what was on it, with the date, and it never
+throws that away on its own. These remotes cannot be bought new. A safety net that exists before the
+first change is worth more than any feature after it.
 
-### P2 "Show it to me properly"
+**What has to be true first:** step 1, and a decision about where those copies live on your machine
+and how you get at them.
 
-The window. The inventory as a screen, the activities and the devices, each button with what it sends,
-and the config's own screens drawn beside the keys they bind. Everything it draws comes from the codec,
-including the rasters, because a second renderer here would be the second copy the split exists to
-prevent.
+### 3. Change something, without touching the remote
 
-**The shell is the decision this milestone forces, and it has not been taken.** Electron is the standing
-intent, named in both briefs and in the end goal, and nothing about it has been measured: not the
-packaged size against a self-contained cross-platform promise, not whether the main process needs the
-libraries bundled or as sources, and not what the alternatives cost. That last one matters because it is
-also the input the other repository is waiting on before it decides what publishing a package means: a
-bundler compiles TypeScript sources itself, an unbundled main process does not. So P2 begins by choosing
-the shell with a measurement rather than by installing the one everybody assumed.
+Rename an activity. Correct a device's name. Then look at exactly what changed, side by side with what
+was there.
 
-**No local listening port.** The bench instrument next door serves a page to a browser and is allowed to,
-because it is a bench instrument. A product gets a content security policy and no socket, and the
-difference is written down in both places so nobody has to infer it.
+Nothing is sent to the remote in this step, on purpose. Your remote keeps working exactly as it did,
+and the change lives in a file on your computer. That sounds like half a feature and it is deliberate:
+it lets the part that makes changes be built, checked and trusted while the worst that can happen is
+that a file on your disk is wrong.
 
-**The application must build and run with the network unplugged, and that gets a test rather than a
-promise.** It is the claim `README.md` makes to a user in the first paragraph, so it is the claim most
-worth being able to fail.
+**The limit you will run into:** a new name has to fit in the space the old one used. A shorter name is
+fine. A longer one is not, yet, and step 6 is where that changes. FreeHarmony will say so plainly
+rather than letting you type and then refusing.
 
-### P3 "Change the name of that activity and put it back"
+**Version 1 ends here.** Steps 1 to 3 are an application that looks, keeps and edits a copy. It never
+writes to a remote. That is not caution for its own sake: see the next step for what writing actually
+costs.
 
-The first write, and it is two milestones stacked. The codec side exists: `edit.ts` replaces a run with a
-run of the same length, refuses an edit outside every claim the byte accounting makes, refuses two edits
-on one byte, and refuses a mode page's list without its copy. `saveEdits` stamps the two fields a save
-must not carry over, where `applyEdits` reproduces them.
+### 4. Put it back, changing nothing
 
-**What does not exist is M4**, the write path, its rails and the read-back-and-compare. That is library
-work, first exercised on the spare Harmony One through the bench instrument next door, and it belongs
-there for the reason all rails do: a rail enforced by an interface is enforced until somebody writes a
-script.
+The first time FreeHarmony writes to a remote, it writes back exactly what it read. Not a single byte
+different. Then it reads the remote again and compares.
 
-**Version 1 is read only and this milestone is therefore version 2.** That is decision 8 in the other
-repository and it is not up for renegotiation here. What it means concretely, and what should be said out
-loud rather than discovered by a user: **version 1 of FreeHarmony is an inspector.** It reads a remote,
-explains it, draws it, and cannot change it.
+That is the whole step, and it is the most important one in this document. A write that changes
+nothing either works perfectly or reveals a problem while there is still an original to go back to.
+Every step after this one rests on it having been done boringly, on a spare remote, many times.
 
-**Only the Harmony One can be written to, and that is a hardware fact rather than a policy.**
-`ARCHITECTURES_WITH_A_WRITE_TARGET` is a list of one, because a first write needs a spare unit whose
-original contents are in the lab byte for byte, and the Harmony 600's architecture has no spare. So P3
-ships for one model before it ships for the rest, and the interface has to be honest about which remote
-it will refuse.
+**What you will see:** a very plain screen that says what it is about to do, does it, and tells you
+whether the remote came back identical.
 
-**Same-length editing is a narrow door and the narrowness is deliberate.** Renaming an activity to a
-shorter string works; renaming it to a longer one is the unscheduled row in the table above. An
-interface that offers a text field and then refuses half of what is typed into it is worse than one that
-says what the limit is, so P3's design problem is honesty about the limit rather than the edit.
+**The honest bit:** this will arrive for one model before the others. Writing needs a spare remote of
+that exact kind to practise on, and there is only one spare on the bench. A remote FreeHarmony cannot
+safely write to will be told so, rather than being written to hopefully.
 
-### P4 "Teach it a code from my old remote"
+### 5. Change what your remote does
 
-M5 next door: the capture arrives as unsolicited reports over USB, already in the shape a config record
-wants on one architecture, and what is missing is the encoder from raw timings to a stored record. That
-encoder replaces a decision Logitech's own server used to make, which is why three of the four infrared
-encoding classes appear in no config anybody has: the service chose the storage form, and the service
-that chose it is the discontinued one.
+Now the two halves meet. Rename an activity and put it on the remote. Change which command a button
+sends. Adjust how fast a held button repeats.
 
-Product side, this is the milestone with a physical ritual in it: point a remote at a receiver, press a
-button, see whether it took. So it needs feedback a user can act on, and a way to try the code out on the
-equipment, which is a write to the remote and therefore lands after P3.
+This is the step where FreeHarmony becomes the thing it exists to be: a remote you own outright
+becomes a remote you can change again.
 
-### P5 "Set up a device I have never had on this remote"
+**What has to be true first:** step 4, done often enough to be dull.
 
-A device definition has to come from somewhere. Three sources, and the field that distinguishes them is
-already decided: **provenance**, from the first version of the format, because it cannot be retrofitted.
-See `CLAUDE.md`.
+### 6. Add and remove devices and activities
 
-* **Learned from hardware**, which is P4, and the only kind that may ever be shared.
-* **Imported from Logitech's service**, which is optional, by the user's own hand, and stays on the
-  machine that fetched it. The cheap route needs no new protocol work at all, since a config Logitech
-  compiled can be read off a remote and converted with the codec as it stands. The direct route has been
-  measured next door rather than only mapped, and it serves symbolic codes rather than pulses, so it
-  needs an infrared encoder per protocol family: that is a real work item and it is nobody's yet.
-* **A shared database**, which is undecided in every respect but that one field.
+Add a television you just bought. Delete the amplifier you sold. Build an activity that turns on three
+things and switches to the right input.
 
-### P6 "Give it to somebody else"
+This is the largest step in the list by a long way, and it is honest to say why: adding something
+means the file gets longer, and everything after the insertion point moves. Steps 3 and 5 avoid that
+entirely by only ever swapping something for something the same size. And a new device needs to come
+from somewhere, which is the next step.
 
-Packaging, signing, cross-platform builds, and a release that a person who has never seen a terminal can
-install. It is last because everything above it changes what has to be packaged, and it is the milestone
-that turns the boundary from a convenience into an obligation: at that point the libraries have to be
-consumable by somebody who does not have the sibling checkout, which is what publishing them is for.
+### 7. Teach it a code from your old remote
 
-## What this plan deliberately does not sequence
+Point your old original remote at your Harmony, press a button, and FreeHarmony learns what that
+button sends and stores it.
 
-* **The interface design.** What the screens are, what the interaction is, what it looks like. P2 forces
-  a shell decision and not a design one, and a wireframe written now would be written before anybody has
-  used P1.
-* **The device database's shape, licence, hosting or review process.** One field is decided and the rest
-  waits until P5 needs it.
-* **Whether a picture can be edited.** It needs the codec to frame image bodies rather than carry them,
-  which is 60 to 80 points of a number next door and, by that repository's own argument, adds no
-  understanding. It is a product question and the product has not asked it.
-* **Anything about a remote nobody here owns.** Four remotes are on the bench and the corpus reaches two
-  more architectures through contributed configs. A model with no hardware behind it gets read support
-  when the format says so and never a write path.
+The remotes have always been able to do this. What they cannot do any more is the second half: the
+original software sent the recorded signal to Logitech's servers, which worked out what it meant and
+sent back the answer. Those servers made that judgement, and they are gone. So this step is not about
+capturing the signal, which is comparatively easy, but about doing the thinking that used to happen
+somewhere else.
 
-## What would change this plan
+A device you have taught FreeHarmony yourself is also the only kind that could ever be shared with
+other people, if a shared collection of devices is ever built. Anything that came out of Logitech's
+own data stays on your machine, because it is their data and not ours to hand around.
 
-* **Logitech's service going dark.** It is alive and answering, and it can be withdrawn without notice.
-  It would cost the import in P5 and nothing else, which is the whole reason offline is the floor rather
-  than a feature.
-* **A second remote of the Harmony 600's architecture.** It is the only thing that unblocks writing to
-  anything but a Harmony One.
-* **A length-changing editor becoming possible.** It moves P3's limit and it is the one row in the table
-  above with no owner.
-* **Somebody else contributing.** The licence is settled while there is one author, and both
-  repositories are pinned and gated so that a first contribution lands in a place with checks in it. What
-  changes is this document's tone: it is currently written for one person who knows why every rail is
-  there.
+### 8. An application you can install
+
+A download, for Windows, macOS and Linux, that installs like anything else and needs no account, no
+server and no terminal.
+
+It is last because everything above it changes what has to be packaged, and because the audience for
+steps 1 to 7 is the small number of people who can run a command. This step is what makes it useful to
+everybody else.
+
+## About the network, at every step
+
+Every step above works with the network unplugged, and that will not quietly change. No account is
+required, nothing has to phone home, and none of it stops working when a server somewhere is switched
+off.
+
+One thing sits on top of that, and only if you ask for it. Logitech's own service is still running
+today, and while it is, it can still tell you which codes your television or amplifier uses. So
+FreeHarmony will be able to fetch a device you own and keep it on your machine, so it outlives the
+service. You decide whether to use that. Somebody who never touches it gets exactly the same
+application.
+
+## Deliberately not decided yet
+
+* **What it looks like.** No screens have been designed. Step 1 will be designed when there is
+  something to design it against, and a picture drawn now would be a picture of a guess.
+* **Whether it is a desktop window or something else.** The intent has always been a normal desktop
+  application. Which technology that is has not actually been chosen, and choosing it properly is part
+  of step 1 rather than an assumption underneath it.
+* **A shared collection of devices.** Whether it exists, who runs it, how a contribution is checked.
+  One thing about it is already settled: every device definition records where it came from, because
+  that is impossible to work out afterwards and the answer decides whether it may be shared at all.
+* **Editing the pictures on the screen.** The icons and images a remote shows can be read and drawn
+  today. Changing them is a separate problem and nobody has asked for it yet.
+
+## What could change the order
+
+* **Logitech's service being switched off.** It is alive today and can go at any time without notice.
+  It would cost the optional import in step 7 and nothing else, which is exactly why nothing depends
+  on it.
+* **A second spare remote of another kind.** Writing needs something to practise on. More spares means
+  step 4 arrives for more models at once instead of one at a time.
+* **The file format giving up the last thing it is holding back.** Step 6 needs the ability to make
+  the file longer safely, and that is the one item in the list with nobody assigned to it.
