@@ -10,6 +10,36 @@ almost every question about what a config contains is answered there and nowhere
 the library plan is the roadmap next door, with its own milestone numbers; where the two touch, the product
 plan names the milestone rather than restating it.
 
+**The order of work is not in that document, it is in GitHub**, and the next section says where the line
+runs.
+
+## Where the backlog lives
+
+Decided on 14 August 2026: the work is planned as a **backlog** in GitHub rather than as a fixed list in a
+file. The higher an item sits, the more concrete it is, and items are picked up iteratively.
+
+* An **epic** is an issue with **sub-issues** under it. That parent and child relationship is GitHub's
+  own, so nothing is invented for it and no label has to stand in for structure.
+* A **Project** carries the ordered backlog and its status field. It can hold issues from **both**
+  repositories, which is the point: a product item sits beside the reverse engineering it waits on,
+  without a document having to say so.
+* Epics are cut along **what a user wants**, not along parts of the application. That a small wish costs a
+  lot of invisible work is expected, and the backlog is where that becomes visible rather than surprising.
+* Under an epic, the distinction worth making is **whether a user can see it**, not chore against user
+  story. Much of the work here is foundation waiting on the other repository.
+
+**The document does not go away, because a tracker carries no narrative.** Somebody landing on this
+repository reads a README and a roadmap, not an issue list. So `docs/roadmap.md` says what FreeHarmony
+will be able to do and in what order it will arrive, and the tracker says what is being built next. Two
+artefacts, two audiences, one boundary: **if a statement would only interest whoever is building the next
+thing, it belongs in the tracker.** Restating the backlog in the document, or the roadmap's argument in an
+issue, is how the two become two roadmaps that drift, which is the same failure the boundary rule above
+guards against in code.
+
+**`docs/roadmap.md` predates this and has not been reconciled with it yet.** It was written on 14 August
+2026 as eight numbered steps, hours before the backlog was decided, so it still reads as though it carries
+the order by itself. That is a known inconsistency and not a second plan.
+
 **Status: the boundary works and there is no interface.** It stopped being a placeholder on 14 August
 2026: `bin/inventory.ts` takes a config file, hands it to `@harmony/codec` and prints the architecture,
 the build date, the devices with the route that named each one, and the activities with the devices each
