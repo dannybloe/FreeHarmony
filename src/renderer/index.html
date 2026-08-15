@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      Filled in by the build, not written here. `electron.vite.config.ts` substitutes the strict
+      policy for a shipped application and a loosened one while developing, because the development
+      server needs inline scripts that must never reach a release. Keeping the real policy in one
+      place is what lets a test read the built page and assert which one came out.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="%CSP%" />
+    <title>FreeHarmony</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

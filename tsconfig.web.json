@@ -1,0 +1,19 @@
+{
+  // The renderer. A browser, so the DOM exists and Node's modules deliberately do not: if the page
+  // ever needs a file or a device, it has to ask the main process for it over the bridge, and the
+  // absence of `node` from `types` is what makes reaching for it a compile error rather than a
+  // review comment.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./node_modules/.tmp/types-web",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "types": []
+  },
+  "include": ["src/renderer/src"]
+}

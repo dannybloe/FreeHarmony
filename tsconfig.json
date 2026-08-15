@@ -1,22 +1,11 @@
 {
-  // Matched to the sibling repository's settings on purpose, so that a file typechecks the same way on
-  // either side of the boundary. `erasableSyntaxOnly` is the one that bites: no enums, no namespaces, no
-  // parameter properties, because Node strips types rather than compiling them.
-  "compilerOptions": {
-    "target": "es2023",
-    "lib": ["es2023"],
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "allowImportingTsExtensions": true,
-    "erasableSyntaxOnly": true,
-    "verbatimModuleSyntax": true,
-    "noEmit": true,
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
-    "skipLibCheck": true,
-    "types": ["node"]
-  },
-  "include": ["bin", "test"]
+  // A solution file with no sources of its own, so an editor loads both worlds at once and every
+  // file in this repository is claimed by exactly one of them.
+  //
+  // "A file no tsconfig claims is not typechecked, and it does not announce that" is a rule the
+  // sibling repository paid for: a whole directory of scripts sat outside its project for months
+  // and a language server gave them default options. So when a directory of TypeScript is added
+  // here, it goes into one of these two in the same commit.
+  "files": [],
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
 }

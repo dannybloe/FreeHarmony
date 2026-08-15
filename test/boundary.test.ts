@@ -27,7 +27,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -37,6 +37,21 @@ import * as codec from '@harmony/codec';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
+
+/**
+ * Every TypeScript source under a directory, relative to the repository root, found by walking
+ * rather than by being told. Used by the last test in this file, which has to see files that did not
+ * exist when it was written.
+ */
+function sourcesUnder(directory: string): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(join(ROOT, directory), { withFileTypes: true })) {
+    const relative = join(directory, entry.name);
+    if (entry.isDirectory()) found.push(...sourcesUnder(relative));
+    else if (/\.tsx?$/.test(entry.name)) found.push(relative);
+  }
+  return found;
+}
 
 test('the library imports at all, which is the whole point of this first commit', () => {
   // A count rather than a floor, per the sibling's own rule about bounds: 361 exports on 14 August 2026.
@@ -88,7 +103,23 @@ test('nothing here re-implements the format, which is the one rule that protects
   const parts = ['getUint' + '16', 'readUInt' + '16', 'Data' + 'View', '0x' + 'feed', '0x' + '1600',
     'GS' + 'PM'];
   const suspicious = new RegExp(parts.join('|'), 'i');
-  const files = ['bin/inventory.ts', 'test/boundary.test.ts'];
+  // **Walked rather than listed**, and that is a correction: this was a literal naming two files
+  // under a comment claiming the scan "stays honest as they grow". It did not. The window, the
+  // build configuration and the page arrived in `src/`, and the check would have gone on passing
+  // while looking at neither. A hand written population that nobody compares to the real one is the
+  // sibling repository's most repeated failure, and the version of it that hides inside a test is
+  // the worst kind, because the test reports a pass either way.
+  //
+  // The guard on the walk is per directory rather than a count of files, deliberately. A floor like
+  // "at least eight sources" reads as a check and is one the moment somebody deletes a directory,
+  // because seven other files still clear it. What can actually go wrong here is the walk looking in
+  // the wrong place, so that is what is asserted, once per place.
+  const directories = ['bin', 'build', 'src', 'test'];
+  const files = directories.flatMap((directory) => {
+    const found = sourcesUnder(directory);
+    assert.ok(found.length > 0, `${directory}/ contributed no sources, so the walk is broken`);
+    return found;
+  });
   for (const relative of files) {
     const source = readFileSync(join(ROOT, relative), 'utf8');
     const code = source

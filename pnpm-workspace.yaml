@@ -1,0 +1,13 @@
+# pnpm refuses to run a dependency's install script unless it is named here, and that default is
+# right: an install script runs arbitrary code on this machine at install time, which is the widest
+# door a dependency has. So every entry below is a decision with a reason beside it, and adding one
+# is a change somebody reviews rather than something that rides along with a commit.
+#
+# Electron is deliberately absent. It carries no install script at all in this version, and fetches
+# its runtime on first use instead, which was worth checking rather than assuming: the expectation
+# going in was that it would need approval here.
+allowBuilds:
+  # esbuild verifies and links the platform binary it receives through its optional dependencies.
+  # Vite uses it while developing. pnpm reported it as blocked on the first install in this
+  # repository, which is the only reason it is named.
+  esbuild: true

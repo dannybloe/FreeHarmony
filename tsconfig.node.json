@@ -1,0 +1,17 @@
+{
+  // Everything that runs in Node: the main process, the build configuration itself, and the two
+  // scripts that predate the window. `bin/inventory.ts` is run by Node directly, which is why the
+  // module settings are `nodenext` rather than a bundler's.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./node_modules/.tmp/types-node",
+    "lib": ["es2023"],
+    "types": ["node", "electron-vite/node"]
+  },
+  "include": ["bin", "build", "test", "src/main", "electron.vite.config.ts"]
+}

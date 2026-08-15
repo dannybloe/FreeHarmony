@@ -1,0 +1,19 @@
+{
+  // The strictness, in one place, because the two configurations that extend this differ only in
+  // which world they compile for: Node for the main process and the scripts, the browser for the
+  // renderer. Writing the flags out twice is the failure the sibling repository is named after.
+  //
+  // Matched to that repository's settings on purpose, so that a file typechecks the same way on
+  // either side of the boundary. `erasableSyntaxOnly` is the one that bites: no enums, no
+  // namespaces, no parameter properties, because Node strips types rather than compiling them.
+  "compilerOptions": {
+    "target": "es2023",
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true
+  }
+}

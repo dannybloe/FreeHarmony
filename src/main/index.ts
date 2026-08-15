@@ -1,0 +1,95 @@
+/**
+ * The main process: it owns the window, and later it will own everything that touches a file or a
+ * remote. Nothing in this file reads a config or opens a device yet.
+ *
+ * Three security settings are the point of this file rather than a detail of it, and they are
+ * written out even where they are already the default, because a default that changes silently in
+ * an Electron upgrade is not a decision anybody made:
+ *
+ *   - `contextIsolation` keeps the page's JavaScript and the bridge in separate worlds, so the page
+ *     cannot reach into the bridge and rewrite it.
+ *   - `nodeIntegration` off means the page has no `require` and no file system, whatever it runs.
+ *   - `sandbox` puts the renderer in the operating system's own sandbox as well.
+ *
+ * The reason these are not negotiable here is the hardware. The rails that stop a write from
+ * reaching an irreplaceable remote live in `@harmony/usb`, in the main process, and a rail that the
+ * page can reach around is not a rail. So the page gets no route to a device except the one that is
+ * deliberately opened for it, which arrives with the typed bridge.
+ */
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { app, BrowserWindow, shell } from 'electron';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+/** Where the renderer comes from in development. `electron-vite` sets it; in a build it is absent. */
+const DEVELOPMENT_RENDERER = process.env['ELECTRON_RENDERER_URL'];
+
+function createWindow(): BrowserWindow {
+  const window = new BrowserWindow({
+    width: 1100,
+    height: 760,
+    minWidth: 900,
+    minHeight: 600,
+    // Created hidden and shown on `ready-to-show`, so the first thing anybody sees is the finished
+    // page rather than a white rectangle that then fills in.
+    show: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  window.once('ready-to-show', () => window.show());
+
+  if (DEVELOPMENT_RENDERER !== undefined) {
+    void window.loadURL(DEVELOPMENT_RENDERER);
+  } else {
+    void window.loadFile(join(HERE, '../renderer/index.html'));
+  }
+
+  return window;
+}
+
+/**
+ * This application has exactly one place its window may point, and it is its own page. Both handlers
+ * below refuse everything else: a link opens in the real browser rather than turning the application
+ * window into one, and an attempt to navigate the window away from the page is cancelled.
+ *
+ * This is belt and braces next to the content security policy, and it is worth having both because
+ * they fail differently. The policy governs what the page may load; these govern where the window
+ * itself may go, which the policy has nothing to say about.
+ */
+function refuseNavigationAwayFromTheApplication(window: BrowserWindow): void {
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  window.webContents.on('will-navigate', (event, url) => {
+    const isTheDevelopmentServer =
+      DEVELOPMENT_RENDERER !== undefined && url.startsWith(DEVELOPMENT_RENDERER);
+    if (!isTheDevelopmentServer) event.preventDefault();
+  });
+}
+
+void app.whenReady().then(() => {
+  refuseNavigationAwayFromTheApplication(createWindow());
+});
+
+/**
+ * Closing the window closes the application, on every platform including macOS.
+ *
+ * That is a deliberate departure from the macOS convention, where an application keeps running with
+ * no windows and reopens one from the dock. The convention exists for programs that hold documents,
+ * because there the running application is what you open the next document into. FreeHarmony has one
+ * window and no documents, so there is nothing to come back to, and an entry left in the dock that
+ * does nothing is a puzzle rather than a courtesy.
+ *
+ * Revisit this if the application ever grows a second window worth keeping open on its own, a menu
+ * bar item, or work that continues after a window is closed. Reading a remote is the obvious
+ * candidate for that last one, and it would be a reason to change this rather than a detail.
+ */
+app.on('window-all-closed', () => app.quit());
