@@ -1,0 +1,70 @@
+// Sass equivalents of the helpers Mantine's PostCSS preset provides, because this project styles
+// with Sass and every example in Mantine's documentation is written against the preset.
+//
+// This file is the translation layer and it is the only place it exists. The preset still runs, and
+// `light-dark()` in a stylesheet is still handled by it; what cannot go through PostCSS is anything
+// that looks like Sass's own syntax, since Sass compiles first and would choke on an `@include` it
+// has never heard of.
+//
+// Use it as `@use '../_mantine.scss' as m;` and then `@include m.dark { ... }`.
+
+@use 'sass:math';
+
+// The breakpoints, as Sass variables, matching Mantine's own defaults. Changing one here changes
+// nothing in Mantine itself: these have to stay in step with the theme, which is why a component
+// should reach for the mixins below rather than writing a media query with a number in it.
+$breakpoint-xs: 36em;
+$breakpoint-sm: 48em;
+$breakpoint-md: 62em;
+$breakpoint-lg: 75em;
+$breakpoint-xl: 88em;
+
+/// Applies only when the light colour scheme is in force. Prefer the `light-dark()` CSS function for
+/// a single property; reach for this when a whole block differs.
+@mixin light {
+  [data-mantine-color-scheme='light'] & {
+    @content;
+  }
+}
+
+/// Applies only when the dark colour scheme is in force.
+@mixin dark {
+  [data-mantine-color-scheme='dark'] & {
+    @content;
+  }
+}
+
+/// Hover, but only where hovering is a thing the input device does. On a touch screen the same rule
+/// is applied while the element is pressed instead, which is what Mantine's own mixin does.
+@mixin hover {
+  @media (hover: hover) {
+    &:hover {
+      @content;
+    }
+  }
+
+  @media (hover: none) {
+    &:active {
+      @content;
+    }
+  }
+}
+
+@mixin smaller-than($breakpoint) {
+  @media (max-width: $breakpoint) {
+    @content;
+  }
+}
+
+@mixin larger-than($breakpoint) {
+  @media (min-width: $breakpoint) {
+    @content;
+  }
+}
+
+/// Pixels as a proportion of the root font size, so that a layout scales when somebody has set a
+/// larger default. Mantine's preset offers the same function under the same name, and a stylesheet
+/// should use it rather than writing `px` and hoping.
+@function rem($value) {
+  @return math.div(math.div($value, $value * 0 + 1), 16) * 1rem;
+}

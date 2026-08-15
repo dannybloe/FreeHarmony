@@ -11,6 +11,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "postinstall": "node node_modules/electron/install.js",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
@@ -22,6 +23,8 @@
   },
   "dependencies": {
     "@harmony/codec": "link:../harmony-explorations/packages/codec",
+    "@mantine/core": "9.5.1",
+    "@mantine/hooks": "9.5.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -32,6 +35,9 @@
     "@vitejs/plugin-react": "6.0.5",
     "electron": "43.4.0",
     "electron-vite": "5.0.0",
+    "postcss": "8.5.26",
+    "postcss-preset-mantine": "1.18.0",
+    "sass-embedded": "1.102.0",
     "typescript": "5.9.3",
     "vite": "8.2.1"
   }

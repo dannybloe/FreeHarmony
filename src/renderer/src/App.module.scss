@@ -1,0 +1,30 @@
+// The first stylesheet in this repository, and it exists to prove the arrangement rather than to
+// make anything look finished.
+//
+// Three things it demonstrates, each of which is the agreement written down in `#5`:
+//
+//   - it is Sass, compiled by `sass-embedded`, so nesting and the helpers in `_mantine.scss` work;
+//   - every value is a theme variable rather than a literal, so the theme is the single place a
+//     colour or a spacing is decided;
+//   - `light-dark()` handles the two colour schemes in one declaration, which is what stops a dark
+//     theme drifting away from a light one written separately.
+
+@use './mantine' as m;
+
+.shell {
+  min-height: 100vh;
+  padding: var(--mantine-spacing-xl);
+  // Two values, one property. The alternative is a second block under a dark selector, and two
+  // blocks are what drift.
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+}
+
+.card {
+  max-width: m.rem(560);
+  margin: 0 auto;
+}
+
+.note {
+  // A role, not a colour. Which grey this is belongs to the theme.
+  color: var(--mantine-color-dimmed);
+}

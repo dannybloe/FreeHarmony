@@ -13,7 +13,11 @@
     "outDir": "./node_modules/.tmp/types-web",
     "lib": ["es2023", "dom", "dom.iterable"],
     "jsx": "react-jsx",
-    "types": []
+    // `vite/client` and nothing else. It is what declares an import of a `.module.scss` file, so a
+    // stylesheet's class names are typed rather than `any`. Node is deliberately absent: if the page
+    // ever reaches for a file or a device it has to ask the main process, and this is what makes
+    // that a compile error instead of a review comment.
+    "types": ["vite/client"]
   },
   "include": ["src/renderer/src"]
 }

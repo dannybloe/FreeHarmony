@@ -44,6 +44,25 @@ function createWindow(): BrowserWindow {
 
   window.once('ready-to-show', () => window.show());
 
+  // F12 opens the developer tools, next to the `Cmd + Option + I` that the standard menu already
+  // offers. It is a keystroke rather than a menu entry because the platform's own way of binding a
+  // key, on macOS at least, matches menu items by title in an installed application, and this is not
+  // one yet.
+  //
+  // `before-input-event` sees the key before the page does and fires only while this window has
+  // focus, which is what separates it from a global shortcut: a global one would steal F12 from
+  // every other program on the machine for as long as FreeHarmony is running.
+  //
+  // Left in for a release rather than limited to development. There is no remote content here, so
+  // an open inspector gives away nothing, and somebody reporting a problem with their own remote is
+  // far easier to help if they can be asked what the console says.
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && input.key === 'F12') {
+      window.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
   if (DEVELOPMENT_RENDERER !== undefined) {
     void window.loadURL(DEVELOPMENT_RENDERER);
   } else {

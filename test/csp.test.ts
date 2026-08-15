@@ -22,21 +22,39 @@ test('the shipped policy denies everything it has not been asked about', () => {
   assert.ok(PRODUCTION_POLICY.startsWith("default-src 'none'"), PRODUCTION_POLICY);
 });
 
-test('the shipped policy allows nothing unsafe, which is what a development fix would break', () => {
-  // Both spellings, because they are separate keywords and allowing either would be enough to make
-  // an injected string executable in a release.
-  assert.ok(!PRODUCTION_POLICY.includes('unsafe-inline'), PRODUCTION_POLICY);
-  assert.ok(!PRODUCTION_POLICY.includes('unsafe-eval'), PRODUCTION_POLICY);
+test('the shipped policy lets nothing execute, whatever it lets look different', () => {
+  // `script-src` is the directive that decides whether an injected string can run, so it carries no
+  // exception at all and neither does anything else. `style-src` is the single exception in this
+  // policy, and it is named here rather than tolerated by a looser test: Mantine writes a theme's
+  // overrides into a `<style>` element it creates at run time, and under `style-src 'self'` the
+  // application renders and silently ignores its own theme. `build/csp.ts` carries the measurement.
+  //
+  // **This assertion was rewritten rather than relaxed**, and the distinction is the whole reason
+  // the test exists. Its first version refused `unsafe-inline` anywhere, which is what caught this,
+  // and the wrong response would have been to widen it until it passed again. So the exception is
+  // stated as one directive with a reason, and every other directive is still held to the original
+  // claim, which means the next loosening fails here too.
+  const withAnException = new Set(['style-src']);
+  for (const directive of PRODUCTION_POLICY.split('; ')) {
+    const name = directive.split(' ')[0] ?? '';
+    if (withAnException.has(name)) continue;
+    assert.ok(!directive.includes('unsafe-'), `${directive} allows something unsafe`);
+  }
+  assert.ok(!PRODUCTION_POLICY.includes('unsafe-eval'), 'nothing may evaluate a string, anywhere');
 });
 
 test('the shipped policy reaches no network host of any kind', () => {
   // FreeHarmony is offline by design, and this is the line that makes that a property of the page
   // rather than a promise in a document. `'self'` is the built page and the assets beside it.
+  // A quoted source is a keyword and never a place: `'self'`, `'none'`, `'unsafe-inline'`. Which of
+  // those are acceptable is the previous test's business, and repeating it here would mean widening
+  // two tests for one decision. What this one refuses is anything unquoted, which is exactly the
+  // shape of a host, a wildcard or a scheme such as `https:` or `ws:`. `data:` is the one exception,
+  // and it names bytes the application already has rather than somewhere to fetch them from.
   for (const directive of PRODUCTION_POLICY.split('; ')) {
-    const sources = directive.split(' ').slice(1);
-    for (const source of sources) {
-      const allowed = source === "'none'" || source === "'self'" || source === 'data:';
-      assert.ok(allowed, `${directive} names a source that is neither the page itself nor a data URI`);
+    for (const source of directive.split(' ').slice(1)) {
+      const isAKeyword = source.startsWith("'") && source.endsWith("'");
+      assert.ok(isAKeyword || source === 'data:', `${directive} names somewhere to fetch from`);
     }
   }
 });

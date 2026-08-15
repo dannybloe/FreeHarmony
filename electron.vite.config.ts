@@ -14,6 +14,7 @@
  */
 import react from '@vitejs/plugin-react';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import postcssPresetMantine from 'postcss-preset-mantine';
 import type { Plugin } from 'vite';
 
 import { DEVELOPMENT_POLICY, PRODUCTION_POLICY } from './build/csp.ts';
@@ -53,5 +54,16 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react(), contentSecurityPolicy()],
+    css: {
+      // Mantine's own PostCSS preset, named here rather than in a `postcss.config.js` beside the
+      // page. Vite looks for that file relative to the renderer's root, which `electron-vite` sets
+      // for us, so a config file at the repository root would be found by nothing and silently do
+      // nothing. Stated here it is typechecked and it is where somebody looking at the build looks.
+      //
+      // The preset is what makes `light-dark()` work in a stylesheet. Everything Sass could do
+      // instead, the mixins and `rem()`, lives in `src/renderer/src/_mantine.scss`, because Sass
+      // compiles first and would try to interpret an `@include` meant for PostCSS.
+      postcss: { plugins: [postcssPresetMantine()] },
+    },
   },
 });

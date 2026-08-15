@@ -20,11 +20,31 @@
  *
  * `data:` is allowed for images on purpose. A remote's screens are drawn by the codec and handed
  * over as PNG bytes, and a data URI is how those reach an `<img>` without inventing a local server.
+ *
+ * **`style-src` carries `'unsafe-inline'` and that is a measured concession, not an oversight.**
+ * Mantine writes a theme's overrides into a `<style>` element it creates at run time, so under
+ * `style-src 'self'` the application renders and quietly ignores its own theme. Measured rather
+ * than reasoned about: with the strict policy the page reported the primary colour as Mantine's
+ * default blue instead of the indigo the theme names, headings at weight 700 instead of 600, and
+ * two `<style>` elements present in the document against one stylesheet actually in force. Nothing
+ * failed, nothing was logged, and it looked fine.
+ *
+ * What the concession costs is worth stating rather than waving at. It allows a `<style>` element
+ * or a `style` attribute to take effect, so an attacker who could already inject markup could
+ * restyle the interface. It does **not** let them run anything: `script-src` stays strict, and that
+ * is the defence that matters. There is also no route by which foreign markup arrives, since the
+ * renderer loads one bundle we build and a config's own strings are drawn as text by React, which
+ * escapes them.
+ *
+ * The alternative, if this ever needs to be tightened: serve the renderer from a custom protocol
+ * registered in the main process rather than from `file://`, which allows a real response header
+ * with a fresh nonce per load, and hand the same nonce to Mantine through `getStyleNonce`. That is
+ * a genuine fix rather than a smaller hole, and it is a piece of work rather than a setting.
  */
 export const PRODUCTION_POLICY = [
   "default-src 'none'",
   "script-src 'self'",
-  "style-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
   "connect-src 'self'",
