@@ -96,6 +96,52 @@ script that opens a config and prints its inventory, so the boundary was proven 
 Electron shell to hide a problem in. It earned its keep immediately, since installing it for real is what
 refuted the spelling above.
 
+## How the application is put together
+
+**Modular, and the seam is MVVM.** A view is what is drawn. A **view model** owns that view's state
+and the operations on it, and knows nothing about rendering: no JSX, no DOM, no component imports.
+
+**There are two kinds of model and only one of them comes from next door.** The **format** is not
+ours: a device, an activity, an infrared code, what a button sends. Those are read by
+`@harmony/codec` and a second reading of them must never appear here, which is the boundary rule
+above stated from the inside. Everything that is the **application** is ours entirely and lives
+here: the list of remotes somebody has added and the names they gave them, where a backup sits and
+when it was taken, what is selected, what a dialog is holding, preferences, window state. A config
+knows nothing about any of that.
+
+The line is worth being able to draw quickly, because the failure is not a model in the wrong
+repository, it is a model here that quietly re-answers a question the codec already answers. If a
+model of ours would have to look at bytes, or decide what a field means, it is on the wrong side.
+
+**A third distinction is open and is being decided rather than assumed**: whether what a view holds
+is the same thing that travels through the application. A view model shaped for a screen and a data
+model passed between the main process and the renderer are not obviously the same object, and
+deciding they are by default is how an interface ends up dictating a data structure. That, and where
+state lives, is the subject of its own epic in the tracker and nothing here should be read as having
+settled it.
+
+What that buys is a place to test. A view model is a module that can be exercised by `node:test`
+with no browser and no rendering library, which is the same reason the research repository keeps its
+readers separate from its scripts. If a rule about a remote can only be checked by clicking, it is in
+the wrong file.
+
+**Where it will rub against React**, said out loud rather than discovered later: React's own idiom is
+a component holding its own state through hooks, and a strict separation fights that. The workable
+reading is that a view model may be exposed as a hook, since a hook is a function, as long as the
+logic inside it is a plain module that could be called without React at all. What must not happen is
+a component that reads a container, decides something about a config, and draws the answer in one
+place.
+
+**Sass is split the same way.** One `.module.scss` beside the component it styles, rather than one
+growing stylesheet. Shared values are theme variables and not shared selectors: if two components
+need the same colour, that is a decision in `theme.ts`, not a class both import. `_mantine.scss` is
+the only partial that is shared on purpose, because it is a translation layer for Mantine's mixins
+and has no styling of its own.
+
+The reason to split both is the same and it is not tidiness. A module that is only used in one place
+can be deleted when that place goes, and a stylesheet everything imports is one nobody can ever
+remove a rule from.
+
 ## Never write to a remote
 
 Version 1 is read only, and the rails that enforce it live in `@harmony/usb`, not here: writes are
