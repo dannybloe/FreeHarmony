@@ -21,6 +21,10 @@ import { fileURLToPath } from 'node:url';
 
 import { app, BrowserWindow, shell } from 'electron';
 
+import { registerRemoteHandlers } from './ipc.ts';
+import { storeRoot } from './store/location.ts';
+import { RemoteStore } from './store/remotes.ts';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** Where the renderer comes from in development. `electron-vite` sets it; in a build it is absent. */
@@ -36,6 +40,10 @@ function createWindow(): BrowserWindow {
     // page rather than a white rectangle that then fills in.
     show: false,
     webPreferences: {
+      // Built as CommonJS with a `.cjs` extension, which is not a style choice: a sandboxed preload
+      // script cannot be an ES module, and the sandbox is what stops the page reaching the file
+      // system at all. `electron.vite.config.ts` says the same thing from the build's side.
+      preload: join(HERE, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -95,6 +103,9 @@ function refuseNavigationAwayFromTheApplication(window: BrowserWindow): void {
 }
 
 void app.whenReady().then(() => {
+  // The store is constructed once and handed to the handlers, rather than each handler reaching for
+  // a location. That is what keeps `store/remotes.ts` free of Electron and therefore testable.
+  registerRemoteHandlers(new RemoteStore({ root: storeRoot() }));
   refuseNavigationAwayFromTheApplication(createWindow());
 });
 

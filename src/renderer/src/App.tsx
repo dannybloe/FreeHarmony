@@ -1,31 +1,16 @@
 /**
- * Still a placeholder, but now a styled one, and it is the demonstration that `#5` asks for rather
- * than the welcome page that `#6` asks for.
+ * The shell the views sit in. It knows about layout and about nothing else.
  *
- * What it shows is the agreement working end to end: Mantine draws the components, a Sass module
- * decides how they look, and the JSX below carries **placement only**. There is no colour, no font
- * size and no weight in this file. Those are in `App.module.scss` and in the theme, which is the
- * rule the lint check will enforce once there is one.
+ * There is one view so far, so this is thin on purpose: when there is a second there will be
+ * something to route between, and that is the moment to decide how, not now.
  */
-import { Card, Stack, Text, Title } from '@mantine/core';
-
+import { RemotesView } from './views/RemotesView.tsx';
 import classes from './App.module.scss';
 
 export function App() {
   return (
     <main className={classes.shell}>
-      <Card className={classes.card} withBorder p="xl">
-        <Stack gap="sm">
-          <Title order={1}>FreeHarmony</Title>
-          <Text>
-            The window opens, the build works, and the styling foundation is in place. Nothing else
-            has been built yet.
-          </Text>
-          <Text className={classes.note} size="sm">
-            No remote is involved. Nothing has been read.
-          </Text>
-        </Stack>
-      </Card>
+      <RemotesView />
     </main>
   );
 }

@@ -52,6 +52,25 @@ export default defineConfig({
     // runtime inside `out/`. The convention is load bearing, so it is followed rather than restated.
     plugins: [externalizeDepsPlugin()],
   },
+  preload: {
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        // `electron` has to be named here, and this is the second time the same trap has been
+        // sprung: **stating any `rollupOptions` replaces `electron-vite`'s defaults wholesale**,
+        // so the externals go with them. The first time it was the entry points and Electron ended
+        // up bundled into the main process, which at least died loudly. Here it bundled the npm
+        // launcher into the preload script, `contextBridge` came back undefined, and the only
+        // symptom was a window with no bridge on it and nothing in any log.
+        external: ['electron'],
+        // CommonJS, with the extension that says so. A sandboxed preload script cannot be an ES
+        // module, and `package.json` declares this project a module, so a plain `.js` here would be
+        // loaded as one and refuse to run. The sandbox is not negotiable: it is what stops the page
+        // reaching a file or a device except through what the bridge publishes.
+        output: { format: 'cjs', entryFileNames: 'index.cjs' },
+      },
+    },
+  },
   renderer: {
     plugins: [react(), contentSecurityPolicy()],
     css: {

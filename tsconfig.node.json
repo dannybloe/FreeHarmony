@@ -13,5 +13,16 @@
     "lib": ["es2023"],
     "types": ["node", "electron-vite/node"]
   },
-  "include": ["bin", "build", "test", "src/main", "electron.vite.config.ts"]
+  // `src/shared` is in both projects on purpose. It is the contract between them, so it has to
+  // typecheck under the main process's settings and under the browser's, and a type that only
+  // compiles on one side is exactly the failure the shared file exists to prevent.
+  //
+  // `*.model.ts` is the naming that makes the architecture's central rule mechanical rather than
+  // aspirational. A view model has no React, no DOM and no component import, so it has to compile
+  // under these settings, where `lib` is Node's and `types` does not include the browser. A hook
+  // that reaches for `window` is named `useSomething.ts`, is not claimed here, and would fail to
+  // compile if it were. So the rule is checked by the typechecker on every run instead of by
+  // somebody reading a diff.
+  "include": ["bin", "build", "test", "src/main", "src/preload", "src/shared",
+              "src/renderer/src/**/*.model.ts", "electron.vite.config.ts"]
 }

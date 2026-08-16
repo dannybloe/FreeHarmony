@@ -19,5 +19,5 @@
     // that a compile error instead of a review comment.
     "types": ["vite/client"]
   },
-  "include": ["src/renderer/src"]
+  "include": ["src/renderer/src", "src/shared"]
 }

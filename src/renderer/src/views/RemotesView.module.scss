@@ -1,0 +1,29 @@
+// Beside the component it styles, per the convention: a module that is used in one place can be
+// deleted with that place, where a shared stylesheet is one nobody can ever remove a rule from.
+
+@use '../mantine' as m;
+
+.list {
+  // The rows are dense on purpose. This is an inventory, not a landing page.
+  max-width: m.rem(720);
+}
+
+.name {
+  font-weight: 600;
+}
+
+.detail {
+  color: var(--mantine-color-dimmed);
+}
+
+.notWritable {
+  // An entry with nothing behind it cannot be sent to a remote. It is shown rather than hidden,
+  // because the honest thing is to say so before somebody has done the work twice.
+  color: light-dark(var(--mantine-color-orange-8), var(--mantine-color-orange-4));
+}
+
+.empty {
+  color: var(--mantine-color-dimmed);
+  text-align: center;
+  padding-block: var(--mantine-spacing-xl);
+}

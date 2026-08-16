@@ -113,12 +113,46 @@ The line is worth being able to draw quickly, because the failure is not a model
 repository, it is a model here that quietly re-answers a question the codec already answers. If a
 model of ours would have to look at bytes, or decide what a field means, it is on the wrong side.
 
-**A third distinction is open and is being decided rather than assumed**: whether what a view holds
-is the same thing that travels through the application. A view model shaped for a screen and a data
-model passed between the main process and the renderer are not obviously the same object, and
-deciding they are by default is how an interface ends up dictating a data structure. That, and where
-state lives, is the subject of its own epic in the tracker and nothing here should be read as having
-settled it.
+## The three layers, decided
+
+Settled on 16 August 2026 and built, so this describes code rather than an intention.
+
+**FreeHarmony is a document application, not a window onto a device.** Somebody adds remotes, names
+them, duplicates one, and works towards a configuration they will eventually send. That lives in
+their own user data on their own machine, and the remote is where the result goes.
+
+| | what it is | where it lives | who may touch it |
+|---|---|---|---|
+| the user's data | `RemoteDocument`, ours, plain JSON | one directory per remote under the operating system's user data location | both sides, it crosses unchanged |
+| the configuration | bytes, the library's | a file beside the document | the main process, through `@harmony/codec`, never the window |
+| the view models | what a screen needs and a remote does not have | `src/renderer/src/**/*.model.ts` | the window only |
+
+**A change is a request and the answer is what is displayed.** The window never patches its own
+list: every operation ends by asking for the list again, so what is on screen is what the main
+process has rather than what the window predicted. That is what stops the two disagreeing the first
+time something changes twice at once.
+
+**The bridge is one shared interface**, `src/shared/api.ts`, implemented by the main process,
+published by the preload script and consumed by the window, so a method whose arguments change
+breaks the typecheck on three sides at once. Everything crossing it is plain data, which is not a
+convention but the channel's own constraint, and it is the reason the configuration bytes cannot
+casually leave the main process.
+
+**A view model is a plain module and that is enforced rather than asked for.** A file named
+`*.model.ts` is claimed by the Node typecheck as well as the browser one, where there is no DOM and
+no React, so a view model that reaches for either stops compiling. A hook may be its face, adds no
+behaviour, and is named `useSomething.ts`.
+
+**The store keeps a directory per remote and no index.** An index is a second place the truth lives
+and a half written one loses every entry; a directory that will not parse loses itself. It takes its
+root, its clock and its identity source as arguments and imports no Electron, which is what lets the
+whole of it be driven by `node:test` against a temporary directory.
+
+**The data is honest about what can be applied.** The library can change a configuration that
+already exists and cannot build one from nothing, so an entry with no base configuration behind it
+is something to look at and never something to send. `isWritable` says so in the model, and the
+screen says so in words, because an interface that discovers this when somebody presses a button has
+let them do the work twice.
 
 What that buys is a place to test. A view model is a module that can be exercised by `node:test`
 with no browser and no rendering library, which is the same reason the research repository keeps its
