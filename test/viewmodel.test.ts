@@ -14,14 +14,20 @@ import type { RemotesApi } from '../src/shared/api.ts';
 import type { RemoteDocument } from '../src/shared/remote.ts';
 import { RemotesModel, type RemotesState } from '../src/renderer/src/viewmodels/remotes.model.ts';
 
-function remote(id: string, name: string): RemoteDocument {
+function remote(name: string): RemoteDocument {
   return {
-    id, name, provenance: 'created-empty',
+    name, provenance: 'created-empty',
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 
-/** An API that answers from a list held here, and can be told to fail the next call. */
+/**
+ * An API that answers from a list held here, and can be told to fail the next call.
+ *
+ * It is addressed by name throughout, like the real one, and that is not incidental to the test: the
+ * view model passes a name straight from what is on screen to the main process, so if a name were not
+ * enough to say which remote is meant, this fake could not be written either.
+ */
 function fakeApi(initial: RemoteDocument[] = []) {
   let held = [...initial];
   let failWith: string | undefined;
@@ -38,22 +44,25 @@ function fakeApi(initial: RemoteDocument[] = []) {
     list: async () => { calls.push('list'); refuseIfAsked(); return [...held]; },
     create: async (name) => {
       calls.push('create'); refuseIfAsked();
-      const made = remote(`id-${held.length + 1}`, name);
+      const made = remote(name);
       held.push(made);
       return made;
     },
-    rename: async (id, name) => {
+    rename: async (name, to) => {
       calls.push('rename'); refuseIfAsked();
-      held = held.map((r) => (r.id === id ? { ...r, name } : r));
-      return held.find((r) => r.id === id)!;
+      held = held.map((r) => (r.name === name ? { ...r, name: to } : r));
+      return held.find((r) => r.name === to)!;
     },
-    duplicate: async (id) => {
+    duplicate: async (name) => {
       calls.push('duplicate'); refuseIfAsked();
-      const made = remote(`${id}-copy`, 'copy');
+      const made = remote(`${name} copy`);
       held.push(made);
       return made;
     },
-    remove: async (id) => { calls.push('remove'); refuseIfAsked(); held = held.filter((r) => r.id !== id); },
+    remove: async (name) => {
+      calls.push('remove'); refuseIfAsked();
+      held = held.filter((r) => r.name !== name);
+    },
   };
 
   return { api, calls, fail: (message: string) => { failWith = message; } };
@@ -66,7 +75,7 @@ function record(api: RemotesApi) {
 }
 
 test('loading goes busy and then ready, in that order', async () => {
-  const { api } = fakeApi([remote('id-1', 'bedroom')]);
+  const { api } = fakeApi([remote('bedroom')]);
   const { model, seen } = record(api);
 
   await model.load();
@@ -79,11 +88,11 @@ test('a change is a request, and what is displayed is what came back', async () 
   // The decision the whole architecture rests on, as an assertion: the model never patches its own
   // array. Every operation ends in a fresh `list`, so the window shows what the main process has
   // rather than what the window predicted it would have.
-  const { api, calls } = fakeApi([remote('id-1', 'bedroom')]);
+  const { api, calls } = fakeApi([remote('bedroom')]);
   const { model } = record(api);
 
   await model.load();
-  await model.rename('id-1', 'study');
+  await model.rename('bedroom', 'study');
 
   assert.deepEqual(calls, ['list', 'rename', 'list']);
   assert.deepEqual(model.state.remotes.map((r) => r.name), ['study']);
@@ -94,8 +103,8 @@ test('every operation refreshes, so none of them can leave the list stale', asyn
   const { model } = record(api);
 
   await model.create('one');
-  await model.duplicate('id-1');
-  await model.remove('id-1');
+  await model.duplicate('one');
+  await model.remove('one');
 
   assert.deepEqual(calls, ['create', 'list', 'duplicate', 'list', 'remove', 'list']);
 });
@@ -115,12 +124,12 @@ test('a failure before the first answer is a failed screen', async () => {
 test('a failure after the first answer keeps the list on screen', async () => {
   // The distinction `status` and `busy` exist for. A rename that is refused should say so above a
   // list somebody can still read, not replace it with an error page.
-  const { api, fail } = fakeApi([remote('id-1', 'bedroom')]);
+  const { api, fail } = fakeApi([remote('bedroom')]);
   const { model } = record(api);
 
   await model.load();
   fail('a remote needs a name');
-  await model.rename('id-1', '   ');
+  await model.rename('bedroom', '   ');
 
   assert.equal(model.state.status, 'ready');
   assert.equal(model.state.error, 'a remote needs a name');

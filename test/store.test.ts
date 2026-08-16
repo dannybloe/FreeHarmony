@@ -1,30 +1,28 @@
 /**
- * The store, exercised with no Electron, no window and no user data on this machine.
+ * The store, exercised with no Electron, no window and no documents folder on this machine.
  *
  * That this file can exist at all is the argument for the architecture rather than a convenience.
- * The store takes its root, its clock and its identity source as arguments, so everything about how
- * somebody's remotes are kept can be driven from here, including the cases that are awkward to reach
- * by clicking: a store that does not exist yet, a directory that will not parse, a duplicate whose
- * original has a configuration behind it.
+ * The store takes its root and its clock as arguments, so everything about how somebody's remotes are
+ * kept can be driven from here, including the cases that are awkward to reach by clicking: a store
+ * that does not exist yet, a folder that will not parse, a folder somebody copied in a file manager,
+ * a name the file system will not accept.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { RemoteStore } from '../src/main/store/remotes.ts';
 import { isWritable } from '../src/shared/remote.ts';
 
-/** A store with a clock that ticks one second per call and identities that count, so results are exact. */
+/** A store whose clock ticks one second per call, so every result here is exact rather than close. */
 async function freshStore() {
   const root = await mkdtemp(join(tmpdir(), 'freeharmony-store-'));
   let tick = 0;
-  let next = 0;
   const store = new RemoteStore({
     root,
     now: () => new Date(Date.UTC(2026, 0, 1, 0, 0, tick++)).toISOString(),
-    nextId: () => `id-${++next}`,
   });
   return { root, store, cleanup: () => rm(root, { recursive: true, force: true }) };
 }
@@ -38,21 +36,83 @@ test('a store that has never been written to is empty rather than broken', async
   await cleanup();
 });
 
-test('a created remote has a name, an identity and no configuration behind it', async () => {
-  const { store, cleanup } = await freshStore();
-  const remote = await store.create('  Living room  ');
+test('the folder is named after the remote, which is what makes it findable', async () => {
+  // The reason the store moved into somebody's documents at all: they can open it and see what is
+  // theirs. A folder named after a generated identifier would defeat that.
+  const { root, store, cleanup } = await freshStore();
+  await store.create('  Living room  ');
 
-  assert.equal(remote.name, 'Living room', 'the name is trimmed here rather than in a form');
-  assert.equal(remote.id, 'id-1');
+  assert.deepEqual(await readdir(root), ['Living room'], 'trimmed, and the folder carries the name');
+  assert.deepEqual((await readdir(join(root, 'Living room'))).sort(), ['backups', 'remote.json']);
+  await cleanup();
+});
+
+test('the manifest holds no name and no identifier, so no fact is in two places', async () => {
+  // The design decision this store exists to demonstrate. If the name were in the manifest as well
+  // as in the folder, the two would disagree the first time anybody renamed a folder in Finder.
+  const { root, store, cleanup } = await freshStore();
+  await store.create('study');
+
+  const manifest = JSON.parse(await readFile(join(root, 'study', 'remote.json'), 'utf8')) as
+    Record<string, unknown>;
+  assert.deepEqual(Object.keys(manifest).sort(), ['createdAt', 'provenance', 'updatedAt']);
+  await cleanup();
+});
+
+test('a created remote knows where it came from and that nothing is behind it', async () => {
+  const { store, cleanup } = await freshStore();
+  const remote = await store.create('bedroom');
+
+  assert.equal(remote.name, 'bedroom');
   assert.equal(remote.provenance, 'created-empty');
   assert.equal(isWritable(remote), false, 'nothing behind it, so nothing to send');
   await cleanup();
 });
 
-test('a remote with no name is refused, because a row nobody can tell apart is worse than none', async () => {
+test('a name the file system cannot hold is refused rather than quietly changed', async () => {
+  // Refused, not transformed. A name silently turned into something else is the name the user meant,
+  // lost, and they find out by reading a list that does not say what they typed.
+  const { root, store, cleanup } = await freshStore();
+  for (const [name, why] of [
+    ['   ', /needs a name/],
+    ['Living room / TV', /cannot contain/],
+    ['..', /means something else/],
+    ['bedroom.', /full stop/],
+    ['NUL', /reserves/],
+    ['x'.repeat(121), /too long/],
+  ] as const) {
+    await assert.rejects(() => store.create(name), why, name);
+  }
+  assert.deepEqual(await readdir(root), [], 'and nothing was created on the way');
+  await cleanup();
+});
+
+test('two remotes cannot share a name, since the name is the folder', async () => {
   const { store, cleanup } = await freshStore();
-  await assert.rejects(() => store.create('   '), /needs a name/);
-  assert.deepEqual(await store.list(), []);
+  await store.create('bedroom');
+  await assert.rejects(() => store.create('bedroom'), /already a remote called bedroom/);
+  await cleanup();
+});
+
+test('renaming moves the folder, and there is no second place holding the old name', async () => {
+  const { root, store, cleanup } = await freshStore();
+  await store.create('bedrom');
+  const fixed = await store.rename('bedrom', 'bedroom');
+
+  assert.equal(fixed.name, 'bedroom');
+  assert.deepEqual(await readdir(root), ['bedroom']);
+  assert.notEqual(fixed.updatedAt, fixed.createdAt, 'a rename is a change to the remote');
+  await cleanup();
+});
+
+test('renaming onto an existing name is refused, and so is renaming to an unusable one', async () => {
+  const { root, store, cleanup } = await freshStore();
+  await store.create('bedroom');
+  await store.create('study');
+
+  await assert.rejects(() => store.rename('study', 'bedroom'), /already a remote called/);
+  await assert.rejects(() => store.rename('study', 'a/b'), /cannot contain/);
+  assert.deepEqual((await readdir(root)).sort(), ['bedroom', 'study'], 'both survived intact');
   await cleanup();
 });
 
@@ -60,29 +120,30 @@ test('the list is most recently changed first', async () => {
   const { store, cleanup } = await freshStore();
   await store.create('first');
   await store.create('second');
-  await store.rename('id-1', 'first, renamed');
+  await store.rename('first', 'first, renamed');
 
   assert.deepEqual((await store.list()).map((r) => r.name), ['first, renamed', 'second']);
   await cleanup();
 });
 
-test('a duplicate carries the configuration and not the backups', async () => {
+test('a duplicate takes the first free name and carries the configuration, not the backups', async () => {
   // The rule the format forces: an entry is the configuration it started from plus what has been
   // changed, so a copy with no bytes behind it could never be sent anywhere. The backups are the
   // history of a different unit and deliberately stay with it.
   const { root, store, cleanup } = await freshStore();
-  const original = await store.create('bedroom');
   const bytes = new Uint8Array([1, 2, 3, 4]);
-  await store.attachConfiguration(original.id, 'config.bin', bytes, 'read-from-device');
-  await writeFile(join(root, original.id, 'backups', 'first-read.bin'), bytes);
+  await store.create('bedroom');
+  await store.attachConfiguration('bedroom', 'config.bin', bytes, 'read-from-device');
+  await writeFile(join(root, 'bedroom', 'backups', 'first-read.bin'), bytes);
 
-  const copy = await store.duplicate(original.id);
-  assert.equal(copy.provenance, 'duplicated');
-  assert.equal(copy.name, 'bedroom copy');
-  assert.notEqual(copy.id, original.id);
-  assert.equal(isWritable(copy), true);
-  assert.deepEqual(new Uint8Array(await readFile(join(root, copy.id, 'config.bin'))), bytes);
-  await assert.rejects(() => readFile(join(root, copy.id, 'backups', 'first-read.bin')));
+  const first = await store.duplicate('bedroom');
+  const second = await store.duplicate('bedroom');
+  assert.equal(first.name, 'bedroom copy');
+  assert.equal(second.name, 'bedroom copy 2');
+  assert.equal(first.provenance, 'duplicated');
+  assert.equal(isWritable(first), true);
+  assert.deepEqual(new Uint8Array(await readFile(join(root, first.name, 'config.bin'))), bytes);
+  assert.deepEqual(await readdir(join(root, first.name, 'backups')), [], 'the backups stayed behind');
   await cleanup();
 });
 
@@ -90,9 +151,9 @@ test('attaching a configuration records its length and its digest and not its me
   // The store stores bytes. What is in them is the library's business on the other side of the
   // boundary, and this is the assertion that says so: nothing here parses anything.
   const { store, cleanup } = await freshStore();
-  const remote = await store.create('study');
+  await store.create('study');
   const updated = await store.attachConfiguration(
-    remote.id, 'config.bin', new Uint8Array([0]), 'read-from-device', '2026-08-16T10:00:00.000Z');
+    'study', 'config.bin', new Uint8Array([0]), 'read-from-device', '2026-08-16T10:00:00.000Z');
 
   assert.equal(updated.baseConfiguration?.byteLength, 1);
   assert.equal(updated.baseConfiguration?.readAt, '2026-08-16T10:00:00.000Z');
@@ -104,9 +165,21 @@ test('attaching a configuration records its length and its digest and not its me
   await cleanup();
 });
 
-test('one unreadable remote costs one remote, which is why there is no index file', async () => {
-  // The reason the store is a directory per remote rather than one list. A half written index loses
-  // every entry; a directory that will not parse loses itself.
+test('a folder copied in a file manager is simply another remote', async () => {
+  // The payoff of the name being the identity, and the case that decided it. With an identifier in
+  // the manifest this would be two entries claiming to be the same remote, and something would have
+  // to notice and repair it. Here there is nothing to repair.
+  const { root, store, cleanup } = await freshStore();
+  await store.create('bedroom');
+  await cp(join(root, 'bedroom'), join(root, 'bedroom spare'), { recursive: true });
+
+  assert.deepEqual((await store.list()).map((r) => r.name).sort(), ['bedroom', 'bedroom spare']);
+  await cleanup();
+});
+
+test('one unreadable folder costs one remote, which is why there is no index file', async () => {
+  // The reason the store is a folder per remote rather than one list. A half written index loses
+  // every entry; a folder that will not parse loses itself.
   const { root, store, cleanup } = await freshStore();
   await store.create('good');
   await mkdir(join(root, 'broken'), { recursive: true });
@@ -116,25 +189,12 @@ test('one unreadable remote costs one remote, which is why there is no index fil
   await cleanup();
 });
 
-test('the directory name is the identity, so a document that disagrees is corrected', async () => {
-  // Somebody copies a directory by hand to make a second remote. Believing the file would give two
-  // entries the same id, and then the list would show one of them twice.
-  const { root, store, cleanup } = await freshStore();
-  const original = await store.create('one');
-  await mkdir(join(root, 'copied-by-hand'), { recursive: true });
-  await writeFile(join(root, 'copied-by-hand', 'remote.json'),
-                  await readFile(join(root, original.id, 'remote.json'), 'utf8'));
-
-  const ids = (await store.list()).map((r) => r.id).sort();
-  assert.deepEqual(ids, ['copied-by-hand', 'id-1']);
-  await cleanup();
-});
-
 test('removing a remote takes everything under it, and removing a missing one is an error', async () => {
-  const { store, cleanup } = await freshStore();
-  const remote = await store.create('gone');
-  await store.remove(remote.id);
-  assert.deepEqual(await store.list(), []);
-  await assert.rejects(() => store.remove(remote.id), /no remote with id/);
+  const { root, store, cleanup } = await freshStore();
+  await store.create('gone');
+  await store.remove('gone');
+
+  assert.deepEqual(await readdir(root), []);
+  await assert.rejects(() => store.remove('gone'), /there is no remote called gone/);
   await cleanup();
 });

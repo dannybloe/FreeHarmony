@@ -145,8 +145,21 @@ behaviour, and is named `useSomething.ts`.
 
 **The store keeps a directory per remote and no index.** An index is a second place the truth lives
 and a half written one loses every entry; a directory that will not parse loses itself. It takes its
-root, its clock and its identity source as arguments and imports no Electron, which is what lets the
-whole of it be driven by `node:test` against a temporary directory.
+root and its clock as arguments and imports no Electron, which is what lets the whole of it be driven
+by `node:test` against a temporary directory.
+
+**A directory rather than one JSON file each**, and the reason is what arrives next rather than
+anything today: a configuration is a binary of up to a megabyte and a half, and the backups are
+several of those with dates. Neither belongs inside a file somebody is meant to be able to open and
+read. A file each was the right question to ask and it was asked; the binaries are the answer.
+
+**The directory's name is the remote's name, and it is also its identity.** So a rename moves a
+directory, a directory copied in Finder is simply another remote with nothing to reconcile, and
+`remote.json` holds only what a name cannot carry: where it came from, when, and which configuration
+sits beside it. The alternative, an identifier in the manifest with the name beside it, puts one fact
+in two places, and two copies of a fact is the failure the repository next door is named for. The
+price is paid openly: a name the file system will not accept is **refused with a reason** rather than
+silently changed, because a name quietly turned into something else is the name somebody meant, lost.
 
 **The data is honest about what can be applied.** The library can change a configuration that
 already exists and cannot build one from nothing, so an entry with no base configuration behind it

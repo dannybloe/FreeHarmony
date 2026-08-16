@@ -15,16 +15,21 @@ import type { RemoteDocument } from './remote.ts';
 /** The name the API is published under on `window`. One constant, so no side spells it by hand. */
 export const API_NAMESPACE = 'freeharmony';
 
+/**
+ * A remote is addressed by its name, because its name is its folder and therefore its identity.
+ * There is no separate identifier to pass, which is the whole reason the store is arranged that way.
+ */
 export interface RemotesApi {
   /** Every remote this machine holds, most recently changed first. */
   list(): Promise<RemoteDocument[]>;
   /** A new entry with nothing behind it. It cannot be written to a device, see `isWritable`. */
   create(name: string): Promise<RemoteDocument>;
-  rename(id: string, name: string): Promise<RemoteDocument>;
-  /** A complete copy, base configuration included, under a new identity. */
-  duplicate(id: string): Promise<RemoteDocument>;
+  /** Moves the folder. Refused if the new name is unusable or already taken. */
+  rename(name: string, to: string): Promise<RemoteDocument>;
+  /** A complete copy under the first free name, base configuration included. */
+  duplicate(name: string): Promise<RemoteDocument>;
   /** Removes the entry and everything under it, including its backups. */
-  remove(id: string): Promise<void>;
+  remove(name: string): Promise<void>;
 }
 
 export interface FreeHarmonyApi {

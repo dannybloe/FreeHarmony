@@ -113,10 +113,10 @@ void app.whenReady().then(() => {
  * Closing the window closes the application, on every platform including macOS.
  *
  * That is a deliberate departure from the macOS convention, where an application keeps running with
- * no windows and reopens one from the dock. The convention exists for programs that hold documents,
- * because there the running application is what you open the next document into. FreeHarmony has one
- * window and no documents, so there is nothing to come back to, and an entry left in the dock that
- * does nothing is a puzzle rather than a courtesy.
+ * no windows and reopens one from the dock. The convention exists for programs that open a document
+ * into a window of its own, because there the running application is what you open the next one into.
+ * FreeHarmony keeps its remotes on disk and shows them in one window, so there is nothing to come back
+ * to, and an entry left in the dock that does nothing is a puzzle rather than a courtesy.
  *
  * Revisit this if the application ever grows a second window worth keeping open on its own, a menu
  * bar item, or work that continues after a window is closed. Reading a remote is the obvious

@@ -19,9 +19,9 @@ export function registerRemoteHandlers(store: RemoteStore): void {
   const api: RemotesApi = {
     list: () => store.list(),
     create: (name) => store.create(name),
-    rename: (id, name) => store.rename(id, name),
-    duplicate: (id) => store.duplicate(id),
-    remove: (id) => store.remove(id),
+    rename: (name, to) => store.rename(name, to),
+    duplicate: (name) => store.duplicate(name),
+    remove: (name) => store.remove(name),
   };
 
   for (const method of REMOTE_METHODS) {

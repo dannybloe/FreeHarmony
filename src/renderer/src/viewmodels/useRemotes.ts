@@ -12,9 +12,9 @@ import { EMPTY, RemotesModel, type RemotesState } from './remotes.model.ts';
 
 export interface Remotes extends RemotesState {
   readonly create: (name: string) => Promise<void>;
-  readonly rename: (id: string, name: string) => Promise<void>;
-  readonly duplicate: (id: string) => Promise<void>;
-  readonly remove: (id: string) => Promise<void>;
+  readonly rename: (name: string, to: string) => Promise<void>;
+  readonly duplicate: (name: string) => Promise<void>;
+  readonly remove: (name: string) => Promise<void>;
 }
 
 export function useRemotes(): Remotes {
@@ -28,8 +28,8 @@ export function useRemotes(): Remotes {
   return {
     ...state,
     create: (name) => model.create(name),
-    rename: (id, name) => model.rename(id, name),
-    duplicate: (id) => model.duplicate(id),
-    remove: (id) => model.remove(id),
+    rename: (name, to) => model.rename(name, to),
+    duplicate: (name) => model.duplicate(name),
+    remove: (name) => model.remove(name),
   };
 }

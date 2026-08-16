@@ -26,9 +26,9 @@ const api: FreeHarmonyApi = {
   remotes: {
     list: () => call('list') as ReturnType<FreeHarmonyApi['remotes']['list']>,
     create: (name) => call('create', name) as ReturnType<FreeHarmonyApi['remotes']['create']>,
-    rename: (id, name) => call('rename', id, name) as ReturnType<FreeHarmonyApi['remotes']['rename']>,
-    duplicate: (id) => call('duplicate', id) as ReturnType<FreeHarmonyApi['remotes']['duplicate']>,
-    remove: (id) => call('remove', id) as ReturnType<FreeHarmonyApi['remotes']['remove']>,
+    rename: (name, to) => call('rename', name, to) as ReturnType<FreeHarmonyApi['remotes']['rename']>,
+    duplicate: (name) => call('duplicate', name) as ReturnType<FreeHarmonyApi['remotes']['duplicate']>,
+    remove: (name) => call('remove', name) as ReturnType<FreeHarmonyApi['remotes']['remove']>,
   },
 };
 

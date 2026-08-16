@@ -16,9 +16,9 @@
   color: var(--mantine-color-dimmed);
 }
 
-.notWritable {
-  // An entry with nothing behind it cannot be sent to a remote. It is shown rather than hidden,
-  // because the honest thing is to say so before somebody has done the work twice.
+.problem {
+  // Two things wear this: an entry with nothing behind it, and whatever the store last refused.
+  // Both are the application saying plainly what it cannot do, which is worth one shared colour.
   color: light-dark(var(--mantine-color-orange-8), var(--mantine-color-orange-4));
 }
 

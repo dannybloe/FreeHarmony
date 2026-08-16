@@ -50,23 +50,23 @@ export class RemotesModel {
     });
   }
 
-  rename(id: string, name: string): Promise<void> {
+  rename(name: string, to: string): Promise<void> {
     return this.#run(async () => {
-      await this.#api.rename(id, name);
+      await this.#api.rename(name, to);
       return { remotes: await this.#api.list() };
     });
   }
 
-  duplicate(id: string): Promise<void> {
+  duplicate(name: string): Promise<void> {
     return this.#run(async () => {
-      await this.#api.duplicate(id);
+      await this.#api.duplicate(name);
       return { remotes: await this.#api.list() };
     });
   }
 
-  remove(id: string): Promise<void> {
+  remove(name: string): Promise<void> {
     return this.#run(async () => {
-      await this.#api.remove(id);
+      await this.#api.remove(name);
       return { remotes: await this.#api.list() };
     });
   }

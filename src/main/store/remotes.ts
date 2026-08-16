@@ -1,30 +1,38 @@
 /**
- * The store: remotes on disk, as directories under a root this module is handed.
+ * The store: remotes as folders in the user's documents, one folder per remote.
+ *
+ * **The folder's name is the remote's name, and it is also its identity.** So a rename is a folder
+ * moving, a folder copied in a file manager is another remote with no reconciling to do, and
+ * `remote.json` holds only what a folder name cannot carry. The alternative, an identifier in the
+ * manifest with the folder named after it, puts the name in two places, and two copies of one fact
+ * is the failure this project is most familiar with.
  *
  * **It does not import Electron and it must not start.** The root comes in as an argument, which is
  * what lets the whole store be exercised by the test runner against a temporary directory, with no
- * window, no application and no user data on the machine that runs it. That is the payoff the
+ * window, no application and no documents folder on the machine that runs it. That is the payoff the
  * architecture was arranged for: if a rule about somebody's remotes can only be checked by clicking,
  * it is in the wrong file.
  *
- * The layout on disk, one directory per remote:
+ * The layout on disk:
  *
- *     <root>/<id>/remote.json          the document, ours, plain JSON
- *     <root>/<id>/<base config file>   the configuration bytes, opaque here
- *     <root>/<id>/backups/             kept forever, never pruned by this module
+ *     Documents/FreeHarmony/remotes/<name>/remote.json          the manifest, ours, plain JSON
+ *     Documents/FreeHarmony/remotes/<name>/<base config file>    the configuration bytes, opaque here
+ *     Documents/FreeHarmony/remotes/<name>/backups/              kept forever, never pruned here
  *
- * A directory per remote rather than one index file, deliberately. An index is a second place the
- * truth lives, and a half written one loses every entry rather than one. This way a directory that
- * cannot be read is a remote that is missing, not a store that is broken.
+ * A folder per remote rather than one file each, because of what arrives next: a configuration is a
+ * binary of up to a megabyte and a half, and the backups are several of those with dates. Neither
+ * belongs inside a manifest somebody is meant to be able to read. And a folder per remote rather
+ * than one index, because a half written index loses every entry where an unreadable folder loses
+ * itself.
  */
-import { createHash, randomUUID } from 'node:crypto';
-import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { cp, mkdir, readdir, readFile, rename as renamePath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { BaseConfiguration, RemoteDocument } from '../../shared/remote.ts';
-import { byMostRecentlyChanged } from '../../shared/remote.ts';
+import type { BaseConfiguration, RemoteDocument, StoredRemote } from '../../shared/remote.ts';
+import { byMostRecentlyChanged, cleanName, whyNameIsRefused } from '../../shared/remote.ts';
 
-const DOCUMENT = 'remote.json';
+const MANIFEST = 'remote.json';
 const BACKUPS = 'backups';
 
 /** Everything the store needs from the world, so that a test can hand it a different clock. */
@@ -32,30 +40,26 @@ export interface StoreOptions {
   readonly root: string;
   /** Returns an ISO 8601 timestamp. A test passes a fixed one; the application passes the clock. */
   readonly now?: () => string;
-  /** Returns a fresh identity. Separated for the same reason as the clock. */
-  readonly nextId?: () => string;
 }
 
 export class RemoteStore {
   readonly #root: string;
   readonly #now: () => string;
-  readonly #nextId: () => string;
 
   constructor(options: StoreOptions) {
     this.#root = options.root;
     this.#now = options.now ?? (() => new Date().toISOString());
-    this.#nextId = options.nextId ?? (() => randomUUID());
   }
 
-  /** The directory a remote owns. Exposed because a backup or a configuration file lives inside it. */
-  directoryOf(id: string): string {
-    return join(this.#root, id);
+  /** The folder a remote owns. Exposed because a backup or a configuration file lives inside it. */
+  folderOf(name: string): string {
+    return join(this.#root, name);
   }
 
   async list(): Promise<RemoteDocument[]> {
-    let entries: string[];
+    let names: string[];
     try {
-      entries = (await readdir(this.#root, { withFileTypes: true }))
+      names = (await readdir(this.#root, { withFileTypes: true }))
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name);
     } catch {
@@ -65,75 +69,79 @@ export class RemoteStore {
     }
 
     const found: RemoteDocument[] = [];
-    for (const id of entries) {
-      const document = await this.#read(id);
-      // A directory whose document will not parse is skipped rather than fatal, which is the reason
+    for (const name of names) {
+      const stored = await this.#read(name);
+      // A folder whose manifest will not parse is skipped rather than fatal, which is the reason
       // there is no index: one unreadable remote costs one remote.
-      if (document !== undefined) found.push(document);
+      if (stored !== undefined) found.push({ ...stored, name });
     }
     return found.sort(byMostRecentlyChanged);
   }
 
-  async get(id: string): Promise<RemoteDocument> {
-    const document = await this.#read(id);
-    if (document === undefined) throw new Error(`no remote with id ${id}`);
-    return document;
+  async get(name: string): Promise<RemoteDocument> {
+    const stored = await this.#read(name);
+    if (stored === undefined) throw new Error(`there is no remote called ${name}`);
+    return { ...stored, name };
   }
 
   async create(name: string): Promise<RemoteDocument> {
-    const at = this.#now();
-    const document: RemoteDocument = {
-      id: this.#nextId(),
-      name: requireAName(name),
-      provenance: 'created-empty',
-      createdAt: at,
-      updatedAt: at,
-    };
-    await mkdir(join(this.directoryOf(document.id), BACKUPS), { recursive: true });
-    await this.#write(document);
-    return document;
-  }
+    const wanted = this.#acceptable(name);
+    if (await this.#exists(wanted)) throw new Error(`there is already a remote called ${wanted}`);
 
-  async rename(id: string, name: string): Promise<RemoteDocument> {
-    const document = await this.get(id);
-    const renamed: RemoteDocument = { ...document, name: requireAName(name), updatedAt: this.#now() };
-    await this.#write(renamed);
-    return renamed;
+    const at = this.#now();
+    const stored: StoredRemote = { provenance: 'created-empty', createdAt: at, updatedAt: at };
+    await mkdir(join(this.folderOf(wanted), BACKUPS), { recursive: true });
+    await this.#write(wanted, stored);
+    return { ...stored, name: wanted };
   }
 
   /**
-   * A complete copy under a new identity, base configuration and all.
+   * Renaming is moving the folder, which is the whole point of the name being the identity: there is
+   * no second place holding the old name that could be forgotten.
    *
-   * The configuration comes too, on purpose, and it is the reason this cannot be a shallow entry: a
-   * remote's entry is the configuration it started from plus what has been changed, so a duplicate
-   * with no bytes behind it would be a copy that can never be sent anywhere. The backups are not
-   * copied, because they are the history of a different unit.
+   * The manifest's `updatedAt` moves too, because a rename is a change to the remote as far as
+   * anybody looking at a list is concerned.
    */
-  async duplicate(id: string): Promise<RemoteDocument> {
-    const original = await this.get(id);
-    const at = this.#now();
-    const copy: RemoteDocument = {
-      ...original,
-      id: this.#nextId(),
-      name: `${original.name} copy`,
-      provenance: 'duplicated',
-      createdAt: at,
-      updatedAt: at,
-    };
+  async rename(name: string, to: string): Promise<RemoteDocument> {
+    const wanted = this.#acceptable(to);
+    const existing = await this.get(name);
+    if (wanted === name) return existing;
+    if (await this.#exists(wanted)) throw new Error(`there is already a remote called ${wanted}`);
 
-    await mkdir(join(this.directoryOf(copy.id), BACKUPS), { recursive: true });
-    const base = original.baseConfiguration;
-    if (base !== undefined) {
-      await cp(join(this.directoryOf(original.id), base.fileName),
-               join(this.directoryOf(copy.id), base.fileName));
-    }
-    await this.#write(copy);
-    return copy;
+    await renamePath(this.folderOf(name), this.folderOf(wanted));
+    const stored: StoredRemote = { ...toStored(existing), updatedAt: this.#now() };
+    await this.#write(wanted, stored);
+    return { ...stored, name: wanted };
   }
 
-  async remove(id: string): Promise<void> {
-    await this.get(id);
-    await rm(this.directoryOf(id), { recursive: true, force: true });
+  /**
+   * A complete copy under the first free name, base configuration and all.
+   *
+   * The configuration comes too, on purpose, and it is the reason this cannot be a shallow entry: an
+   * entry is the configuration it started from plus what has been changed, so a duplicate with no
+   * bytes behind it would be a copy that could never be sent anywhere. The backups do not come,
+   * because they are the history of a different unit.
+   */
+  async duplicate(name: string): Promise<RemoteDocument> {
+    const original = await this.get(name);
+    const copy = await this.#firstFreeCopyName(name);
+    const at = this.#now();
+    const stored: StoredRemote = {
+      ...toStored(original), provenance: 'duplicated', createdAt: at, updatedAt: at,
+    };
+
+    await mkdir(join(this.folderOf(copy), BACKUPS), { recursive: true });
+    const base = original.baseConfiguration;
+    if (base !== undefined) {
+      await cp(join(this.folderOf(name), base.fileName), join(this.folderOf(copy), base.fileName));
+    }
+    await this.#write(copy, stored);
+    return { ...stored, name: copy };
+  }
+
+  async remove(name: string): Promise<void> {
+    await this.get(name);
+    await rm(this.folderOf(name), { recursive: true, force: true });
   }
 
   /**
@@ -143,12 +151,11 @@ export class RemoteStore {
    * and remembers their length and their digest. Reading them is the library's job in a later step,
    * and the digest is what will let a stored file be checked rather than assumed.
    */
-  async attachConfiguration(id: string, fileName: string, bytes: Uint8Array,
-                            provenance: RemoteDocument['provenance'],
+  async attachConfiguration(name: string, fileName: string, bytes: Uint8Array,
+                            provenance: StoredRemote['provenance'],
                             readAt?: string): Promise<RemoteDocument> {
-    const document = await this.get(id);
-    await mkdir(this.directoryOf(id), { recursive: true });
-    await writeFile(join(this.directoryOf(id), fileName), bytes);
+    const existing = await this.get(name);
+    await writeFile(join(this.folderOf(name), fileName), bytes);
 
     const base: BaseConfiguration = {
       fileName,
@@ -156,35 +163,52 @@ export class RemoteStore {
       sha256: createHash('sha256').update(bytes).digest('hex'),
       ...(readAt === undefined ? {} : { readAt }),
     };
-    const updated: RemoteDocument = {
-      ...document, provenance, baseConfiguration: base, updatedAt: this.#now(),
+    const stored: StoredRemote = {
+      ...toStored(existing), provenance, baseConfiguration: base, updatedAt: this.#now(),
     };
-    await this.#write(updated);
-    return updated;
+    await this.#write(name, stored);
+    return { ...stored, name };
   }
 
-  async #read(id: string): Promise<RemoteDocument | undefined> {
+  /** The shared rule, applied here because this is the refusal that counts. */
+  #acceptable(name: string): string {
+    const refused = whyNameIsRefused(name);
+    if (refused !== undefined) throw new Error(refused);
+    return cleanName(name);
+  }
+
+  async #exists(name: string): Promise<boolean> {
+    return (await this.#read(name)) !== undefined;
+  }
+
+  /** `<name> copy`, then `<name> copy 2`, counting up. Deterministic, so a test can assert it. */
+  async #firstFreeCopyName(name: string): Promise<string> {
+    for (let n = 1; ; n += 1) {
+      const candidate = n === 1 ? `${name} copy` : `${name} copy ${n}`;
+      if (!(await this.#exists(candidate))) return candidate;
+    }
+  }
+
+  async #read(name: string): Promise<StoredRemote | undefined> {
     try {
-      const text = await readFile(join(this.directoryOf(id), DOCUMENT), 'utf8');
-      const document = JSON.parse(text) as RemoteDocument;
-      // The directory name is the identity. A document claiming another one has been moved by hand,
-      // and believing the file would give two remotes the same id.
-      return document.id === id ? document : { ...document, id };
+      const text = await readFile(join(this.folderOf(name), MANIFEST), 'utf8');
+      return JSON.parse(text) as StoredRemote;
     } catch {
       return undefined;
     }
   }
 
-  async #write(document: RemoteDocument): Promise<void> {
-    await mkdir(this.directoryOf(document.id), { recursive: true });
-    await writeFile(join(this.directoryOf(document.id), DOCUMENT),
-                    `${JSON.stringify(document, null, 2)}\n`, 'utf8');
+  async #write(name: string, stored: StoredRemote): Promise<void> {
+    await mkdir(this.folderOf(name), { recursive: true });
+    // Indented, with a trailing newline: it is in somebody's documents folder, so it is meant to be
+    // opened, read and committed to whatever they keep their own things in.
+    await writeFile(join(this.folderOf(name), MANIFEST),
+                    `${JSON.stringify(stored, null, 2)}\n`, 'utf8');
   }
 }
 
-/** A remote with no name is a row nobody can tell apart, so it is refused here and not in a form. */
-function requireAName(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed === '') throw new Error('a remote needs a name');
-  return trimmed;
+/** Drops the name back off, since the name is the folder and never a field in the manifest. */
+function toStored(remote: RemoteDocument): StoredRemote {
+  const { name: _name, ...stored } = remote;
+  return stored;
 }
