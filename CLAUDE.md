@@ -123,7 +123,7 @@ their own user data on their own machine, and the remote is where the result goe
 
 | | what it is | where it lives | who may touch it |
 |---|---|---|---|
-| the user's data | `RemoteDocument`, ours, plain JSON | one directory per remote under the operating system's user data location | both sides, it crosses unchanged |
+| the user's data | `RemoteDocument`, ours, plain JSON | one directory per remote under `Documents/FreeHarmony/remotes` | both sides, it crosses unchanged |
 | the configuration | bytes, the library's | a file beside the document | the main process, through `@harmony/codec`, never the window |
 | the view models | what a screen needs and a remote does not have | `src/renderer/src/**/*.model.ts` | the window only |
 
