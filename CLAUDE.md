@@ -206,6 +206,19 @@ logic inside it is a plain module that could be called without React at all. Wha
 a component that reads a container, decides something about a config, and draws the answer in one
 place.
 
+**One colour scheme, light, decided on 18 August 2026.** A dark theme is not important yet and half
+of one is worse than none, so `main.tsx` forces the light scheme with Mantine's own
+`forceColorScheme` rather than following the system, and every stylesheet of ours carries one value
+per property. The `light` and `dark` mixins are gone from `_mantine.scss` with it, because with the
+scheme forced a block keyed on the dark one compiles, ships and can never apply, and a rule that
+cannot fire is worse than a missing one: it reads as covered.
+
+Two tests hold it, and the pair is deliberate. `test/styles.test.ts` asks the source, which is the
+part we decide, and `test/app/scheme.test.ts` asks a running window with the system emulated as
+preferring dark, which is the only way to know whether the forcing actually holds. Bringing a dark
+theme back is one line in `main.tsx`, a second value in each stylesheet that needs one, and rewriting
+those two tests, which will fail first and say so.
+
 **Sass is split the same way.** One `.module.scss` beside the component it styles, rather than one
 growing stylesheet. Shared values are theme variables and not shared selectors: if two components
 need the same colour, that is a decision in `theme.ts`, not a class both import. `_mantine.scss` is
@@ -335,6 +348,14 @@ a database whose origins nobody kept, and the only safe thing to do with that is
   structured fact, a written argument and a regression test. Product code is not a finding, but the
   spirit transfers: if this application states something about a remote, it should be able to say which
   section of `docs/findings.md` says so.
+* **Control a test by breaking the thing it guards**, and do it in the same sitting. Three of the six
+  tests written on 18 August 2026 were controlled and bit; two were controlled and did **not**, and
+  both were vacuous for reasons no amount of reading would have shown. The colour scheme test passed
+  against the exact code it was written to refuse, because a running page does not re-read the system
+  preference and the emulation has to precede a reload. The stylesheet check had two defects that
+  cancelled: it matched a compiled selector that is never emitted, and its rule for telling our CSS
+  from Mantine's matched both. Reverse a control with a string replacement, never with
+  `git checkout -- <path>`, which discards whatever else is uncommitted in that file.
 
 ## Licence
 

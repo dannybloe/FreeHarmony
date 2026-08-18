@@ -6,17 +6,16 @@
 //   - it is Sass, compiled by `sass-embedded`, so nesting and the helpers in `_mantine.scss` work;
 //   - every value is a theme variable rather than a literal, so the theme is the single place a
 //     colour or a spacing is decided;
-//   - `light-dark()` handles the two colour schemes in one declaration, which is what stops a dark
-//     theme drifting away from a light one written separately.
+//   - one value per property, because the application is light only for now. That is decided in
+//     `main.tsx`, which forces the scheme rather than following the system, so a second value here
+//     would be a colour nothing could ever draw.
 
 @use './mantine' as m;
 
 .shell {
   min-height: 100vh;
   padding: var(--mantine-spacing-xl);
-  // Two values, one property. The alternative is a second block under a dark selector, and two
-  // blocks are what drift.
-  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+  background-color: var(--mantine-color-gray-0);
 }
 
 // `.card` and `.note` were the placeholder's, and they went with it rather than being left behind

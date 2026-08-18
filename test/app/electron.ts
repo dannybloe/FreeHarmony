@@ -48,6 +48,23 @@ export interface RunningApplication {
   readonly store: string;
   /** Evaluates an expression in the page, awaiting it if it is a promise. Throws what the page threw. */
   evaluate<T>(expression: string): Promise<T>;
+  /**
+   * Any other protocol command, for the cases where evaluating an expression is not enough.
+   *
+   * `Emulation.setEmulatedMedia` is the one that matters so far: it is how a test can ask the page to
+   * believe the system prefers a dark colour scheme, which is a thing no expression can change and
+   * the only honest way to check that forcing the light scheme actually holds.
+   */
+  send(method: string, params?: Record<string, unknown>): Promise<unknown>;
+  /**
+   * Reloads the page and waits until it has drawn again.
+   *
+   * The reason a test needs this is emulation: something like a preferred colour scheme is read when
+   * the page mounts, so telling a running page that the system has changed its mind proves nothing
+   * about an application somebody starts on a machine that already prefers it. Reloading with the
+   * emulation in place is the honest arrangement.
+   */
+  reload(): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -77,9 +94,7 @@ export async function launch(): Promise<RunningApplication> {
                              () => `no developer tools port appeared. The application said:\n${said}`);
     const socket = await connectToThePage(port, () => said);
     const application = talkTo(socket, store, child);
-    await until(async () => (await application.evaluate<string>('document.readyState')) === 'complete'
-                              ? true : undefined,
-                () => 'the page never finished loading');
+    await application.reload();
     return application;
   } catch (failure) {
     await stop(child);
@@ -141,23 +156,25 @@ function talkTo(socket: WebSocket, store: string, child: ChildProcess): RunningA
     waiting.delete(answer.id);
   });
 
+  /** One command and its reply, matched by id. A refusal by the protocol itself throws here. */
+  async function ask(method: string, params: Record<string, unknown>): Promise<Answer> {
+    const id = nextId++;
+    const answer = await new Promise<Answer>((arrived) => {
+      waiting.set(id, arrived);
+      socket.send(JSON.stringify({ id, method, params }));
+    });
+    if (answer.error !== undefined) throw new Error(`the protocol refused: ${answer.error.message}`);
+    return answer;
+  }
+
   return {
     store,
 
     async evaluate<T>(expression: string): Promise<T> {
-      const id = nextId++;
-      const answer = await new Promise<Answer>((arrived) => {
-        waiting.set(id, arrived);
-        socket.send(JSON.stringify({
-          id,
-          method: 'Runtime.evaluate',
-          // `awaitPromise` is what lets a test say `await api.list()` and get the list rather than a
-          // promise handle, and `returnByValue` is what brings the value across as plain data.
-          params: { expression, awaitPromise: true, returnByValue: true },
-        }));
-      });
-
-      if (answer.error !== undefined) throw new Error(`the protocol refused: ${answer.error.message}`);
+      // `awaitPromise` is what lets a test say `await api.list()` and get the list rather than a
+      // promise handle, and `returnByValue` is what brings the value across as plain data.
+      const answer = await ask('Runtime.evaluate',
+                               { expression, awaitPromise: true, returnByValue: true });
       const thrown = answer.result?.exceptionDetails;
       // A page that throws has to fail the test rather than return `undefined`, which is what an
       // uninspected `result.value` would quietly do.
@@ -165,6 +182,23 @@ function talkTo(socket: WebSocket, store: string, child: ChildProcess): RunningA
         throw new Error(`the page threw: ${thrown.exception?.description ?? thrown.text}`);
       }
       return answer.result?.result?.value as T;
+    },
+
+    async send(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+      return (await ask(method, params)).result;
+    },
+
+    async reload(): Promise<void> {
+      // Waiting on `document.readyState` alone is not enough: it says the document is parsed, not that
+      // React has mounted, and a test that reads a computed style needs the page to have drawn. The
+      // shell element is the cheapest proof of both. On the first call there is nothing to reload yet,
+      // which `Page.reload` handles by simply loading.
+      await ask('Page.enable', {});
+      await ask('Page.reload', {});
+      await until(async () => (await this.evaluate<boolean>(
+                    `document.readyState === 'complete' && !!document.querySelector('main')`))
+                    ? true : undefined,
+                  () => 'the page never finished loading');
     },
 
     async close(): Promise<void> {

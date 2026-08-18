@@ -1,12 +1,17 @@
 // Sass equivalents of the helpers Mantine's PostCSS preset provides, because this project styles
 // with Sass and every example in Mantine's documentation is written against the preset.
 //
-// This file is the translation layer and it is the only place it exists. The preset still runs, and
-// `light-dark()` in a stylesheet is still handled by it; what cannot go through PostCSS is anything
-// that looks like Sass's own syntax, since Sass compiles first and would choke on an `@include` it
-// has never heard of.
+// This file is the translation layer and it is the only place it exists. The preset still runs; what
+// cannot go through PostCSS is anything that looks like Sass's own syntax, since Sass compiles first
+// and would choke on an `@include` it has never heard of.
 //
-// Use it as `@use '../_mantine.scss' as m;` and then `@include m.dark { ... }`.
+// Use it as `@use '../_mantine.scss' as m;` and then `@include m.hover { ... }`.
+//
+// **The `light` and `dark` mixins were here and are gone**, removed on 18 August 2026 with the dark
+// theme itself. Not for tidiness: `main.tsx` forces the light scheme, so a block under
+// `[data-mantine-color-scheme='dark']` would compile, ship and never apply, and a rule that cannot
+// fire is worse than a missing one because it reads as covered. They come back with the second scheme,
+// and so does `light-dark()`, which is Mantine's PostCSS function rather than anything of ours.
 
 @use 'sass:math';
 
@@ -18,21 +23,6 @@ $breakpoint-sm: 48em;
 $breakpoint-md: 62em;
 $breakpoint-lg: 75em;
 $breakpoint-xl: 88em;
-
-/// Applies only when the light colour scheme is in force. Prefer the `light-dark()` CSS function for
-/// a single property; reach for this when a whole block differs.
-@mixin light {
-  [data-mantine-color-scheme='light'] & {
-    @content;
-  }
-}
-
-/// Applies only when the dark colour scheme is in force.
-@mixin dark {
-  [data-mantine-color-scheme='dark'] & {
-    @content;
-  }
-}
 
 /// Hover, but only where hovering is a thing the input device does. On a touch screen the same rule
 /// is applied while the element is pressed instead, which is what Mantine's own mixin does.

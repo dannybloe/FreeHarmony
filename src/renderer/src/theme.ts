@@ -15,11 +15,11 @@
 import { createTheme } from '@mantine/core';
 
 export const theme = createTheme({
-  // Mantine's own palettes, chosen rather than defaulted. `primaryColor` names the role; the shade
-  // is stated too, because the default differs between light and dark and an interface that changes
-  // hue with the colour scheme reads as a bug.
+  // Mantine's own palettes, chosen rather than defaulted. `primaryColor` names the role and
+  // `primaryShade` says which step of it, as one number rather than one per colour scheme: the
+  // application is light only for now and `main.tsx` is where that is decided.
   primaryColor: 'indigo',
-  primaryShade: { light: 6, dark: 8 },
+  primaryShade: 6,
 
   // Rounded a little more than the default, which is the cheapest way for an interface to stop
   // looking like the framework it was built with.
