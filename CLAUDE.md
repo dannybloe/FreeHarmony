@@ -138,6 +138,33 @@ breaks the typecheck on three sides at once. Everything crossing it is plain dat
 convention but the channel's own constraint, and it is the reason the configuration bytes cannot
 casually leave the main process.
 
+**And it is checked in a running window, because nothing else can check it.** The store tests and the
+view model tests exercise the two ends separately, against a temporary directory on one side and a
+fake API on the other, and both would keep passing if the ends were never connected: a channel that
+matches on one side, a preload script that fails to load, a security setting that stops the page
+reaching anything. `test/app/bridge.test.ts` launches the built application and evaluates expressions
+in its page, so it asserts what only a running window shows: that the page is given exactly the
+methods the shared interface declares and nothing beside them, that a request lands in a real folder
+on disk, and that a refusal arrives as a thrown error carrying the store's own words rather than a
+second copy of the rule.
+
+**It brings no new dependency**, which is deliberate. Playwright would do it in fewer lines and would
+bring a browser download this workspace does not approve, for what is a websocket and three messages
+of Chromium's own protocol. Electron is already a dependency because the application is Electron, and
+`WebSocket` has been in Node since 22, so `test/app/electron.ts` is the whole cost.
+
+**There is no headless Electron and the test does not pretend otherwise.** A browser can be told to
+run without a display; Electron cannot, because the window is the application. `FREEHARMONY_HIDDEN=1`
+does the thing that matters instead: the window is created hidden already, so it is simply never
+shown, and on macOS no dock icon appears. The page still loads and still runs its scripts. What it
+does not do is paint, so that seam is for testing the bridge and never for testing how anything looks.
+
+**Two environment variables exist for the test and both are read in production code**, which is a cost
+worth naming rather than hiding: `FREEHARMONY_STORE` moves the store, and `FREEHARMONY_HIDDEN` keeps
+the window off the screen. The first is the important one. A test that creates and deletes entries in
+somebody's real documents folder is not an acceptable test, and the alternative, letting the test
+reach past the application into the store, is what would make the test stop proving anything.
+
 **A view model is a plain module and that is enforced rather than asked for.** A file named
 `*.model.ts` is claimed by the Node typecheck as well as the browser one, where there is no DOM and
 no React, so a view model that reaches for either stops compiling. A hook may be its face, adds no
@@ -188,6 +215,24 @@ and has no styling of its own.
 The reason to split both is the same and it is not tidiness. A module that is only used in one place
 can be deleted when that place goes, and a stylesheet everything imports is one nobody can ever
 remove a rule from.
+
+## The checks
+
+```
+pnpm dev          the application with the renderer served from Vite, F12 for the inspector
+pnpm build        into out/, which is what pnpm start and the application test both run
+pnpm test         everything: the fast tests, then a build, then the bridge in a running window
+pnpm test:unit    the fast half only, no build needed, for a tight loop
+pnpm test:app     builds and drives the built application over the developer tools protocol
+pnpm typecheck    both projects, Node's settings and the browser's
+pnpm check        typecheck and every test, which is the one command before a commit
+```
+
+`pnpm test` is deliberately the slow, complete one and `test:unit` is the named shortcut, rather than
+the other way round. A default that skips the expensive half is a default that stops being run.
+
+There is no continuous integration yet, so `pnpm check` is the whole gate and it is on whoever
+commits. That is what issues #9 and #10 are for.
 
 ## Never write to a remote
 

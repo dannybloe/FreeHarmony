@@ -24,5 +24,22 @@ import { app } from 'electron';
  * since the application otherwise touches no network at all.
  */
 export function storeRoot(): string {
-  return join(app.getPath('documents'), 'FreeHarmony', 'remotes');
+  return elsewhere() ?? join(app.getPath('documents'), 'FreeHarmony', 'remotes');
+}
+
+/**
+ * Where the store goes instead, if something has said so.
+ *
+ * This exists for one caller: the end to end test in `test/app`, which drives the built application
+ * over the developer tools protocol and has to create and delete entries to prove the bridge reaches
+ * the real store. Doing that in somebody's own documents folder would be an unacceptable price for a
+ * test, and pointing the application at a temporary directory is the whole of the fix.
+ *
+ * It is read here rather than passed to `RemoteStore`, because the store already takes its root as an
+ * argument and the question this answers is where the **application** puts it. So the seam sits in the
+ * one file that decides that, and the store stays unaware that an override exists at all.
+ */
+function elsewhere(): string | undefined {
+  const named = process.env['FREEHARMONY_STORE'];
+  return named === undefined || named === '' ? undefined : named;
 }

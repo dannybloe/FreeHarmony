@@ -19,7 +19,10 @@
     "typecheck:node": "tsc -p tsconfig.node.json",
     "typecheck:web": "tsc -p tsconfig.web.json",
     "typecheck": "pnpm typecheck:node && pnpm typecheck:web",
-    "test": "node --test 'test/**/*.test.ts'"
+    "test:unit": "node --test 'test/*.test.ts'",
+    "test:app": "pnpm build && node --test 'test/app/*.test.ts'",
+    "test": "pnpm test:unit && pnpm test:app",
+    "check": "pnpm typecheck && pnpm test"
   },
   "dependencies": {
     "@harmony/codec": "link:../harmony-explorations/packages/codec",

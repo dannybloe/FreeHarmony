@@ -30,6 +30,20 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** Where the renderer comes from in development. `electron-vite` sets it; in a build it is absent. */
 const DEVELOPMENT_RENDERER = process.env['ELECTRON_RENDERER_URL'];
 
+/**
+ * Load the page and never put a window on the screen. Set by the end to end test in `test/app`.
+ *
+ * There is no headless Electron to ask for. A browser can be told to run without a display; Electron
+ * cannot, because the window is the application. What it can do is what this does, which is the same
+ * thing for a test's purposes: the window is created hidden already, so the only change is not
+ * showing it, and on macOS not putting an icon in the dock either.
+ *
+ * So a test run does not steal focus four times, and the page still loads, still runs its scripts and
+ * still answers the developer tools protocol. What it does not do is paint, which is why this is a
+ * seam for a bridge test rather than a way to test anything about how the application looks.
+ */
+const STAY_HIDDEN = process.env['FREEHARMONY_HIDDEN'] === '1';
+
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1100,
@@ -50,7 +64,7 @@ function createWindow(): BrowserWindow {
     },
   });
 
-  window.once('ready-to-show', () => window.show());
+  if (!STAY_HIDDEN) window.once('ready-to-show', () => window.show());
 
   // F12 opens the developer tools, next to the `Cmd + Option + I` that the standard menu already
   // offers. It is a keystroke rather than a menu entry because the platform's own way of binding a
@@ -105,6 +119,7 @@ function refuseNavigationAwayFromTheApplication(window: BrowserWindow): void {
 void app.whenReady().then(() => {
   // The store is constructed once and handed to the handlers, rather than each handler reaching for
   // a location. That is what keeps `store/remotes.ts` free of Electron and therefore testable.
+  if (STAY_HIDDEN) app.dock?.hide();
   registerRemoteHandlers(new RemoteStore({ root: storeRoot() }));
   refuseNavigationAwayFromTheApplication(createWindow());
 });
