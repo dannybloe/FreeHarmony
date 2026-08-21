@@ -1,10 +1,8 @@
 /**
  * Add a remote: read one off the hardware, or say which model you have.
  *
- * Two routes side by side, as sketched, and the left one is the honest half of this screen. Reading a
- * remote means talking to it over USB, which this application cannot do yet, so the tile says so on
- * itself rather than in a document. Showing the shape of the screen with one route still arriving beats
- * a screen that changes shape later.
+ * Two routes side by side, as sketched. The left one goes to the Connect page, which watches the bus and
+ * recognises whatever is plugged in; the right one is for a remote that is not to hand.
  *
  * The chooser's tiles are **faces, not model numbers**. Where two numbers are the same remote they
  * share a tile and both numbers are on it; where the keys differ they are different remotes and get a
@@ -59,9 +57,9 @@ export function AddRemoteView({ picked, onPick, onContinue, onConnect }: AddRemo
           </Carousel>
 
           <div className={classes.footer}>
-            <Text className={classes.facts}>
-              {chosen === undefined ? 'Three models are drawn so far.' : chosen.facts.join(' · ')}
-            </Text>
+            {/* Empty until something is picked. It used to count the drawings here, which told somebody
+                how far this application has got rather than anything about their remote. */}
+            <Text className={classes.facts}>{chosen === undefined ? '' : chosen.facts.join(' · ')}</Text>
             <Button
               size="sm"
               disabled={chosen === undefined}

@@ -24,14 +24,10 @@
   backdrop-filter: blur(m.rem(12));
   box-shadow: 0 m.rem(14) m.rem(34) rgb(16 24 40 / 6%);
 
-  // At this size the printed words on the face are legible, so the drawing gets a little more contrast
-  // than it has in a tile.
-  --case-fill: var(--mantine-color-gray-1);
-  --case-stroke: var(--mantine-color-gray-6);
-  --recess-fill: var(--mantine-color-gray-2);
-  --key-fill: var(--mantine-color-white);
-  --key-stroke: var(--mantine-color-gray-5);
-  --key-text: var(--mantine-color-gray-8);
+  // The same palette as a tile, deliberately. At this size the printed words on the face are legible,
+  // which was once the argument for giving this one more contrast; one palette at two sizes is worth
+  // more than a shade, since the two drawings are of the same object.
+  @include m.drawing-palette;
 }
 
 .panel {
@@ -109,18 +105,6 @@
   border-radius: var(--mantine-radius-md);
   border: 1px solid var(--mantine-color-gray-2);
   background: rgb(255 255 255 / 60%);
-}
-
-.hardwareTitle {
-  font-size: var(--mantine-font-size-sm);
-  font-weight: 600;
-  color: var(--mantine-color-gray-8);
-}
-
-.hardwareNote {
-  font-size: var(--mantine-font-size-xs);
-  line-height: 1.5;
-  color: var(--mantine-color-gray-6);
 }
 
 .hardwareError {

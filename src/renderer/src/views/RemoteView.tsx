@@ -95,8 +95,10 @@ export function RemoteView({ remote, busy, onRename, onDuplicate, onRemove }: Re
           <dd>{ORIGIN[remote.provenance]}</dd>
           <dt>Configuration</dt>
           <dd>
+            {/* "none" and not "none yet, so there is nothing to change": the absence is a fact about
+                this document, the sentence after it was about this application. */}
             {remote.baseConfiguration === undefined
-              ? 'none yet, so there is nothing to change'
+              ? 'none'
               : `${remote.baseConfiguration.byteLength.toLocaleString()} bytes`}
           </dd>
         </dl>

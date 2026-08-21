@@ -21,7 +21,6 @@
 import { Button, Text, Title } from '@mantine/core';
 import type { ReactNode } from 'react';
 
-import type { AttachedRemote } from '../../../shared/devices.ts';
 import type { RemoteModel } from '../../../shared/remote.ts';
 import { type DevicesState, theRecognisedOne } from '../viewmodels/devices.model.ts';
 import { PlugGlyph } from './Glyphs.tsx';
@@ -57,9 +56,7 @@ export function ConnectView({ devices, onBack, onPickByHand, onContinue }: Conne
           ? (
             <>
               <Title order={2} className={classes.title}>Found your {recognised.model?.name}</Title>
-              <Text className={classes.lead}>
-                Nothing was read off it beyond which model it is, and nothing was opened to find that out.
-              </Text>
+              <Text className={classes.lead}>Giving it a name next.</Text>
             </>
             )
           : (
@@ -79,9 +76,7 @@ export function ConnectView({ devices, onBack, onPickByHand, onContinue }: Conne
           </ol>
         )}
 
-        {devices.status === 'failed' && (
-          <Note title="Could not look at the USB bus">{devices.error}</Note>
-        )}
+        {devices.status === 'failed' && <Note title="Could not look">{devices.error}</Note>}
 
         {devices.status !== 'failed' && attached.length === 0 && (
           <p className={classes.searching}>
@@ -92,15 +87,13 @@ export function ConnectView({ devices, onBack, onPickByHand, onContinue }: Conne
 
         {attached.length > 1 && (
           <Note title={`${attached.length} remotes are attached`}>
-            Nothing here can tell which one you meant, so leave the one you want plugged in and unplug
-            the rest. Seen: {attached.map(describeBriefly).join(', ')}.
+            Leave the one you want plugged in and unplug the rest.
           </Note>
         )}
 
         {attached.length === 1 && recognised === undefined && (
           <Note title="Attached, but not recognised">
-            {describeBriefly(attached[0] as AttachedRemote)} is a Harmony, and nothing here names that
-            model. You can still add it by picking the closest model by hand.
+            Pick your model from the list and carry on.
           </Note>
         )}
 
@@ -118,13 +111,6 @@ export function ConnectView({ devices, onBack, onPickByHand, onContinue }: Conne
       </div>
     </section>
   );
-}
-
-/** What we can say about a remote without opening it, which on a bad day is a number. */
-function describeBriefly(device: AttachedRemote): string {
-  if (device.model !== undefined) return device.model.name;
-  const skin = device.skin === undefined ? 'no skin' : `skin ${device.skin}`;
-  return `${device.product ?? 'A remote'} (${skin}, product 0x${device.productId.toString(16)})`;
 }
 
 /**

@@ -135,7 +135,6 @@ export function App() {
             <ExistingRemotesView
               model={screen.model}
               matches={matches}
-              fromDevice={screen.origin === 'device'}
               onOpen={(name) => nav.go({ at: 'remote', name })}
               onAddAnother={() =>
                 nav.go({

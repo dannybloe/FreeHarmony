@@ -63,30 +63,22 @@ export function NameRemoteView({
       </div>
 
       <div className={classes.panel}>
-        {origin === 'device' && (
-          // Said before the name, because it is the reason the name is already filled in. It also draws
-          // the line this round deliberately stops at: the model was read, and nothing else was.
-          <Text className={classes.origin}>
-            Read from the remote you plugged in{model.skin === undefined ? '' : `, which reports skin ${model.skin}`}
-          </Text>
-        )}
+        {/* Said before the name, because it is the reason the name is already filled in. The skin was
+            here too and it is gone: a number nobody outside this project can act on. */}
+        {origin === 'device' && <Text className={classes.origin}>Plugged in now</Text>}
 
         <Title order={2} className={classes.title}>Logitech {model.name}</Title>
         {described.soldAs.length > 1 && (
           <Text className={classes.also}>also sold as the {described.soldAs.slice(1).join(', ')}</Text>
         )}
 
-        {described.facts.length === 0
-          ? (
-            <Text className={classes.also}>
-              Nothing else is recorded about this model here, which does not stop you keeping it.
-            </Text>
-            )
-          : (
-            <ul className={classes.facts}>
-              {described.facts.map((fact) => <li key={fact}>{fact}</li>)}
-            </ul>
-            )}
+        {/* No facts is simply no row. It used to say so in a sentence, which told somebody about this
+            application's tables rather than about their remote. */}
+        {described.facts.length > 0 && (
+          <ul className={classes.facts}>
+            {described.facts.map((fact) => <li key={fact}>{fact}</li>)}
+          </ul>
+        )}
 
         {productId !== undefined && (
           <HardwarePanel
@@ -121,12 +113,14 @@ export function NameRemoteView({
  *
  * **A button and never automatic**, which is the whole design of this panel. Asking opens the device,
  * and a page that claimed an irreplaceable remote because somebody navigated to it would be a page that
- * decides for them. So the read is one press, it says what it will do before it does it, and what it
- * stored is on screen before Add is pressed rather than after.
+ * decides for them. So the read is one press, and what it found is on screen before Add rather than
+ * after.
  *
- * It says "this model and this firmware" rather than "this remote", because that is all the answer is:
- * two Harmony Ones running one firmware answer identically, and there is nothing in the reply that
- * separates them.
+ * **It explains none of that on screen**, which is a standing rule for this application and was said
+ * for the third time on 21 August 2026: it is not a diagnostic tool. The button says what it does, the
+ * three values are the answer, and what a version block can and cannot establish lives in `CLAUDE.md`
+ * and in the tests where it can be checked. The software type went with that pass as well, since
+ * "application" beside a firmware version is a word only this project can act on.
  */
 function HardwarePanel({ state, onRead }: {
   readonly state: HardwareState;
@@ -136,38 +130,20 @@ function HardwarePanel({ state, onRead }: {
     const read = state.reading;
     return (
       <div className={classes.hardware}>
-        <Text className={classes.hardwareTitle}>What the remote answered</Text>
         <dl className={classes.readings}>
           <dt>Firmware</dt><dd>{read.firmware}</dd>
           <dt>Board</dt><dd>{read.hardware}</dd>
           <dt>Flash</dt><dd>{read.flash}</dd>
-          <dt>Running</dt><dd>{read.softwareTypeName ?? `software type ${read.softwareType}`}</dd>
         </dl>
-        <Text className={classes.hardwareNote}>
-          Kept with this remote as a note of what was read today. It describes the model and its
-          firmware, not this particular remote: two of the same answer the same.
-        </Text>
       </div>
     );
   }
 
   return (
     <div className={classes.hardware}>
-      <Text className={classes.hardwareTitle}>Read its firmware version?</Text>
-      <Text className={classes.hardwareNote}>
-        This opens the remote over USB and asks it one question. Nothing is written and no
-        configuration is read.
-      </Text>
-      {state.status === 'failed' && (
-        <Text className={classes.hardwareError}>{state.error}</Text>
-      )}
-      <Button
-        size="xs"
-        variant="default"
-        loading={state.status === 'reading'}
-        onClick={onRead}
-      >
-        {state.status === 'failed' ? 'Try again' : 'Read it'}
+      {state.status === 'failed' && <Text className={classes.hardwareError}>{state.error}</Text>}
+      <Button size="xs" variant="default" loading={state.status === 'reading'} onClick={onRead}>
+        {state.status === 'failed' ? 'Try again' : 'Read its firmware version'}
       </Button>
     </div>
   );

@@ -64,14 +64,9 @@
   background: linear-gradient(180deg, rgb(255 255 255 / 0%), var(--mantine-color-gray-0));
   border-radius: var(--mantine-radius-md);
 
-  // The drawing itself, coloured from here rather than in the library: every fill in it reads a custom
-  // property, so one rule dresses the whole remote and there is no second drawing to keep in step.
-  --case-fill: var(--mantine-color-gray-1);
-  --case-stroke: var(--mantine-color-gray-6);
-  --recess-fill: var(--mantine-color-gray-2);
-  --key-fill: var(--mantine-color-white);
-  --key-stroke: var(--mantine-color-gray-4);
-  --key-text: var(--mantine-color-gray-7);
+  // The drawing itself, coloured from `m.drawing-palette` rather than from here, because a palette
+  // written per stylesheet is a derivation with three copies and they drifted within a day.
+  @include m.drawing-palette;
 }
 
 .title {

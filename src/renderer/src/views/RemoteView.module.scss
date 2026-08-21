@@ -23,12 +23,7 @@
   backdrop-filter: blur(m.rem(12));
   box-shadow: 0 m.rem(14) m.rem(34) rgb(16 24 40 / 6%);
 
-  --case-fill: var(--mantine-color-gray-1);
-  --case-stroke: var(--mantine-color-gray-6);
-  --recess-fill: var(--mantine-color-gray-2);
-  --key-fill: var(--mantine-color-white);
-  --key-stroke: var(--mantine-color-gray-5);
-  --key-text: var(--mantine-color-gray-8);
+  @include m.drawing-palette;
 }
 
 .panel {

@@ -79,3 +79,28 @@ $breakpoint-xl: 88em;
   color: var(--mantine-color-indigo-4);
   background: var(--mantine-color-indigo-0);
 }
+
+/// The colours a silhouette is drawn in, in one place.
+///
+/// Every fill and stroke in a drawing reads a custom property, so a palette is eight declarations and
+/// the library holds none of them. **This was three copies for a day** and they drifted the moment one
+/// of them was touched: darkening the tiles left the naming page and the remote page a shade paler,
+/// which reads as two different products rather than as one at two sizes. The same rule as the opcode
+/// table next door, and the same reason a mixin rather than a `composes:` line, per `stand-in` above.
+///
+/// **Darker than the first version.** A Harmony One read as half transparent beside a Harmony 600 in
+/// the same row, and the drawings turned out to be identical in weight: same stroke width, same
+/// colours, same layers, all normalised to one case height. What differs is the **face**. The One has
+/// 44 keys where the 600 has 54, its keys are larger and further apart, and its screen is a big pale
+/// rectangle across the top. So the row was not inconsistent, it was showing two products that
+/// genuinely differ in density, and equalising that would mean drawing one of them wrong. Raising the
+/// contrast for all of them is what makes the lightest face read: measured afterwards over the three
+/// drawings in one row, the darkest pixel is the same in each and the means sit within 8 of 255.
+@mixin drawing-palette {
+  --case-fill: var(--mantine-color-gray-3);
+  --case-stroke: var(--mantine-color-gray-7);
+  --recess-fill: var(--mantine-color-gray-5);
+  --key-fill: var(--mantine-color-white);
+  --key-stroke: var(--mantine-color-gray-6);
+  --key-text: var(--mantine-color-gray-7);
+}
