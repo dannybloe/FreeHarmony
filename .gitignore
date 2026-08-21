@@ -39,3 +39,6 @@ release/
 # Build and tool noise.
 .DS_Store
 *.log
+
+# Screenshots of the window, which are for looking at rather than for keeping.
+var/

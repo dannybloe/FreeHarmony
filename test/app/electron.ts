@@ -19,6 +19,12 @@
  * The application is launched with its store pointed at a temporary directory. A test that creates and
  * deletes entries in somebody's real documents folder is not an acceptable test, and `storeRoot()` has
  * the seam for exactly this caller.
+ *
+ * **It lives under `test` and it has a second caller**, `bin/screenshot.ts`, which draws the window to
+ * a PNG so that a change to the interface can be looked at rather than described. That is deliberate
+ * rather than untidy: the driver exists for the tests, and a screenshot tool with its own copy of the
+ * launching, the port parsing and the protocol plumbing would be the second copy this project's oldest
+ * rule is about.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -68,15 +74,33 @@ export interface RunningApplication {
   close(): Promise<void>;
 }
 
+export interface LaunchOptions {
+  /**
+   * Put the window on the screen. Off by default, so a test run does not steal focus.
+   *
+   * `bin/screenshot.ts` turns it on, and has to: a window that is never shown is never composited, so
+   * `Page.captureScreenshot` has nothing to photograph. Measured rather than assumed, since a hidden
+   * window answers every other protocol command perfectly well.
+   */
+  readonly visible?: boolean;
+  /** Where the store goes. A temporary directory by default, removed on `close`. */
+  readonly store?: string;
+}
+
 /** Launches the built application and waits until its page has finished loading. */
-export async function launch(): Promise<RunningApplication> {
-  const store = await mkdtemp(join(tmpdir(), 'freeharmony-app-'));
+export async function launch(options: LaunchOptions = {}): Promise<RunningApplication> {
+  const own = options.store === undefined;
+  const store = options.store ?? await mkdtemp(join(tmpdir(), 'freeharmony-app-'));
   const child = spawn(await electronBinary(), ['.', '--remote-debugging-port=0'], {
     cwd: REPO,
     // Two things are added to the environment and nothing else about this run differs from what
-    // somebody starting the application would get: where the store goes, and that no window appears.
+    // somebody starting the application would get: where the store goes, and whether a window appears.
     // See `STAY_HIDDEN` in `src/main/index.ts` for why that is the nearest thing to headless here.
-    env: { ...process.env, FREEHARMONY_STORE: store, FREEHARMONY_HIDDEN: '1' },
+    env: {
+      ...process.env,
+      FREEHARMONY_STORE: store,
+      ...(options.visible === true ? {} : { FREEHARMONY_HIDDEN: '1' }),
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -93,12 +117,12 @@ export async function launch(): Promise<RunningApplication> {
     const port = await until(() => /DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//.exec(said)?.[1],
                              () => `no developer tools port appeared. The application said:\n${said}`);
     const socket = await connectToThePage(port, () => said);
-    const application = talkTo(socket, store, child);
+    const application = talkTo(socket, store, child, own);
     await application.reload();
     return application;
   } catch (failure) {
     await stop(child);
-    await rm(store, { recursive: true, force: true });
+    if (own) await rm(store, { recursive: true, force: true });
     throw failure;
   }
 }
@@ -147,7 +171,8 @@ interface Answer {
 }
 
 /** Wraps an open socket as the small interface a test wants: evaluate, and close. */
-function talkTo(socket: WebSocket, store: string, child: ChildProcess): RunningApplication {
+function talkTo(socket: WebSocket, store: string, child: ChildProcess,
+                storeIsOurs: boolean): RunningApplication {
   let nextId = 1;
   const waiting = new Map<number, (answer: Answer) => void>();
   socket.addEventListener('message', (event: MessageEvent) => {
@@ -204,7 +229,7 @@ function talkTo(socket: WebSocket, store: string, child: ChildProcess): RunningA
     async close(): Promise<void> {
       socket.close();
       await stop(child);
-      await rm(store, { recursive: true, force: true });
+      if (storeIsOurs) await rm(store, { recursive: true, force: true });
     },
   };
 }
