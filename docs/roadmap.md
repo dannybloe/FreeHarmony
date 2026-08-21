@@ -147,10 +147,16 @@ application.
   application. Which technology that is has not actually been chosen, and choosing it properly is part
   of step 1 rather than an assumption underneath it.
 * **A shared collection of devices.** Whether it exists, who runs it, how a contribution is checked.
-  One thing about it is already settled: every device definition records where it came from, because
-  that is impossible to work out afterwards and the answer decides whether it may be shared at all.
+  Two things about it are settled. Every device definition records where it came from, because that
+  is impossible to work out afterwards and the answer decides whether it may be shared at all. And
+  the definitions live in their **own place beside the documents** rather than inside them, decided
+  on 21 August 2026: the same television belongs to three remotes and should be described once.
+  `docs/data-model.md` carries what follows from that.
 * **Editing the pictures on the screen.** The icons and images a remote shows can be read and drawn
-  today. Changing them is a separate problem and nobody has asked for it yet.
+  today. Changing them is a separate problem and nobody has asked for it yet, but it is **not** the
+  hard problem it looked like: the format stores most pictures uncompressed, so drawing our own
+  costs a couple of percent of space and no new format work. Reproducing Logitech's own encoder is
+  the thing that cannot be done, and replacing its artwork means never needing to.
 
 ## What could change the order
 

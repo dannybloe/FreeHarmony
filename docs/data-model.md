@@ -92,6 +92,17 @@ image it did not change through unchanged, which is what it should do anyway.
 The screen programs sit in between because the instructions are framed and the pixels and strings
 they carry are not.
 
+**And the artwork turns out not to be a constraint at all**, decided on 21 August 2026 on the
+grounds that Logitech's own icons are dated and worth replacing rather than preserving. Writing a
+picture needs no new reading: the format has a **raw** kind, which is a header and the pixels, and
+that is already what most pictures are. Measured on the two configurations above: 65 of a Harmony
+One's 98 pictures and 15 of a Harmony 600's 16 are stored raw, and emitting every one of them raw
+would grow the whole picture bank by **2%** on the One and by nothing measurable on the 600. So
+"generate our own bitmaps" costs a couple of percent of space and no format work, which is a much
+cheaper answer than reproducing an encoder we cannot reproduce anyway. What stays true is that a
+picture we did not make is carried through untouched, since re-encoding it is the thing that cannot
+be done.
+
 ## What this means for version 1
 
 Version 1 is read only, so none of this is written to a remote yet. What it does mean is that the
@@ -104,13 +115,25 @@ The one thing to carry per field is whether it can be written back. That belongs
 not in the emitter, because otherwise we build interface for something that can never reach a
 remote.
 
-## Open, and it is the fork that shapes the model
+## Decided: the device library sits outside the document
 
-**Does a device definition belong to the document, or to a shared library?**
+Settled on 21 August 2026. A device definition lives in a library beside the documents, and a
+document refers to it. The same television is in three documents and is defined once; it is the unit
+a shared collection would exchange, and the unit provenance is recorded on, so it is the same object
+in both directions.
 
-The same television will be in three documents. It is also exactly the unit a community database
-would exchange, and the unit provenance is recorded on. Put it in the document and every document is
-self contained and duplicates its neighbours. Put it in a library and a document holds references,
-and there is a second place where things live.
+Three things follow, and they are work rather than objections.
 
-Not decided. Everything above works either way, which is why it can wait for one conversation.
+* **A document is no longer self contained.** Anything that moves a document to another machine has
+  to take the definitions it refers to, or say what is missing. A folder that cannot be opened
+  because a device is unknown would be the failure to avoid.
+* **A definition can change under a document.** Teaching a better code for a television improves
+  every document that uses it, which is the point, and it also means a document can stop matching
+  the configuration that was built from it. Which of the two a change is has to be a stated answer
+  and not an accident.
+* **Provenance lives in the library**, one flag per definition, and only something learned from
+  hardware may ever be shared. That was already decided; putting the definitions in one place is
+  what makes it enforceable rather than a convention.
+
+Whether that library is ever shared with other people is still open, and nothing above depends on
+it.
