@@ -15,9 +15,9 @@
  * process that may never need one. Measured before this file was written: the binding does load under
  * Electron 43's own ABI with no rebuild, which was the one real risk in this step.
  */
-import { listHarmony, skinId } from '@harmony/usb';
+import { HarmonyRemote, listHarmony, openHarmony, readVersion, skinId } from '@harmony/usb';
 
-import type { AttachedRemote } from '../shared/devices.ts';
+import type { AttachedRemote, HardwareReading } from '../shared/devices.ts';
 import { remoteModelForSkin } from '../shared/models.ts';
 
 /**
@@ -47,4 +47,50 @@ export async function attachedRemotes(): Promise<AttachedRemote[]> {
       ...(device.product === undefined ? {} : { product: device.product }),
     };
   });
+}
+
+/**
+ * Ask one remote what it is, which means **opening it**, and that is what separates this from
+ * everything above.
+ *
+ * `listHarmony` looks at a bus. This claims a device: it takes it away from anything else on the
+ * machine and starts a conversation with hardware nobody can replace. It is the first thing FreeHarmony
+ * does that has that weight, so five things about it are deliberate rather than incidental:
+ *
+ *   - **One command, `GET_VERSION`.** No flash is read, nothing is written, and no other command is
+ *     sent. In particular no `READ_FLASH`, so the odd length read that hangs a remote is not in reach.
+ *   - **It is never called on a timer.** The Connect page polls enumeration; this runs when somebody
+ *     asks for it, once. A page that opened a device every second would be a page nobody should ship.
+ *   - **The handle is closed in a `finally`**, so a reply that never arrives still leaves the device to
+ *     whatever asks next. A clean read only session does not strand a remote, measured three times out
+ *     of three on the bench next door, and leaving a handle open is the one way to spoil that.
+ *   - **Nothing is sent at the end.** USB mode's exit is gated on a command state variable being zero
+ *     and a completed command clears its own, so a session that simply stops leaves the gate open.
+ *   - **The reading is the library's**, `readVersion`, not ours. Interpreting a reply is
+ *     `@harmony/usb`'s job and a second reading of those fields here is the split the two repositories
+ *     exist to prevent.
+ *
+ * The selector is a product id, which names a **model** and not a unit, so this refuses rather than
+ * guesses when two of one model are attached: `openHarmony` will not choose between them. The caller is
+ * expected to have established that there is one, which `theRecognisedOne` does.
+ */
+export async function readHardware(productId: number, now: () => string): Promise<HardwareReading> {
+  const remote = new HarmonyRemote(await openHarmony({ productId }));
+  try {
+    const reading = readVersion(await remote.getVersion());
+    return {
+      readAt: now(),
+      firmware: reading.firmware,
+      hardware: reading.hardware,
+      flash: reading.flash,
+      architecture: reading.architecture,
+      skin: reading.skin,
+      softwareType: reading.softwareType,
+      ...(reading.softwareTypeName === undefined ? {} : { softwareTypeName: reading.softwareTypeName }),
+      platform: reading.platform,
+      versionBlock: Array.from(reading.fields, (byte) => byte.toString(16).padStart(2, '0')).join(''),
+    };
+  } finally {
+    await remote.close();
+  }
 }

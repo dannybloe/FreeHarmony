@@ -8,7 +8,7 @@
  * remotes attached at once, and a remote whose model nothing in the tables names.
  */
 import type { DevicesApi } from '../../../shared/api.ts';
-import type { AttachedRemote } from '../../../shared/devices.ts';
+import type { AttachedRemote, HardwareReading } from '../../../shared/devices.ts';
 import type { RemoteModel } from '../../../shared/remote.ts';
 
 export interface DevicesState {
@@ -52,6 +52,13 @@ export function arrivalKey(device: AttachedRemote): string {
 export interface Advance {
   /** The model to move on with. Absent means stay where you are. */
   readonly model?: RemoteModel;
+  /**
+   * Which attached remote it was, so the naming page can offer to ask that one.
+   *
+   * A product id names a model, so this is a selector and not an identity, and it is only ever set
+   * alongside a model, which means exactly one remote of that model was attached.
+   */
+  readonly productId?: number;
   /** The arrival to consider dealt with from now on. `undefined` forgets, which is what re-arms it. */
   readonly remember: string | undefined;
 }
@@ -75,7 +82,9 @@ export function advanceOn(state: DevicesState, advancedFor: string | undefined):
   const only = theRecognisedOne(state);
   if (only?.model === undefined) return { remember: undefined };
   const key = arrivalKey(only);
-  return key === advancedFor ? { remember: key } : { model: only.model, remember: key };
+  return key === advancedFor
+    ? { remember: key }
+    : { model: only.model, productId: only.productId, remember: key };
 }
 
 export class DevicesModel {
@@ -122,4 +131,62 @@ export class DevicesModel {
 
 function same(before: readonly AttachedRemote[], after: readonly AttachedRemote[]): boolean {
   return JSON.stringify(before) === JSON.stringify(after);
+}
+
+/**
+ * The state of asking one remote what it is, which is a state because **it opens the device**.
+ *
+ * A separate model from `DevicesModel` on purpose, and the reason is the difference between the two
+ * questions. Enumeration is cheap, repeatable and polled; this claims hardware, runs once, when somebody
+ * presses something, and can fail in ways worth putting on a screen. Folding it into a model that polls
+ * would put a device open on a timer one careless edit away.
+ */
+export interface HardwareState {
+  readonly status: 'unread' | 'reading' | 'read' | 'failed';
+  readonly reading?: HardwareReading;
+  /** Why it did not work, in the library's own words, kept until the next attempt. */
+  readonly error?: string;
+}
+
+export const UNREAD: HardwareState = { status: 'unread' };
+
+export class HardwareModel {
+  #state: HardwareState = UNREAD;
+  readonly #api: DevicesApi;
+  readonly #changed: (state: HardwareState) => void;
+
+  constructor(api: DevicesApi, changed: (state: HardwareState) => void) {
+    this.#api = api;
+    this.#changed = changed;
+  }
+
+  get state(): HardwareState {
+    return this.#state;
+  }
+
+  /**
+   * Open the remote, ask it one question, and keep the answer.
+   *
+   * **It refuses to run while it is already running**, which is not defensive tidiness: two of these in
+   * flight at once would be two attempts to claim one irreplaceable device, and the second would fail in
+   * a way that says nothing useful about the first. A button that can be pressed twice is the ordinary
+   * way that happens.
+   */
+  async read(productId: number): Promise<void> {
+    if (this.#state.status === 'reading') return;
+    this.#emit({ status: 'reading' });
+    try {
+      this.#emit({ status: 'read', reading: await this.#api.readHardware(productId) });
+    } catch (error) {
+      this.#emit({
+        status: 'failed',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  #emit(state: HardwareState): void {
+    this.#state = state;
+    this.#changed(state);
+  }
 }

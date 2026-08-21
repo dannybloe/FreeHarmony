@@ -18,6 +18,8 @@
  * That is how a document application works: the identity of a document is where it is.
  */
 
+import type { HardwareReading } from './devices.ts';
+
 /** How a remote's stored configuration came to exist, which decides what may be done with it. */
 export type Provenance =
   /** Added by reading a real remote over USB. The only kind that could be written back. */
@@ -76,6 +78,19 @@ export interface StoredRemote {
    * else's equipment. The interface draws such a document as a tile with a name and no picture.
    */
   readonly model?: RemoteModel;
+  /**
+   * What the remote said about itself the last time it was asked, or absent because it never was.
+   *
+   * Provenance rather than state, which is why it sits beside `model` and not inside it: a model is
+   * what kind of remote this document is about, and this is what one particular remote answered on one
+   * particular day. Firmware gets updated, so it carries its own timestamp and is never treated as
+   * current.
+   *
+   * **It does not identify a unit and must never be used as though it did.** Two Harmony Ones running
+   * the same firmware produce byte identical readings. `isSameModel` is the comparison this application
+   * has, and it compares models.
+   */
+  readonly hardware?: HardwareReading;
   /** ISO 8601, both, so ordering never depends on a file system timestamp. */
   readonly createdAt: string;
   readonly updatedAt: string;

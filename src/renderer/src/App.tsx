@@ -13,11 +13,13 @@
 import { Text } from '@mantine/core';
 import { useEffect, useRef, useState } from 'react';
 
+import type { HardwareReading } from '../../shared/devices.ts';
 import type { RemoteModel } from '../../shared/remote.ts';
 import { asRemoteModel, isSameModel } from './catalogue.ts';
 import { advanceOn } from './viewmodels/devices.model.ts';
 import { afterChoosingModel } from './viewmodels/navigation.model.ts';
 import { useDevices } from './viewmodels/useDevices.ts';
+import { useHardware } from './viewmodels/useHardware.ts';
 import { useNavigation } from './viewmodels/useNavigation.ts';
 import { useRemotes } from './viewmodels/useRemotes.ts';
 import { AddRemoteView } from './views/AddRemoteView.tsx';
@@ -39,9 +41,12 @@ export function App() {
   // mounting the hook conditionally is what keeps the polling in one place and stops it running for the
   // life of the window: nothing else in this application asks about hardware.
   const devices = useDevices(screen.at === 'connect');
+  // The one thing here that opens a remote. It is a model of its own rather than part of `useDevices`,
+  // because that one polls and this one must never be on a timer.
+  const hardware = useHardware();
 
-  const add = async (name: string, model: RemoteModel) => {
-    await remotes.create(name, model);
+  const add = async (name: string, model: RemoteModel, read?: HardwareReading) => {
+    await remotes.create(name, model, read);
     setPicked(undefined);
     nav.home();
   };
@@ -66,7 +71,7 @@ export function App() {
     const next = advanceOn(devices, advancedFor.current);
     advancedFor.current = next.remember;
     if (next.model !== undefined) {
-      nav.go(afterChoosingModel(remotes.remotes, next.model, 'device'));
+      nav.go(afterChoosingModel(remotes.remotes, next.model, 'device', next.productId));
     }
   }, [screen.at, devices, nav, remotes.remotes]);
 
@@ -100,8 +105,11 @@ export function App() {
           <NameRemoteView
             model={screen.model}
             origin={screen.origin}
+            productId={screen.productId}
+            hardware={hardware}
             busy={remotes.busy}
-            onAdd={(name, model) => void add(name, model)}
+            onReadHardware={(productId) => void hardware.read(productId)}
+            onAdd={(name, model, read) => void add(name, model, read)}
           />
         )}
 
@@ -115,8 +123,11 @@ export function App() {
               <NameRemoteView
                 model={screen.model}
                 origin={screen.origin}
+                productId={screen.productId}
+                hardware={hardware}
                 busy={remotes.busy}
-                onAdd={(name, model) => void add(name, model)}
+                onReadHardware={(productId) => void hardware.read(productId)}
+                onAdd={(name, model, read) => void add(name, model, read)}
               />
             );
           }
@@ -127,7 +138,10 @@ export function App() {
               fromDevice={screen.origin === 'device'}
               onOpen={(name) => nav.go({ at: 'remote', name })}
               onAddAnother={() =>
-                nav.go({ at: 'name', model: screen.model, origin: screen.origin })}
+                nav.go({
+                  at: 'name', model: screen.model, origin: screen.origin,
+                  ...(screen.productId === undefined ? {} : { productId: screen.productId }),
+                })}
             />
           );
         })()}
@@ -137,7 +151,8 @@ export function App() {
             devices={devices}
             onBack={() => nav.back()}
             onPickByHand={() => nav.go({ at: 'add' })}
-            onContinue={(model) => nav.go(afterChoosingModel(remotes.remotes, model, 'device'))}
+            onContinue={(model, productId) =>
+              nav.go(afterChoosingModel(remotes.remotes, model, 'device', productId))}
           />
         )}
 

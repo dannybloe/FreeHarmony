@@ -230,3 +230,52 @@ test('removing a remote takes everything under it, and removing a missing one is
   await assert.rejects(() => store.remove('gone'), /there is no remote called gone/);
   await cleanup();
 });
+
+test('what the hardware answered lands in the manifest, and only when it was asked', async () => {
+  /**
+   * The reading is **provenance** rather than state, so it goes in the manifest beside the model and it
+   * is never invented. A document created without a read has no key at all, which is the honest shape:
+   * absent means nobody asked, where a zeroed reading would mean a remote answered zeroes.
+   *
+   * The literal is a Harmony One's real answer, from `docs/usb-protocol.md`, so what is asserted to
+   * survive a round trip through JSON is a shape a remote actually produces.
+   */
+  const { root, store, cleanup } = await freshStore();
+  const hardware = {
+    readAt: '2026-08-21T12:00:00.000Z',
+    firmware: '3.4', hardware: '0.5', flash: '1F:C8',
+    architecture: 12, skin: 54, softwareType: 0, softwareTypeName: 'application', platform: 12,
+    versionBlock: '3405c81fc0360c3434163434',
+  };
+
+  await store.create('Woonkamer', { name: 'Harmony One', skin: 54 }, hardware);
+  const manifest = JSON.parse(await readFile(join(root, 'Woonkamer', 'remote.json'), 'utf8')) as
+    Record<string, unknown>;
+  assert.deepEqual(Object.keys(manifest).sort(),
+                   ['createdAt', 'hardware', 'model', 'provenance', 'updatedAt']);
+  assert.deepEqual(manifest['hardware'], hardware, 'every field survives, the whole block included');
+
+  await store.create('Zolder', { name: 'Harmony One', skin: 54 });
+  const unasked = JSON.parse(await readFile(join(root, 'Zolder', 'remote.json'), 'utf8')) as
+    Record<string, unknown>;
+  assert.ok(!('hardware' in unasked), `nobody asked, so nothing is claimed: ${JSON.stringify(unasked)}`);
+  await cleanup();
+});
+
+test('a duplicate carries the reading, since it is a note about a model and not about a unit', async () => {
+  // The consequence of the naming. If this were an identity, copying it onto a second document would be
+  // a copy claiming to be the same remote, and the copy would have to drop it. It is a description of a
+  // model and its firmware, two of which answer identically, so it travels with the copy like the model.
+  const { store, cleanup } = await freshStore();
+  const hardware = {
+    readAt: '2026-08-21T12:00:00.000Z',
+    firmware: '3.4', hardware: '0.5', flash: '1F:C8',
+    architecture: 12, skin: 54, softwareType: 0, platform: 12,
+    versionBlock: '3405c81fc0360c3434163434',
+  };
+  await store.create('Woonkamer', { name: 'Harmony One', skin: 54 }, hardware);
+
+  const copy = await store.duplicate('Woonkamer');
+  assert.deepEqual(copy.hardware, hardware);
+  await cleanup();
+});

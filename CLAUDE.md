@@ -341,9 +341,38 @@ skin 54, the same face. The regional suffix is folded now, in `fullName`, and th
 document so nothing is lost. The catalogue had been folding it separately for a tile's caption, which is
 the copy that should have made it obvious a day earlier.
 
-**What comes next needs opening a device**, and that is a separate step on purpose: `getVersion()` gives
-the firmware version, the board and the flash id, and it is the first time FreeHarmony would claim
-hardware that cannot be replaced.
+## Opening a remote, which happens once and only when asked
+
+Built on 21 August 2026. `readHardware` in `src/main/devices.ts` is **the only thing in this application
+that claims a device**, and everything about it is arranged around that:
+
+* **One command, `GET_VERSION`.** No flash is read, nothing is written, no other command is sent. In
+  particular no `READ_FLASH`, so the odd length read that hangs a remote is not in reach.
+* **Never on a timer.** The Connect page polls enumeration; this runs when somebody presses a button,
+  once. `HardwareModel` refuses a second read while one is in flight, because a button can be pressed
+  twice and two opens of one irreplaceable remote is not a race worth having.
+* **The handle is closed in a `finally`**, so a reply that never arrives still leaves the device to
+  whatever asks next. A clean read only session does not strand a remote, measured three times out of
+  three next door, and a leaked handle is the one way to spoil that.
+* **Nothing is sent at the end.** USB mode's exit is gated on a command state variable being zero and a
+  completed command clears its own.
+* **The reading is `readVersion`'s**, in `@harmony/usb`. Interpreting a reply is the library's job.
+
+**It is offered and never automatic**, on the naming page, with a panel that says what pressing it will
+do before it does it and shows what was read before Add is pressed rather than after. A page that claimed
+a remote because somebody navigated to it would be deciding for them.
+
+**The result is called `hardware` and not `identity`, and the naming is the point.** Every field in it is
+a property of the model or of the firmware installed on it, so two Harmony Ones running one firmware
+produce byte identical readings. It is provenance with its own timestamp, it travels with a duplicate
+like the model does, and nothing may treat it as saying which unit a document belongs to.
+
+`versionBlock` carries every byte as hex, so the six fields with a reading are never the only record of
+what the remote said.
+
+**The in-window test skips rather than passes when a remote is attached.** With an empty bus it asserts
+something real, that `openHarmony`'s refusal reaches the page word for word; with a remote on the cable
+it stands down, because `pnpm check` must not claim hardware on its way past.
 
 ## Never write to a remote
 

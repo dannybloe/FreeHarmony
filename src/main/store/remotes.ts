@@ -29,6 +29,7 @@ import { createHash } from 'node:crypto';
 import { cp, mkdir, readdir, readFile, rename as renamePath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import type { HardwareReading } from '../../shared/devices.ts';
 import type { BaseConfiguration, RemoteDocument, RemoteModel, StoredRemote } from '../../shared/remote.ts';
 import { byMostRecentlyChanged, cleanName, whyNameIsRefused } from '../../shared/remote.ts';
 
@@ -85,14 +86,18 @@ export class RemoteStore {
   }
 
   /**
-   * A new document, with the model it is about where the caller knows it.
+   * A new document, with the model it is about and what the hardware said, where the caller knows them.
    *
-   * The model is optional at this seam and not further in: a document written before the field
-   * existed has none, and the store's job is to keep what it was told rather than to invent one. The
-   * spread is what `exactOptionalPropertyTypes` demands, and it is the right shape anyway, since an
+   * Both are optional at this seam and not further in: a document written before either field existed
+   * has neither, and the store's job is to keep what it was told rather than to invent anything. The
+   * spreads are what `exactOptionalPropertyTypes` demands, and they are the right shape anyway, since an
    * absent key and a key holding `undefined` should not both end up in somebody's JSON.
+   *
+   * `hardware` is a reading of a remote and **not** a claim that the document belongs to that unit. Two
+   * Harmony Ones running one firmware answer identically, so nothing may treat it as an identity.
    */
-  async create(name: string, model?: RemoteModel): Promise<RemoteDocument> {
+  async create(name: string, model?: RemoteModel,
+               hardware?: HardwareReading): Promise<RemoteDocument> {
     const wanted = this.#acceptable(name);
     if (await this.#exists(wanted)) throw new Error(`there is already a remote called ${wanted}`);
 
@@ -100,6 +105,7 @@ export class RemoteStore {
     const stored: StoredRemote = {
       provenance: 'created-empty', createdAt: at, updatedAt: at,
       ...(model === undefined ? {} : { model }),
+      ...(hardware === undefined ? {} : { hardware }),
     };
     await mkdir(join(this.folderOf(wanted), BACKUPS), { recursive: true });
     await this.#write(wanted, stored);

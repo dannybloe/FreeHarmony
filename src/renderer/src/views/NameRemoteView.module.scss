@@ -96,3 +96,54 @@
 .unknown {
   @include m.stand-in(150, 60);
 }
+
+// The one place in this application that offers to open a remote, so it is set apart from the rest of
+// the panel rather than sitting among the fields: it is a different kind of act from typing a name.
+.hardware {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: m.rem(6);
+  margin-block-start: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--mantine-color-gray-2);
+  background: rgb(255 255 255 / 60%);
+}
+
+.hardwareTitle {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  color: var(--mantine-color-gray-8);
+}
+
+.hardwareNote {
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.5;
+  color: var(--mantine-color-gray-6);
+}
+
+.hardwareError {
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.5;
+  color: var(--mantine-color-red-7);
+}
+
+// A definition list, because that is what it is: four labelled values the remote stated.
+.readings {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: m.rem(2) var(--mantine-spacing-sm);
+  margin: m.rem(2) 0 0;
+  font-size: var(--mantine-font-size-xs);
+
+  dt {
+    color: var(--mantine-color-gray-6);
+  }
+
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--mantine-color-gray-9);
+  }
+}

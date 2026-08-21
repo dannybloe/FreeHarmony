@@ -97,3 +97,35 @@ test('the empty answer is the bus being empty and not the binding failing to loa
   assert.equal(seen.ok, true, `the bridge itself refused: ${seen.message}`);
   assert.equal(typeof seen.devices, 'number');
 });
+
+test('asking a remote what it is refuses when there is none, and opens nothing by accident', async (t) => {
+  /**
+   * The one method in this application that **opens a device**, tested the only way a routine run may.
+   *
+   * The shape is deliberate. With an empty bus this asserts something real: that the refusal comes from
+   * `openHarmony` in the library and reaches the page word for word, so a page has something to show and
+   * this repository is not carrying its own copy of the message. With a remote attached it **skips**,
+   * because a test that runs `pnpm check` must not claim an irreplaceable remote on its way past, which
+   * is the rule the sibling repository enforces with its own hardware flag.
+   *
+   * Skipping rather than passing, so the reason is on screen instead of implied by a green line.
+   */
+  const app = await launch();
+  t.after(() => app.close());
+
+  const attached = await app.evaluate<AttachedRemote[]>(
+    `window['${API_NAMESPACE}'].devices.attached()`);
+  if (attached.length > 0) {
+    t.skip(`a remote is attached and this test will not open it: ${attached.length} on the bus`);
+    return;
+  }
+
+  const refusal = await app.evaluate<{ error: string; message: string } | null>(
+    `(async () => {
+       try { await window['${API_NAMESPACE}'].devices.readHardware(0xc121); return null; }
+       catch (thrown) { return { error: thrown.constructor.name, message: thrown.message }; }
+     })()`);
+
+  assert.deepEqual(refusal, { error: 'Error', message: 'no Harmony remote found on the USB bus' },
+                   'the library refuses, and its words arrive in the page');
+});

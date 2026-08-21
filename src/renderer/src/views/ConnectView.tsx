@@ -39,7 +39,7 @@ interface ConnectViewProps {
    * second visit: come back from the naming page and the remote is still plugged in, and the shell
    * deliberately does not advance again, because that would make the back arrow do nothing.
    */
-  readonly onContinue: (model: RemoteModel) => void;
+  readonly onContinue: (model: RemoteModel, productId: number) => void;
 }
 
 export function ConnectView({ devices, onBack, onPickByHand, onContinue }: ConnectViewProps) {
@@ -110,7 +110,9 @@ export function ConnectView({ devices, onBack, onPickByHand, onContinue }: Conne
             <Button size="sm" onClick={onPickByHand}>Pick a model...</Button>
           )}
           {recognised?.model !== undefined && (
-            <Button size="sm" onClick={() => onContinue(recognised.model!)}>Name it...</Button>
+            <Button size="sm" onClick={() => onContinue(recognised.model!, recognised.productId)}>
+              Name it...
+            </Button>
           )}
         </div>
       </div>

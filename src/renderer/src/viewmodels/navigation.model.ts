@@ -31,7 +31,20 @@ export type Screen =
    * picture, and `RemoteModel` is exactly that. It is also plain data, which is the rule this module
    * holds to, and it is exactly what the document will be created with.
    */
-  | { readonly at: 'name'; readonly model: RemoteModel; readonly origin: ModelOrigin }
+  | {
+      readonly at: 'name';
+      readonly model: RemoteModel;
+      readonly origin: ModelOrigin;
+      /**
+       * Which attached remote this came from, on the device route only.
+       *
+       * Carried because the naming page offers to ask that remote what it is, and asking means opening
+       * it, so the page has to know which one. A product id names a **model**, so this is not an
+       * identity and cannot be used as one; it is a selector, and it is only ever set when exactly one
+       * remote of that model was attached, which is what `theRecognisedOne` establishes.
+       */
+      readonly productId?: number;
+    }
   /**
    * You already have one of these. Open it, or add another?
    *
@@ -39,7 +52,12 @@ export type Screen =
    * carries a name: the list is on disk and the matches are derived from it every time it is drawn, so
    * a document renamed or deleted while this page is open cannot leave a stale entry on it.
    */
-  | { readonly at: 'existing'; readonly model: RemoteModel; readonly origin: ModelOrigin }
+  | {
+      readonly at: 'existing';
+      readonly model: RemoteModel;
+      readonly origin: ModelOrigin;
+      readonly productId?: number;
+    }
   | { readonly at: 'connect' }
   | { readonly at: 'remote'; readonly name: string };
 
@@ -67,9 +85,11 @@ export function afterChoosingModel(
   remotes: readonly RemoteDocument[],
   model: RemoteModel,
   origin: ModelOrigin,
+  productId?: number,
 ): Screen {
   const already = remotes.some((remote) => isSameModel(remote.model, model));
-  return already ? { at: 'existing', model, origin } : { at: 'name', model, origin };
+  if (already) return { at: 'existing', model, origin, ...(productId === undefined ? {} : { productId }) };
+  return { at: 'name', model, origin, ...(productId === undefined ? {} : { productId }) };
 }
 
 export class NavigationModel {

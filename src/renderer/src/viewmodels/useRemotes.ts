@@ -7,12 +7,13 @@
  */
 import { useEffect, useState } from 'react';
 
+import type { HardwareReading } from '../../../shared/devices.ts';
 import type { RemoteModel } from '../../../shared/remote.ts';
 import { api } from '../api.ts';
 import { EMPTY, RemotesModel, type RemotesState } from './remotes.model.ts';
 
 export interface Remotes extends RemotesState {
-  readonly create: (name: string, model?: RemoteModel) => Promise<void>;
+  readonly create: (name: string, model?: RemoteModel, hardware?: HardwareReading) => Promise<void>;
   readonly rename: (name: string, to: string) => Promise<void>;
   readonly duplicate: (name: string) => Promise<void>;
   readonly remove: (name: string) => Promise<void>;
@@ -28,7 +29,7 @@ export function useRemotes(): Remotes {
 
   return {
     ...state,
-    create: (name, wanted) => model.create(name, wanted),
+    create: (name, wanted, hardware) => model.create(name, wanted, hardware),
     rename: (name, to) => model.rename(name, to),
     duplicate: (name) => model.duplicate(name),
     remove: (name) => model.remove(name),

@@ -34,8 +34,8 @@ async function call<N extends Namespace>(
 const api: FreeHarmonyApi = {
   remotes: {
     list: () => call('remotes', 'list') as ReturnType<FreeHarmonyApi['remotes']['list']>,
-    create: (name, model) =>
-      call('remotes', 'create', name, model) as ReturnType<FreeHarmonyApi['remotes']['create']>,
+    create: (name, model, hardware) =>
+      call('remotes', 'create', name, model, hardware) as ReturnType<FreeHarmonyApi['remotes']['create']>,
     rename: (name, to) =>
       call('remotes', 'rename', name, to) as ReturnType<FreeHarmonyApi['remotes']['rename']>,
     duplicate: (name) =>
@@ -44,6 +44,9 @@ const api: FreeHarmonyApi = {
   },
   devices: {
     attached: () => call('devices', 'attached') as ReturnType<FreeHarmonyApi['devices']['attached']>,
+    readHardware: (productId) =>
+      call('devices', 'readHardware', productId) as
+        ReturnType<FreeHarmonyApi['devices']['readHardware']>,
   },
 };
 

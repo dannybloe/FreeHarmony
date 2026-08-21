@@ -18,13 +18,17 @@ import assert from 'node:assert/strict';
 
 import type { DevicesApi } from '../src/shared/api.ts';
 import type { AttachedRemote } from '../src/shared/devices.ts';
+import type { HardwareReading } from '../src/shared/devices.ts';
 import {
   advanceOn,
   arrivalKey,
   DevicesModel,
+  HardwareModel,
   NOTHING_YET,
   theRecognisedOne,
+  UNREAD,
   type DevicesState,
+  type HardwareState,
 } from '../src/renderer/src/viewmodels/devices.model.ts';
 
 const A_HARMONY_ONE: AttachedRemote = {
@@ -43,6 +47,11 @@ function fakeApi(...rounds: AttachedRemote[][]) {
   const calls: number[] = [];
 
   const api: DevicesApi = {
+    // Refused rather than stubbed, because every test in this half is about **enumeration** and an
+    // accidental call would be a test opening a device. `hardwareApi` below is the one that answers.
+    readHardware: async () => {
+      throw new Error('this fake does not open devices');
+    },
     attached: async () => {
       calls.push(at);
       if (failWith !== undefined) {
@@ -226,4 +235,119 @@ test('a remote whose model nothing names never advances, however long it sits th
   const answer = advanceOn(unnamed, undefined);
   assert.equal(answer.model, undefined);
   assert.equal(answer.remember, undefined, 'nothing was acted on, so there is nothing to remember');
+});
+
+/** A Harmony One's real answer, from `docs/usb-protocol.md`, so the shape here is a measured one. */
+const A_REAL_READING: HardwareReading = {
+  readAt: '2026-08-21T12:00:00.000Z',
+  firmware: '3.4', hardware: '0.5', flash: '1F:C8',
+  architecture: 12, skin: 54, softwareType: 0, softwareTypeName: 'application', platform: 12,
+  versionBlock: '3405c81fc0360c3434163434',
+};
+
+/** An API whose one interesting method opens a device, or refuses to, on command. */
+function hardwareApi(answer: HardwareReading | Error) {
+  const asked: number[] = [];
+  const api: DevicesApi = {
+    attached: async () => [],
+    readHardware: async (productId) => {
+      asked.push(productId);
+      if (answer instanceof Error) throw answer;
+      return answer;
+    },
+  };
+  return { api, asked };
+}
+
+function recordHardware(api: DevicesApi) {
+  const seen: HardwareState[] = [];
+  const model = new HardwareModel(api, (state) => seen.push(state));
+  return { model, seen };
+}
+
+test('nothing is read until somebody asks, which is the point of a separate model', () => {
+  // Constructing it opens nothing and asks nothing. That is worth an assertion because the alternative,
+  // reading on construction, is what a hook would do by accident and it would claim a device on
+  // navigation.
+  const { api, asked } = hardwareApi(A_REAL_READING);
+  const { model, seen } = recordHardware(api);
+
+  assert.deepEqual(model.state, UNREAD);
+  assert.deepEqual(asked, [], 'no device was opened');
+  assert.deepEqual(seen, [], 'and nothing was announced');
+});
+
+test('a read goes reading and then read, in that order, and keeps the answer', async () => {
+  const { api, asked } = hardwareApi(A_REAL_READING);
+  const { model, seen } = recordHardware(api);
+
+  await model.read(0xc121);
+
+  assert.deepEqual(seen.map((s) => s.status), ['reading', 'read']);
+  assert.deepEqual(asked, [0xc121], 'and it asked the remote it was told to');
+  assert.deepEqual(model.state.reading, A_REAL_READING);
+});
+
+test('a refusal is kept in the library own words rather than replaced with ours', async () => {
+  // The messages worth showing come from `openHarmony`: no remote found, or a selector matching more
+  // than one. Restating them here would be a second copy of a rule that lives next door.
+  const { api } = hardwareApi(new Error('no Harmony remote found on the USB bus'));
+  const { model } = recordHardware(api);
+
+  await model.read(0xc121);
+
+  assert.equal(model.state.status, 'failed');
+  assert.equal(model.state.error, 'no Harmony remote found on the USB bus');
+  assert.equal(model.state.reading, undefined, 'and nothing is left claiming to be a reading');
+});
+
+test('a second read while one is in flight is refused, because it would claim the same device twice', async () => {
+  /**
+   * The guard with hardware behind it. A button can be pressed twice, and two opens of one irreplaceable
+   * remote is not a race worth having: the second fails in a way that says nothing about the first.
+   *
+   * **The mechanism is that `reading` is set synchronously, before the first await**, so the second call
+   * sees it and returns. The assertion in the middle is that mechanism rather than a formality, and it is
+   * what a first version of this test papered over with a promise it never awaited.
+   */
+  const { api, asked } = hardwareApi(A_REAL_READING);
+  const { model } = recordHardware(api);
+
+  const first = model.read(0xc121);
+  assert.equal(model.state.status, 'reading', 'armed before the first await, which is what makes it work');
+  const second = model.read(0xc121);
+  await Promise.all([first, second]);
+
+  assert.deepEqual(asked, [0xc121], 'one open, not two');
+  assert.equal(model.state.status, 'read');
+});
+
+test('a failed read can be tried again, so one bad cable is not the end of it', async () => {
+  const { api, asked } = hardwareApi(new Error('no Harmony remote found on the USB bus'));
+  const { model } = recordHardware(api);
+
+  await model.read(0xc121);
+  await model.read(0xc121);
+
+  assert.deepEqual(asked, [0xc121, 0xc121], 'the guard is about being in flight, not about having failed');
+});
+
+test('the model to advance on carries which remote it was, so the read can be offered', () => {
+  // Without the product id the naming page cannot offer to ask anything, because opening a device needs
+  // a selector. It travels with the model rather than being looked up again, which would be a second
+  // answer to a question already settled.
+  const answered: DevicesState = { status: 'answered', attached: [A_HARMONY_ONE] };
+  const next = advanceOn(answered, undefined);
+
+  assert.equal(next.productId, A_HARMONY_ONE.productId);
+  assert.deepEqual(next.model, A_HARMONY_ONE.model);
+});
+
+test('nothing to advance on carries no product id either, so nothing can be opened from it', () => {
+  const empty: DevicesState = { status: 'answered', attached: [] };
+  const crowded: DevicesState = { status: 'answered', attached: [A_HARMONY_ONE, A_HARMONY_600] };
+
+  assert.equal(advanceOn(empty, undefined).productId, undefined);
+  assert.equal(advanceOn(crowded, undefined).productId, undefined,
+               'and two attached is the case that matters, since a product id would name a model');
 });

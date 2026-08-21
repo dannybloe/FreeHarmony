@@ -10,7 +10,7 @@
  * with methods, a class instance or a parsed container cannot pass, and that constraint is a feature:
  * the configuration bytes stay in the main process because they cannot casually leave it.
  */
-import type { AttachedRemote } from './devices.ts';
+import type { AttachedRemote, HardwareReading } from './devices.ts';
 import type { RemoteDocument, RemoteModel } from './remote.ts';
 
 /** The name the API is published under on `window`. One constant, so no side spells it by hand. */
@@ -29,7 +29,7 @@ export interface RemotesApi {
    * The model is optional because it genuinely is: it is known when somebody picked one from the list
    * or when a remote reported it, and unknown otherwise, and an unknown model is drawn as a name.
    */
-  create(name: string, model?: RemoteModel): Promise<RemoteDocument>;
+  create(name: string, model?: RemoteModel, hardware?: HardwareReading): Promise<RemoteDocument>;
   /** Moves the folder. Refused if the new name is unusable or already taken. */
   rename(name: string, to: string): Promise<RemoteDocument>;
   /** A complete copy under the first free name, base configuration included. */
@@ -49,6 +49,17 @@ export interface RemotesApi {
 export interface DevicesApi {
   /** Every attached Harmony, by enumeration. Opens nothing and can be called as often as wanted. */
   attached(): Promise<AttachedRemote[]>;
+  /**
+   * Ask one remote what it is, which **opens the device**.
+   *
+   * The only method on either half of this API that claims hardware, which is why it is worth a
+   * paragraph in an interface. One `GET_VERSION` is sent and nothing else, the handle is closed
+   * whatever happens, and it is called when somebody asks rather than on a timer.
+   *
+   * The selector is a product id, so it names a model. It refuses rather than guesses when two of one
+   * model are attached, because `openHarmony` will not choose between them.
+   */
+  readHardware(productId: number): Promise<HardwareReading>;
 }
 
 export interface FreeHarmonyApi {
@@ -64,7 +75,7 @@ export type Namespace = keyof FreeHarmonyApi;
  * forgetting to register it is a typecheck failure instead of a channel that answers nothing.
  */
 export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove'] as const;
-export const DEVICE_METHODS = ['attached'] as const;
+export const DEVICE_METHODS = ['attached', 'readHardware'] as const;
 
 export type RemoteMethod = (typeof REMOTE_METHODS)[number];
 export type DeviceMethod = (typeof DEVICE_METHODS)[number];
