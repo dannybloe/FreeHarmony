@@ -1,0 +1,50 @@
+// The top bar. Every value is a theme variable, so the primary colour is decided in `theme.ts` and
+// nowhere else.
+
+@use '../mantine' as m;
+
+.bar {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-xl);
+  border-block-end: 1px solid var(--mantine-color-gray-2);
+  // A wash rather than a flat panel, so the page has a top edge without a heavy rule. Both stops are
+  // theme colours, which keeps it in step if the primary colour ever changes.
+  background: linear-gradient(110deg, var(--mantine-color-indigo-0) 0%, var(--mantine-color-white) 55%);
+}
+
+// The pulse train sits behind the bar's contents, bleeding off the right edge. It is decoration, faint
+// enough to read as texture, and it is never the thing anybody looks at.
+.pulse {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: m.rem(-40);
+  translate: 0 -50%;
+  width: m.rem(420);
+  height: m.rem(44);
+  color: var(--mantine-color-indigo-6);
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+.mark {
+  color: var(--mantine-color-indigo-6);
+}
+
+.wordmark {
+  font-size: m.rem(21);
+  font-weight: 650;
+  letter-spacing: m.rem(-0.3);
+  line-height: 1.2;
+  color: var(--mantine-color-indigo-8);
+}
+
+// The second half in the text colour, so the name reads as one word with an accent rather than as two
+// words in two colours.
+.wordmarkTail {
+  color: var(--mantine-color-gray-9);
+}
