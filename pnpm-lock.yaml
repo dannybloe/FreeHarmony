@@ -14,6 +14,9 @@ importers:
       '@harmony/silhouettes':
         specifier: link:../harmony-explorations/packages/silhouettes
         version: link:../harmony-explorations/packages/silhouettes
+      '@harmony/usb':
+        specifier: link:../harmony-explorations/packages/usb
+        version: link:../harmony-explorations/packages/usb
       '@mantine/core':
         specifier: 9.5.1
         version: 9.5.1(@mantine/hooks@9.5.1(react@19.2.8))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

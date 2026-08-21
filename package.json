@@ -28,6 +28,7 @@
   "dependencies": {
     "@harmony/codec": "link:../harmony-explorations/packages/codec",
     "@harmony/silhouettes": "link:../harmony-explorations/packages/silhouettes",
+    "@harmony/usb": "link:../harmony-explorations/packages/usb",
     "@mantine/core": "9.5.1",
     "@mantine/hooks": "9.5.1",
     "react": "19.2.8",

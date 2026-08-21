@@ -35,6 +35,7 @@ import { dirname, join, sep } from 'node:path';
 
 import * as codec from '@harmony/codec';
 import * as silhouettes from '@harmony/silhouettes';
+import * as usbModels from '@harmony/usb/models';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -65,7 +66,10 @@ function sourcesUnder(directory: string): string[] {
  * library gains or loses an export, and then they move in a diff somebody reads.
  */
 const LIBRARIES: readonly {
+  /** What the import says. For a subpath this is not the package name, which is why `pkg` exists. */
   name: string;
+  /** The package as `package.json` declares it. Only stated where it differs from the import. */
+  pkg?: string;
   module: Record<string, unknown>;
   exports: number;
   entry: readonly string[];
@@ -84,6 +88,17 @@ const LIBRARIES: readonly {
     exports: 30,
     entry: ['packages', 'silhouettes', 'src', 'index.ts'],
     functions: ['toSvg', 'keyOf', 'keyOfScan'],
+  },
+  {
+    // A **subpath** rather than the package, and that is the point of the row. `@harmony/usb` proper
+    // pulls in the HID transport and its native binding; this entry is a table that imports nothing,
+    // so a window can hold Logitech's own model figures without holding a device driver.
+    name: '@harmony/usb/models',
+    pkg: '@harmony/usb',
+    module: usbModels as unknown as Record<string, unknown>,
+    exports: 6,
+    entry: ['packages', 'usb', 'src', 'models.ts'],
+    functions: ['modelForSkin', 'architectureHasTouch'],
   },
 ];
 
@@ -145,8 +160,11 @@ test('the dependency is spelled the way this project\'s package manager needs', 
   };
   assert.ok(manifest.packageManager?.startsWith('pnpm@'), 'the package manager has to be stated');
   for (const library of LIBRARIES) {
-    const spec = manifest.dependencies?.[library.name];
-    assert.ok(spec?.startsWith('link:'), `${library.name}: pnpm needs link:, not ${spec}`);
+    // The declared package, which is what a manifest holds. A subpath import is not a dependency of
+    // its own, and asking for one is how this check first failed when the third row arrived.
+    const declared = library.pkg ?? library.name;
+    const spec = manifest.dependencies?.[declared];
+    assert.ok(spec?.startsWith('link:'), `${declared}: pnpm needs link:, not ${spec}`);
     assert.ok(spec?.includes('harmony-explorations'), 'the sibling checkout is load bearing');
   }
 });

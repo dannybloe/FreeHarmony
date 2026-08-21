@@ -11,12 +11,18 @@
  * `viewmodels` cannot be confused when reading a file list. A model here is a piece of hardware; a
  * view model is a screen's state.
  *
- * What it deliberately does **not** hold: how many devices or activities a model supports. Those are
- * in `@harmony/usb`, which brings a native binding with it, and they arrive when USB does. The facts
- * below are the ones the drawings already carry, and every one of them is measured rather than
- * tabulated.
+ * Two libraries: `@harmony/silhouettes` for the drawing and the geometry, and `@harmony/usb/models`
+ * for what Logitech's own tables say about a skin. The second is a **subpath** on purpose: it is a
+ * table with no imports at all, where the package's main entry pulls in the HID transport and its
+ * native binding, which a window cannot load and does not need.
+ *
+ * **A tile is a face, not a model number.** A skin names a keypad, which is the reading in the model
+ * table's own comments, so one drawing serves every skin whose keypad it matches and a tile lists the
+ * model numbers those skins are sold as. Where that is one number it says one; where two model numbers
+ * share a face it says both, which is the whole reason this is computed rather than written out.
  */
 import { DETAIL, MODELS, type Model } from '@harmony/silhouettes';
+import { modelForSkin } from '@harmony/usb/models';
 
 import type { RemoteModel } from '../../shared/remote.ts';
 
@@ -42,11 +48,43 @@ export interface SupportedModel {
    * read over USB later states its own.
    */
   readonly skin: number;
+  /**
+   * Every model number this one face is sold as, in the order the skins are claimed.
+   *
+   * Usually one. Two where Logitech sold the same keypad under two numbers, which is what a chooser
+   * has to show: somebody holding the other number should recognise their own remote instead of
+   * concluding it is unsupported.
+   *
+   * **A regional variant is not a second number.** Skins 54 and 59 are the Harmony One and the
+   * European Harmony One, which differ in nothing on the face and in nothing printed on it, so the
+   * suffix is Logitech's internal marker and adding it to a tile would be noise.
+   */
+  readonly soldAs: readonly string[];
   readonly drawing: Model;
   readonly facts: readonly string[];
 }
 
-/** What a drawing says about the hardware, in words. Measured, all of it. */
+/** The model numbers a drawing's skins are sold as, with regional duplicates folded together. */
+function soldAs(drawing: Model): string[] {
+  const seen: string[] = [];
+  for (const skin of drawing.skins) {
+    const named = modelForSkin(skin)?.name;
+    if (named === undefined) continue;
+    const withoutRegion = named.replace(/ EMEA$/, '');
+    if (!seen.includes(withoutRegion)) seen.push(withoutRegion);
+  }
+  return seen;
+}
+
+/**
+ * What is worth saying about a model, in words.
+ *
+ * The first two are **measured**, off the drawing: the buttons were counted and the display was read
+ * out of a config. The device ceiling is **Logitech's own figure** and no config in the corpus next
+ * door reaches any stated maximum, so it is phrased as "up to" and never as a promise. That
+ * distinction is not decoration: one of these numbers can be checked and the other has to be taken
+ * on somebody's word.
+ */
 function factsAbout(drawing: Model): string[] {
   const facts = [`${drawing.keys.length} buttons`];
   const screen = drawing.screen;
@@ -54,6 +92,8 @@ function factsAbout(drawing: Model): string[] {
     const size = `${screen.pixels.width} by ${screen.pixels.height} pixels`;
     facts.push(screen.touch ? `a touch screen of ${size}` : `a screen of ${size}`);
   }
+  const stated = modelForSkin(drawing.skins[0]);
+  if (stated !== undefined) facts.push(`up to ${stated.maxDevices} devices`);
   return facts;
 }
 
@@ -69,6 +109,7 @@ export const SUPPORTED: readonly SupportedModel[] = Object.values(MODELS)
     id: drawing.id,
     name: drawing.label,
     skin: drawing.skins[0] ?? 0,
+    soldAs: soldAs(drawing),
     drawing,
     facts: factsAbout(drawing),
   }))

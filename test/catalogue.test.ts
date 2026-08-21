@@ -8,6 +8,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { modelForSkin } from '@harmony/usb/models';
+
 import { asRemoteModel, drawingFor, SUPPORTED } from '../src/renderer/src/catalogue.ts';
 
 test('three models are offered, oldest hardware first, each with its own facts', () => {
@@ -22,11 +24,60 @@ test('three models are offered, oldest hardware first, each with its own facts',
   }
 });
 
-test('the facts are measured off the drawing, and say what the hardware has', () => {
+test('the facts are measured off the drawing, and the vendor figure says it is a ceiling', () => {
   const one = SUPPORTED.find((m) => m.name === 'Harmony One');
-  assert.deepEqual(one?.facts, ['44 buttons', 'a touch screen of 176 by 220 pixels']);
+  assert.deepEqual(one?.facts,
+                   ['44 buttons', 'a touch screen of 176 by 220 pixels', 'up to 15 devices']);
   const six = SUPPORTED.find((m) => m.name === 'Harmony 600');
-  assert.deepEqual(six?.facts, ['54 buttons', 'a screen of 128 by 128 pixels']);
+  assert.deepEqual(six?.facts, ['54 buttons', 'a screen of 128 by 128 pixels', 'up to 5 devices']);
+});
+
+test('a tile is a face, and it names every model number that face is sold as', () => {
+  // Danny's rule for the chooser: two model numbers that are the same remote share one tile with both
+  // numbers on it, rather than getting a picture each. Today every one of the three answers with a
+  // single number, and that is the honest answer rather than a missing feature: the only aliases in
+  // Logitech's table for these three are regional twins of the same name.
+  assert.deepEqual(SUPPORTED.map((m) => m.soldAs), [['525'], ['One'], ['600']]);
+});
+
+test('a regional twin folds into its own number instead of appearing beside it', () => {
+  // Skins 54 and 59 are the Harmony One and the European Harmony One. Both are claimed by one
+  // drawing, because the faces are identical, and the suffix is Logitech's internal marker rather
+  // than anything printed on a remote. So a chooser must not offer "One" and "One EMEA" as if they
+  // were a choice. The 600 pair, skins 71 and 73, is the same case and is what makes this a rule.
+  const one = SUPPORTED.find((m) => m.name === 'Harmony One');
+  assert.deepEqual(one?.drawing.skins, [54, 59], 'the drawing claims both, which is the input');
+  assert.deepEqual(one?.soldAs, ['One'], 'and the tile says one number, which is the output');
+});
+
+test('every skin one drawing claims agrees about the hardware the face shows', () => {
+  /**
+   * Danny's rule as a check: if the keys differ they are different remotes and must not be merged.
+   *
+   * The table has no button count, so this cannot verify the keys themselves. What it can verify is
+   * everything a face would betray anyway, and it is a **necessary** condition rather than a
+   * sufficient one: a drawing claiming two skins that disagree about the display, the touch panel or
+   * the architecture is claiming something the drawing itself contradicts. Stated as such, because a
+   * check that reads stronger than it is is worse than none.
+   */
+  for (const model of SUPPORTED) {
+    const claimed = model.drawing.skins.map((skin) => modelForSkin(skin)).filter((m) => m !== undefined);
+    assert.equal(claimed.length, model.drawing.skins.length, `${model.name}: a skin has no record`);
+    const shapes = claimed.map((m) => `${m.architecture}/${m.panel}/${m.touch}/${m.favourites ?? 0}`);
+    assert.equal(new Set(shapes).size, 1,
+                 `${model.name} claims skins that disagree about the hardware: ${shapes.join(' vs ')}`);
+  }
+});
+
+test('the 525 does not share its tile with the 520, because that is a different face', () => {
+  // The case that made the rule worth writing down. Logitech's table pairs skin 22, the 525, with
+  // skin 18, the 520, and that pair differs by exactly the four teletext keys. This drawing has
+  // those four, so claiming the 520 here would draw a remote nobody owns. The drawing claims one
+  // skin and the tile therefore says one number, which is the correct answer and not a gap.
+  const h525 = SUPPORTED.find((m) => m.name === 'Harmony 525');
+  assert.deepEqual(h525?.drawing.skins, [22]);
+  assert.deepEqual(h525?.soldAs, ['525']);
+  assert.ok(!(h525?.soldAs.includes('520') ?? true), 'the 520 is a different keypad');
 });
 
 test('a skin finds its drawing, and a regional twin finds the same one', () => {
