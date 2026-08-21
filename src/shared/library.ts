@@ -211,3 +211,37 @@ export interface DeviceDefinition {
   /** ISO 8601, so ordering never depends on a file system timestamp. */
   readonly addedAt: string;
 }
+
+/**
+ * What a set of commands sends, as one string, so two appliances can be compared without knowing what
+ * either of them is.
+ *
+ * **The pulses and not the names**, which is the whole idea: a name is what somebody typed and the
+ * pulses are what the appliance hears, so two descriptions of one television agree here even when one is
+ * called `TV` and the other `Woonkamer`. The carrier is in it because two appliances can share a frame
+ * value and differ in carrier, and the order is fixed by sorting rather than by whatever order the
+ * commands happen to sit in.
+ *
+ * Empty for an appliance with no commands, and callers have to treat that as an **absence** rather than
+ * as a match: every appliance nobody has taught anything to agrees with every other one.
+ *
+ * It is in the shared model rather than beside the store because two things need it and this project's
+ * oldest rule is about exactly that. It decides which appliances the library reports as probably one,
+ * and it decides what a definition imported from a configuration is **called**, so that reading the
+ * same remote twice does not describe its television twice.
+ */
+export function fingerprintOf(commands: readonly DeviceCommand[]): string {
+  return commands
+    .map((command) => signatureOf(command.signal))
+    .filter((one) => one !== '')
+    .sort()
+    .join('|');
+}
+
+/** One signal, as a string. Separate only because the empty case has to be recognisable. */
+export function signatureOf(signal: InfraredSignal): string {
+  const blocks = [signal.once, signal.held, signal.tail]
+    .map((block) => (block ?? []).map((pulse) => `${pulse.mark ? '+' : '-'}${pulse.us}`).join(','))
+    .join(';');
+  return blocks === ';;' ? '' : `${signal.carrierHz ?? 0}:${blocks}`;
+}

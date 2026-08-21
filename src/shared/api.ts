@@ -10,7 +10,7 @@
  * with methods, a class instance or a parsed container cannot pass, and that constraint is a feature:
  * the configuration bytes stay in the main process because they cannot casually leave it.
  */
-import type { RemoteContent } from './content.ts';
+import type { DocumentContents, FiledDefinitions, RemoteContent } from './content.ts';
 import type { AttachedRemote, HardwareReading } from './devices.ts';
 import type { DeviceDefinition } from './library.ts';
 import type { RemoteDocument, RemoteModel } from './remote.ts';
@@ -38,6 +38,45 @@ export interface RemotesApi {
   duplicate(name: string): Promise<RemoteDocument>;
   /** Removes the entry and everything under it, including its backups. */
   remove(name: string): Promise<void>;
+
+  /**
+   * Read the whole configuration off an attached remote and keep it against this document.
+   *
+   * **The second method on this API that claims hardware and by far the heavier one**: it holds an
+   * irreplaceable device for the length of a transfer of up to 1.6 MB. Reads only, one device, closed
+   * afterwards, and never on a timer. It either files a configuration that passed both of the read's
+   * own checks or it throws and the document keeps what it had.
+   *
+   * The product id names a model rather than a unit, so it refuses when two of one model are attached.
+   *
+   * **The bytes do not come back.** They stay in the main process, where the library can read them,
+   * and what the window gets is the document's manifest. `contents` is how it sees inside.
+   *
+   * It also puts a description of every appliance the remote drives into the shared library, because
+   * that is what an import is. Nothing already there is overwritten, so reading the same remote again
+   * costs nothing and changes nothing.
+   */
+  readConfiguration(name: string, productId: number): Promise<RemoteDocument>;
+
+  /**
+   * What this document holds: devices, activities and what every button sends.
+   *
+   * `undefined` when there is no configuration behind it, which is the ordinary state of a document
+   * somebody created by picking a model from a list. Not an empty model: a screen showing a remote
+   * with no devices would be a statement about somebody's equipment, and there is nothing to state.
+   *
+   * `missing` names the appliances the content refers to that this machine's library has not got.
+   */
+  contents(name: string): Promise<DocumentContents | undefined>;
+
+  /**
+   * Put a definition in the shared library for every appliance this document drives.
+   *
+   * Separate from `contents` because it writes to a collection every other document sees, and nothing
+   * should do that as a side effect of looking. An identifier already there is **kept, never
+   * overwritten**: it may have been corrected by hand since, and a re-import would discard that.
+   */
+  fileDefinitions(name: string): Promise<FiledDefinitions>;
 }
 
 /**
@@ -109,7 +148,8 @@ export type Namespace = keyof FreeHarmonyApi;
  * The channel names, derived from the interfaces rather than written out, so that adding a method and
  * forgetting to register it is a typecheck failure instead of a channel that answers nothing.
  */
-export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove'] as const;
+export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove',
+                               'readConfiguration', 'contents', 'fileDefinitions'] as const;
 export const DEVICE_METHODS = ['attached', 'readHardware'] as const;
 export const LIBRARY_METHODS =
   ['list', 'get', 'put', 'remove', 'missingFor', 'likelyDuplicates'] as const;

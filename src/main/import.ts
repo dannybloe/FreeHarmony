@@ -15,6 +15,8 @@
  * with a plausible default, because a default here is a claim about somebody else's equipment.
  * `writeback.ts` says the same thing per field, and `docs/data-model.md` argues it.
  */
+import { createHash } from 'node:crypto';
+
 import {
   activities as readActivities,
   deviceVariables,
@@ -41,6 +43,7 @@ import type {
 import type {
   DeviceCommand, DeviceDefinition, DeviceProperty, InfraredSignal, Pulse, StateTransition,
 } from '../shared/library.ts';
+import { fingerprintOf } from '../shared/library.ts';
 
 /** A mark rather than a space, in a duration word. The library states the bit; this names it once. */
 const MARK = 0x8000;
@@ -147,6 +150,37 @@ export function propertiesOf(c: Container): { properties: Map<number, DeviceProp
 }
 
 /** Every device the configuration drives, as a provisional definition plus its use on this remote. */
+/**
+ * What a definition read out of a configuration is called.
+ *
+ * **Named after what it sends**, which makes the identifier a property of the appliance rather than of
+ * the read that found it. Three things follow, and all three are the behaviour wanted:
+ *
+ *   - reading the same remote a second time produces the same identifiers, so a routine re-read leaves
+ *     the library exactly as it was instead of describing everything twice
+ *   - the same television on two remotes is **one** definition, which is the whole reason the library
+ *     sits outside the document
+ *   - a rename of the document changes nothing, because a person's own words are not in it
+ *
+ * The identifier used to be built from the caller's prefix, and passing the document's name produced
+ * `living room-device-0`, which the store refuses because an identifier is a file name. That was a
+ * symptom rather than the fault: deriving a definition's permanent identity from something somebody can
+ * rename was wrong however it was spelled.
+ *
+ * **An appliance with no commands falls back to the prefix**, and it has to: every appliance nobody has
+ * taught anything to sends the same nothing, so they would all be one definition. There is no content to
+ * address, so the read that found it is the honest identity. The caller supplies a prefix that is itself
+ * a usable identifier, which for a document means its configuration's digest and not its name.
+ *
+ * Hashed rather than used whole because a fingerprint is thousands of characters and this becomes a file
+ * name. Sixteen hexadecimal characters is 64 bits, against a library of a few dozen appliances.
+ */
+function identifierFor(commands: readonly DeviceCommand[], fallback: string): string {
+  const fingerprint = fingerprintOf(commands);
+  if (fingerprint === '') return fallback;
+  return `appliance-${createHash('sha256').update(fingerprint).digest('hex').slice(0, 16)}`;
+}
+
 function devicesOf(c: Container, now: string, idPrefix: string): {
   uses: DeviceUse[];
   definitions: DeviceDefinition[];
@@ -156,12 +190,12 @@ function devicesOf(c: Container, now: string, idPrefix: string): {
   const uses: DeviceUse[] = [];
   const definitions: DeviceDefinition[] = [];
   (irGroups(c) ?? []).forEach((group, slot) => {
-    const id = `${idPrefix}-device-${slot}`;
     const commands: DeviceCommand[] = group.addresses.map((record, index) => ({
       slot: index,
       signal: signalOf(c, record),
       origin: 'from-a-configuration' as const,
     }));
+    const id = identifierFor(commands, `${idPrefix}-device-${slot}`);
     definitions.push({
       id,
       // No manufacturer and no model, per `Imported.definitions`. `other` rather than a guess from the

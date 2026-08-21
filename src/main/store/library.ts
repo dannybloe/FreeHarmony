@@ -25,7 +25,8 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { RemoteContent } from '../../shared/content.ts';
-import type { DeviceDefinition, InfraredSignal } from '../../shared/library.ts';
+import type { DeviceDefinition } from '../../shared/library.ts';
+import { fingerprintOf } from '../../shared/library.ts';
 
 /** Characters an identifier may hold, which is what makes it safe as a file name on every platform. */
 const IDENTIFIER = /^[a-z0-9][a-z0-9_-]{0,119}$/;
@@ -125,7 +126,7 @@ export class DeviceLibrary {
   async likelyDuplicates(): Promise<DeviceDefinition[][]> {
     const groups = new Map<string, DeviceDefinition[]>();
     for (const one of await this.list()) {
-      const key = fingerprint(one);
+      const key = fingerprintOf(one.commands);
       // An appliance with no commands at all fingerprints as the empty string, and every one of those
       // would group with every other. That is not a duplicate, it is an absence, so they are left out.
       if (key === '') continue;
@@ -149,29 +150,4 @@ export class DeviceLibrary {
       return undefined;
     }
   }
-}
-
-/**
- * What an appliance sends, as one string, so that two definitions can be compared without knowing
- * what either of them is.
- *
- * **The pulses and not the names**, which is the whole idea: a name is what somebody typed and the
- * pulses are what the appliance hears, so two definitions of one television agree here even when one is
- * called `TV` and the other `Woonkamer`. The carrier is in it because two appliances can share a frame
- * value and differ in carrier, and the order is fixed by sorting rather than by the order the commands
- * happen to sit in.
- */
-function fingerprint(definition: DeviceDefinition): string {
-  return definition.commands
-    .map((command) => signature(command.signal))
-    .filter((one) => one !== '')
-    .sort()
-    .join('|');
-}
-
-function signature(signal: InfraredSignal): string {
-  const blocks = [signal.once, signal.held, signal.tail]
-    .map((block) => (block ?? []).map((pulse) => `${pulse.mark ? '+' : '-'}${pulse.us}`).join(','))
-    .join(';');
-  return blocks === ';;' ? '' : `${signal.carrierHz ?? 0}:${blocks}`;
 }

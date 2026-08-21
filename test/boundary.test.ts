@@ -34,6 +34,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, sep } from 'node:path';
 
 import * as codec from '@harmony/codec';
+import * as corpusRead from '@harmony/corpus/read';
 import * as lab from '@harmony/lab';
 import * as silhouettes from '@harmony/silhouettes';
 import * as usb from '@harmony/usb';
@@ -121,6 +122,22 @@ const LIBRARIES: readonly {
     exports: 10,
     entry: ['packages', 'lab', 'src', 'index.ts'],
     functions: ['load', 'require_', 'skipUnless'],
+  },
+  {
+    // The second **subpath** row, and it is here because of what it deliberately leaves out. The package
+    // is called `@harmony/corpus` and its other half files reads into the private lab directory; this
+    // entry is the read itself, which imports `@harmony/codec` and nothing else. So the product gets the
+    // transfer, with its end marker check and its trailer checksum, and not a route into anybody's lab.
+    //
+    // Those two checks are the reason a read is not reimplemented here. A transfer can insert bytes
+    // without losing any, so a configuration that parses is not a configuration that arrived, and the
+    // pair of checks that catch that were learned next door at some expense.
+    name: '@harmony/corpus/read',
+    pkg: '@harmony/corpus',
+    module: corpusRead as unknown as Record<string, unknown>,
+    exports: 8,
+    entry: ['packages', 'corpus', 'src', 'read.ts'],
+    functions: ['readConfig', 'profileFor', 'parseHeader'],
   },
   {
     // A **subpath** rather than the package, and that is the point of the row. `@harmony/usb` proper

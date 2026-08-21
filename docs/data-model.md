@@ -1,7 +1,8 @@
-# The document model, a proposal
+# The document model
 
-Written 21 August 2026, before any of it exists, so that it can be argued with rather than
-discovered in the code. Nothing here is decided except where it says so.
+Written 21 August 2026 before any of it existed, so that it could be argued with rather than
+discovered in the code. **Most of it exists now**, and the sections below say which parts and where.
+Nothing here is decided except where it says so.
 
 ## Why the model comes first
 
@@ -38,6 +39,14 @@ measured below.
 configuration that was read off a remote. The first three are plain data with no library behind them,
 by the same rule as the rest of `src/shared`; the fourth is the only file here that turns the library's
 values into ours, which is why it sits in the main process.
+
+**And it is wired up end to end now.** `src/main/configuration.ts` reads a configuration off an
+attached remote and reads one back off a disk, `src/main/store/library.ts` keeps the appliances in
+`Documents/FreeHarmony/devices`, and `src/renderer/src/views/Inventory.tsx` is the first screen in
+FreeHarmony that shows somebody their own configuration. The transfer itself is the sibling
+repository's `readConfig`, imported through the `@harmony/corpus/read` subpath, because it carries two
+checks nothing here should reimplement: the end marker has to sit where the header said, and the
+trailer checksum has to recompute.
 
 **The table is enforced by the compiler**, not by a habit: every entry in `writeback.ts` is a mapped
 type over the interface it describes, so adding a field to the model fails the typecheck until somebody
@@ -214,6 +223,30 @@ Three things follow, and they are work rather than objections.
 * **Provenance lives in the library**, one flag per definition, and only something learned from
   hardware may ever be shared. That was already decided; putting the definitions in one place is
   what makes it enforceable rather than a convention.
+
+### What an appliance is called, decided by building it
+
+**A definition is named after what it sends**, hashed, so the identifier is a property of the appliance
+and not of the read that found it. Three consequences, and all three are what was wanted: reading the
+same remote twice leaves the library exactly as it was, the same television on two remotes is one
+definition, and renaming a document changes nothing.
+
+It was **not** the first answer. The identifier started as the document's name plus a position, which
+a test caught immediately: a remote called `living room` produced `living room-device-0`, and the store
+refuses that because an identifier is a file name. Spelling it acceptably would have hidden the real
+fault, which is that a definition's identity is permanent and a document's name is something a person
+changes on a whim.
+
+**An appliance with no commands falls back to the configuration's digest**, and it has to. Every
+appliance nobody has taught anything to sends the same nothing, so addressing them by content would
+make them all one definition. There is no content to address, so the read that found it is the honest
+identity.
+
+**Nothing is ever overwritten and nothing is merged.** Filing the appliances of a document that has
+already been filed reports them as kept, because a definition may have been corrected by hand since it
+arrived. And two definitions that send the same things are **reported** as probably one appliance and
+never joined: merging changes what every document pointing at either one is pointing at, which is a
+decision for a person.
 
 Whether that library is ever shared with other people is still open, and nothing above depends on
 it.

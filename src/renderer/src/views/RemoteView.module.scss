@@ -88,3 +88,17 @@
   gap: var(--mantine-spacing-xs);
   margin-block-start: var(--mantine-spacing-lg);
 }
+
+// The read, on its own row above the document actions: it is the one thing on this page that touches
+// hardware, and it should not sit in a line of buttons that only move folders about.
+.read {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  margin-block-start: var(--mantine-spacing-md);
+}
+
+.readError {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-red-7);
+}

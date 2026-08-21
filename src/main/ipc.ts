@@ -12,24 +12,31 @@
 import { ipcMain } from 'electron';
 
 import { channelFor, METHODS, type FreeHarmonyApi, type Namespace } from '../shared/api.ts';
+import { contentsOf, fileDefinitionsOf, readConfigurationFrom } from './configuration.ts';
 import { attachedRemotes, readHardware } from './devices.ts';
 import { DeviceLibrary } from './store/library.ts';
 import { RemoteStore } from './store/remotes.ts';
 
 export function registerHandlers(store: RemoteStore, library: DeviceLibrary): void {
+  // One clock, the main process's. A timestamp on somebody's document should be the machine's own and
+  // never something a page could be wrong about.
+  const now = () => new Date().toISOString();
+
   register('remotes', {
     list: () => store.list(),
     create: (name, model, hardware) => store.create(name, model, hardware),
     rename: (name, to) => store.rename(name, to),
     duplicate: (name) => store.duplicate(name),
     remove: (name) => store.remove(name),
+    readConfiguration: (name, productId) =>
+      readConfigurationFrom(store, library, name, productId, now),
+    contents: (name) => contentsOf(store, library, name),
+    fileDefinitions: (name) => fileDefinitionsOf(store, library, name, now),
   });
 
   register('devices', {
     attached: () => attachedRemotes(),
-    // The clock is the main process's, not the window's: a timestamp on a document should be the
-    // machine's own and not something a page could be wrong about.
-    readHardware: (productId) => readHardware(productId, () => new Date().toISOString()),
+    readHardware: (productId) => readHardware(productId, now),
   });
 
   register('library', {

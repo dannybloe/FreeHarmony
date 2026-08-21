@@ -63,6 +63,12 @@ function fakeApi(initial: RemoteDocument[] = []) {
       calls.push('remove'); refuseIfAsked();
       held = held.filter((r) => r.name !== name);
     },
+    // The three that reach a configuration. This view model is about the list of documents and calls
+    // none of them, which is what these throwing bodies assert: if it ever starts, a test fails here
+    // rather than a page quietly opening a device.
+    readConfiguration: async () => { throw new Error('the list view model must not read hardware'); },
+    contents: async () => { throw new Error('the list view model must not read a configuration'); },
+    fileDefinitions: async () => { throw new Error('the list view model must not write a library'); },
   };
 
   return { api, calls, fail: (message: string) => { failWith = message; } };

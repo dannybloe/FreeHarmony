@@ -15,19 +15,22 @@ something anybody can schedule.
 
 ## Where it stands
 
-**Step 2 is done and step 1 has not started.** That is the wrong way round on purpose. There is a
-window now: it keeps a list of your remotes, each one a folder in your own documents, and you can add
-one, name it, rename it, copy it and remove it. Plug a remote in and it recognises which model it is
-and can ask it for its firmware version, without changing anything on it.
+**Step 2 is done and step 1 works.** There is a window: it keeps a list of your remotes, each one a
+folder in your own documents, and you can add one, name it, rename it, copy it and remove it.
 
-What it does not do yet is show you what is **on** a remote, which is step 1. Keeping remotes in one
-place turned out to be what step 1 needs underneath it, since a configuration has to be read into
-something before it can be shown, so it was built first.
+Open one with the remote plugged in and it offers to read what is on it. That read takes a minute or
+so, it changes nothing on the remote, and afterwards the page lists your devices with the number of
+buttons each one answers to, and your activities with the devices each one drives. The names are
+yours: the ones you typed into Logitech's software, and for an activity the words the remote draws on
+its own screen.
 
-There is also a command line script that reads a configuration file and says what is on it: when it
-was made, which devices it drives, which activities it offers and which devices each of those uses.
-That is the proof that the hard part, understanding the file, reaches the application. Putting it on
-screen is what step 1 is.
+What step 1 still owes you is the rest of the picture: what every individual button sends, and the
+screens drawn the way the remote draws them. Both can be read today, next door, and neither is on
+screen yet.
+
+Appliances are kept in their own place, beside the remotes rather than inside one, because the same
+television belongs to every remote that drives it. Reading the same remote twice does not describe
+its television twice: an appliance is named after what it sends.
 
 ## The steps
 
@@ -41,9 +44,12 @@ Nothing is changed. This step is a window onto a remote you already own, and it 
 to be trustworthy before any other one is allowed to exist.
 
 **What has to be true first:** reading a remote works and is proven byte for byte, and almost
-everything in the file can be explained. Both are done. What is missing is somewhere to **put** what
-was read, which is a description of a remote that can hold more than a configuration file does. That
-is being designed now, in `docs/data-model.md`.
+everything in the file can be explained. Both are done. And somewhere to **put** what was read, which
+is a description of a remote holding more than a configuration file does: that exists now, and
+`docs/data-model.md` is both its argument and its description.
+
+**Where it stands:** your devices and your activities are on screen, read off the remote by the
+application itself. Buttons and screens are what is left.
 
 ### 2. Keep your remotes in one place
 

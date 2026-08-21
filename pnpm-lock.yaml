@@ -11,6 +11,9 @@ importers:
       '@harmony/codec':
         specifier: link:../harmony-explorations/packages/codec
         version: link:../harmony-explorations/packages/codec
+      '@harmony/corpus':
+        specifier: link:../harmony-explorations/packages/corpus
+        version: link:../harmony-explorations/packages/corpus
       '@harmony/silhouettes':
         specifier: link:../harmony-explorations/packages/silhouettes
         version: link:../harmony-explorations/packages/silhouettes

@@ -232,3 +232,27 @@ export interface RemoteContent {
   /** Where this came from, so that "absent" can be read as "the compiler dropped it" or as "not set". */
   readonly filledFrom: 'a-configuration' | 'here';
 }
+
+/**
+ * What a document holds, as the window is told it.
+ *
+ * `missing` is the price of the device library sitting outside the document, answered rather than
+ * discovered: a document names appliances and this machine may not have them. Empty is the ordinary
+ * case, and an interface has something honest to say when it is not.
+ */
+export interface DocumentContents {
+  readonly content: RemoteContent;
+  readonly missing: readonly string[];
+}
+
+/**
+ * What filing a document's appliances into the shared library did.
+ *
+ * Two lists rather than a count, because they mean different things: `added` is new descriptions this
+ * machine now has, and `kept` is descriptions that were already there and were **not** overwritten,
+ * since one may have been corrected by hand since it arrived.
+ */
+export interface FiledDefinitions {
+  readonly added: readonly string[];
+  readonly kept: readonly string[];
+}

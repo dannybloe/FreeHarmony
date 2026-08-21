@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@harmony/codec": "link:../harmony-explorations/packages/codec",
+    "@harmony/corpus": "link:../harmony-explorations/packages/corpus",
     "@harmony/silhouettes": "link:../harmony-explorations/packages/silhouettes",
     "@harmony/usb": "link:../harmony-explorations/packages/usb",
     "@mantine/core": "9.5.1",

@@ -15,6 +15,7 @@
  *   pnpm screenshot                                          the empty state, into var/screenshot.png
  *   pnpm screenshot --out var/home.png
  *   pnpm screenshot --remotes "Woonkamer:one,Zolder"         seeded through the application's own API
+ *   pnpm screenshot --configuration h600_config              give the first remote a real configuration
  *   pnpm screenshot --click "Add..." --click "Harmony 600"    to reach a screen that is not the first
  *   pnpm screenshot --width 1280 --height 900
  *
@@ -24,16 +25,27 @@
  *
  * The store is a temporary directory that goes away afterwards, so nothing here touches the remotes
  * anybody actually has.
+ *
+ * `--configuration` needs a lab, since this repository holds no configuration of anybody's, and it
+ * attaches one through `RemoteStore`'s own method rather than by writing a manifest by hand. That
+ * matters for the same reason the seeding above goes through the bridge: a picture of a state nobody
+ * can reach is a picture of nothing. The store is a plain class that takes its root as an argument, so
+ * this process can use the very code the main process uses, pointed at the same temporary folder.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
+import { require_ } from '@harmony/lab';
+
+import { RemoteStore } from '../src/main/store/remotes.ts';
 import { asRemoteModel, SUPPORTED } from '../src/renderer/src/catalogue.ts';
 import { launch } from '../test/app/electron.ts';
 
 interface Options {
   out: string;
   remotes: { name: string; model: string | undefined }[];
+  /** A lab sample to attach to the first seeded remote, so a page can show real contents. */
+  configuration: string | undefined;
   clicks: string[];
   width: number;
   height: number;
@@ -55,6 +67,7 @@ function options(argv: string[]): Options {
           const [name, model] = entry.split(':');
           return { name: (name ?? '').trim(), model: model?.trim() };
         }),
+    configuration: named('--configuration'),
     clicks: every('--click'),
     width: Number(named('--width') ?? 1100),
     height: Number(named('--height') ?? 760),
@@ -78,6 +91,15 @@ async function main(): Promise<number> {
       const asModel = picked === undefined ? 'undefined' : JSON.stringify(asRemoteModel(picked));
       await app.evaluate(
         `window.freeharmony.remotes.create(${JSON.stringify(name)}, ${asModel})`);
+    }
+    // A real configuration behind the first remote, through the store's own method. The reload below is
+    // what makes the window notice, since nothing polls the disk.
+    const first = wanted.remotes[0];
+    if (wanted.configuration !== undefined && first !== undefined) {
+      const store = new RemoteStore({ root: app.remotes });
+      await store.attachConfiguration(first.name, 'configuration.bin',
+                                      require_(wanted.configuration), 'read-from-device',
+                                      new Date().toISOString());
     }
     if (wanted.remotes.length > 0) await app.reload();
 

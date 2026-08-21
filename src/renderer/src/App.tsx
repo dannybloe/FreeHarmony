@@ -18,6 +18,7 @@ import type { RemoteModel } from '../../shared/remote.ts';
 import { asRemoteModel, isSameModel } from './catalogue.ts';
 import { advanceOn } from './viewmodels/devices.model.ts';
 import { afterChoosingModel } from './viewmodels/navigation.model.ts';
+import { useContents } from './viewmodels/useContents.ts';
 import { useDevices } from './viewmodels/useDevices.ts';
 import { useHardware } from './viewmodels/useHardware.ts';
 import { useNavigation } from './viewmodels/useNavigation.ts';
@@ -37,10 +38,16 @@ export function App() {
   // Which model is highlighted in the chooser. View state, and it belongs to this flow rather than to
   // navigation: leaving the page and coming back should not remember a half made choice.
   const [picked, setPicked] = useState<string | undefined>(undefined);
-  // The USB bus is only watched while the Connect screen is up. Passing the condition in rather than
-  // mounting the hook conditionally is what keeps the polling in one place and stops it running for the
-  // life of the window: nothing else in this application asks about hardware.
-  const devices = useDevices(screen.at === 'connect');
+  // The USB bus is watched while the Connect screen is up, and while a remote's own page is open.
+  // Passing the condition in rather than mounting the hook conditionally is what keeps the polling in
+  // one place and stops it running for the life of the window.
+  //
+  // **The second screen is why this is a condition and not a constant.** A document's page offers to
+  // read the remote it is about, and that offer can only be honest if something is watching the bus.
+  // Enumeration opens nothing, so it is the cheap half; the read is a button.
+  const devices = useDevices(screen.at === 'connect' || screen.at === 'remote');
+  // What the open document holds. Keyed on the name, so opening a different remote asks about that one.
+  const contents = useContents(screen.at === 'remote' ? screen.name : undefined);
   // The one thing here that opens a remote. It is a model of its own rather than part of `useDevices`,
   // because that one polls and this one must never be on a timer.
   const hardware = useHardware();
@@ -166,6 +173,8 @@ export function App() {
             <RemoteView
               remote={remote}
               busy={remotes.busy}
+              contents={contents}
+              attached={devices.attached}
               onRename={(to) => void rename(remote.name, to)}
               onDuplicate={() => void remotes.duplicate(remote.name)}
               onRemove={() => void remove(remote.name)}
