@@ -15,12 +15,19 @@ something anybody can schedule.
 
 ## Where it stands
 
-**Step 1 has started.** There is one command line script and no window yet. Give it a configuration
-file taken off your own remote and it tells you what is on it: when it was made, which devices it
-drives, which activities it offers and which devices each of those uses.
+**Step 2 is done and step 1 has not started.** That is the wrong way round on purpose. There is a
+window now: it keeps a list of your remotes, each one a folder in your own documents, and you can add
+one, name it, rename it, copy it and remove it. Plug a remote in and it recognises which model it is
+and can ask it for its firmware version, without changing anything on it.
 
-That is not something to install. It is the first proof that the hard part, understanding the file,
-actually reaches the application.
+What it does not do yet is show you what is **on** a remote, which is step 1. Keeping remotes in one
+place turned out to be what step 1 needs underneath it, since a configuration has to be read into
+something before it can be shown, so it was built first.
+
+There is also a command line script that reads a configuration file and says what is on it: when it
+was made, which devices it drives, which activities it offers and which devices each of those uses.
+That is the proof that the hard part, understanding the file, reaches the application. Putting it on
+screen is what step 1 is.
 
 ## The steps
 
@@ -34,7 +41,9 @@ Nothing is changed. This step is a window onto a remote you already own, and it 
 to be trustworthy before any other one is allowed to exist.
 
 **What has to be true first:** reading a remote works and is proven byte for byte, and almost
-everything in the file can be explained. Both are done. What is missing is the window.
+everything in the file can be explained. Both are done. What is missing is somewhere to **put** what
+was read, which is a description of a remote that can hold more than a configuration file does. That
+is being designed now, in `docs/data-model.md`.
 
 ### 2. Keep your remotes in one place
 
@@ -47,7 +56,8 @@ throws that away on its own. These remotes cannot be bought new. A safety net th
 first change is worth more than any feature after it.
 
 **What has to be true first:** step 1, and a decision about where those copies live on your machine
-and how you get at them.
+and how you get at them. **Done**, ahead of step 1 and for the reason given above: a remote is a
+folder in your own documents, named by you, and nothing here deletes one without asking.
 
 ### 3. Change something, without touching the remote
 
@@ -141,11 +151,12 @@ application.
 
 ## Deliberately not decided yet
 
-* **What it looks like.** No screens have been designed. Step 1 will be designed when there is
-  something to design it against, and a picture drawn now would be a picture of a guess.
-* **Whether it is a desktop window or something else.** The intent has always been a normal desktop
-  application. Which technology that is has not actually been chosen, and choosing it properly is part
-  of step 1 rather than an assumption underneath it.
+* **What the screens for step 1 look like.** The ones that exist were designed against something
+  real, which was the rule. Showing a configuration has nothing to design against yet.
+* ~~Whether it is a desktop window or something else.~~ **Decided.** A normal desktop application,
+  one window, built on the same technology as several applications you probably already have open, so
+  one codebase can cover macOS, Windows and Linux. Chosen on 18 August 2026 by building it rather than
+  by arguing about it. Only macOS has actually been run; giving it to the other two is step 8.
 * **A shared collection of devices.** Whether it exists, who runs it, how a contribution is checked.
   Two things about it are settled. Every device definition records where it came from, because that
   is impossible to work out afterwards and the answer decides whether it may be shared at all. And
