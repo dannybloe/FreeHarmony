@@ -55,18 +55,49 @@ test('somebody else brand keeps its own name, and the count is exact rather than
   //
   // Exact on both sides on purpose. A floor under 21 would absorb a brand quietly dropping out of the
   // list, and a floor under 76 would absorb a whole table failing to load.
+  //
+  // **The predicate is what the claim is about, and the first version's was not.** It asked whether
+  // `fullName` left a name unchanged, which stopped meaning "not a Harmony" the moment the function
+  // began folding the regional suffix: `Olive EMEA` keeps its brand and still comes back changed. 20
+  // names are unchanged and 21 are not Harmonys, and the one in between is exactly that case.
   const every = [
     ...Object.values(MODELS_BY_SKIN).map((m) => m.name),
     ...Object.values(SKINS_WITHOUT_A_MODEL_RECORD),
   ];
   assert.equal(every.length, 76);
 
-  const kept = every.filter((name) => fullName(name) === name);
-  assert.equal(kept.length, 21, `kept: ${[...new Set(kept)].sort().join(', ')}`);
+  const theirs = every.filter((name) => !fullName(name).startsWith('Harmony '));
+  assert.equal(theirs.length, 21, `theirs: ${[...new Set(theirs)].sort().join(', ')}`);
+  assert.equal(every.filter((name) => fullName(name) === name).length, 20,
+               'and one of the 21 is folded rather than untouched, which is Olive EMEA');
   for (const name of every) {
-    if (kept.includes(name)) continue;
+    if (theirs.includes(name)) continue;
     assert.match(fullName(name), /^Harmony /, `${name} came out as ${fullName(name)}`);
   }
+});
+
+test('a regional twin is one name, because one face cannot have two', () => {
+  /**
+   * The defect this fixed, as an assertion, and it was live for a day.
+   *
+   * A European Harmony One reports skin 59 and the chooser records skin 54 for the same drawing, so a
+   * remote read over USB was stored as `Harmony One EMEA` while the same remote picked from a list was
+   * stored as `Harmony One`. One face, two names, in the very function written to stop exactly that.
+   *
+   * The skin is kept on both, so nothing is lost: which variant it is is still recorded, only the name
+   * is settled. Nine of the 76 names carry the suffix, and 76 names fold to 67 distinct ones.
+   */
+  assert.equal(remoteModelForSkin(54)?.name, remoteModelForSkin(59)?.name, 'Harmony One and its twin');
+  assert.equal(remoteModelForSkin(71)?.name, remoteModelForSkin(73)?.name, 'Harmony 600 and its twin');
+  assert.deepEqual(remoteModelForSkin(59), { name: 'Harmony One', skin: 59 },
+                   'the name is folded and the skin is not');
+
+  const every = [
+    ...Object.values(MODELS_BY_SKIN).map((m) => m.name),
+    ...Object.values(SKINS_WITHOUT_A_MODEL_RECORD),
+  ];
+  assert.equal(every.filter((name) => / EMEA$/.test(name)).length, 9, 'nine names carry the suffix');
+  assert.equal(new Set(every.map(fullName)).size, 67, 'so 76 names fold to 67');
 });
 
 test('the brand list is what does the keeping, which is the control on the test above', () => {

@@ -13,6 +13,7 @@
  * copy would be showing a remote that had since been renamed or deleted. Renaming follows the new
  * name; deleting drops the screen and anything behind it that pointed at the same remote.
  */
+import { isSameModel } from '../catalogue.ts';
 import type { RemoteDocument, RemoteModel } from '../../../shared/remote.ts';
 
 /** Where the model on the naming screen came from, which is the one thing that screen words differently. */
@@ -31,10 +32,45 @@ export type Screen =
    * holds to, and it is exactly what the document will be created with.
    */
   | { readonly at: 'name'; readonly model: RemoteModel; readonly origin: ModelOrigin }
+  /**
+   * You already have one of these. Open it, or add another?
+   *
+   * It carries the model and not the documents that match it, for the same reason the remote screen
+   * carries a name: the list is on disk and the matches are derived from it every time it is drawn, so
+   * a document renamed or deleted while this page is open cannot leave a stale entry on it.
+   */
+  | { readonly at: 'existing'; readonly model: RemoteModel; readonly origin: ModelOrigin }
   | { readonly at: 'connect' }
   | { readonly at: 'remote'; readonly name: string };
 
 export const START: Screen = { at: 'home' };
+
+/**
+ * Where a chosen or detected model goes next: straight to naming, or past the question first.
+ *
+ * Danny's, on 21 August 2026, and the honest version of it is narrower than the ask. He asked whether
+ * the application can tell that a remote being added is one it already has a document for. It cannot, per
+ * unit: a Harmony declares `iSerialNumber 0` in its USB descriptor so enumeration has no serial to
+ * report, and the per unit identifiers sit in the remote's internal flash behind an opened device. What
+ * it can tell is that a document of the same **model** exists, which is what this asks, and the screen it
+ * leads to says "a Harmony One" and never "this remote".
+ *
+ * It is a function rather than a branch in the shell because it is the decision, and because both routes
+ * in need it: picking a model from the chooser and plugging one in are the same question.
+ *
+ * `isSameModel` is imported rather than passed in, which is worth a line because the first version took it
+ * as a parameter to keep this module free of the drawing library. That was the wrong instinct: there is
+ * one answer to "is this the same remote" and injecting it would let a caller supply a second. The
+ * catalogue is claimed by the Node typecheck for exactly this reason, so a test walks it here unchanged.
+ */
+export function afterChoosingModel(
+  remotes: readonly RemoteDocument[],
+  model: RemoteModel,
+  origin: ModelOrigin,
+): Screen {
+  const already = remotes.some((remote) => isSameModel(remote.model, model));
+  return already ? { at: 'existing', model, origin } : { at: 'name', model, origin };
+}
 
 export class NavigationModel {
   #screen: Screen = START;

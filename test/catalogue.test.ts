@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 
 import { modelForSkin } from '@harmony/usb/models';
 
-import { asRemoteModel, drawingFor, SUPPORTED } from '../src/renderer/src/catalogue.ts';
+import { asRemoteModel, drawingFor, isSameModel, SUPPORTED } from '../src/renderer/src/catalogue.ts';
 
 test('three models are offered, in the order somebody reads them, each with its own facts', () => {
   // Exact, not a floor. Three of the forty models Logitech retired are drawn, and when a fourth is
@@ -115,4 +115,43 @@ test('what a picked model puts in a document finds its way back to the drawing',
   for (const picked of SUPPORTED) {
     assert.equal(drawingFor(asRemoteModel(picked))?.id, picked.id, picked.name);
   }
+});
+
+test('the same model is the same face, so a regional pair is one answer', () => {
+  /**
+   * Danny's question needs one comparison and this is it: is the remote being added one there is
+   * already a document for. **By face, because a skin comparison gets the regional pair wrong**: a
+   * European Harmony One reports skin 59 where the chooser records 54, and those are the same remote to
+   * everybody except Logitech's table.
+   */
+  assert.equal(isSameModel({ name: 'Harmony One', skin: 54 }, { name: 'Harmony One', skin: 59 }), true);
+  assert.equal(isSameModel({ name: 'Harmony 600', skin: 71 }, { name: 'Harmony 600', skin: 73 }), true);
+  assert.equal(isSameModel({ name: 'Harmony One', skin: 54 }, { name: 'Harmony 600', skin: 71 }), false);
+});
+
+test('two models nobody has drawn still compare, by skin and then by name', () => {
+  // Three of the forty retired models are drawn, so this is the ordinary path rather than the fallback.
+  // The skin comes first because it is what the hardware states.
+  assert.equal(isSameModel({ name: 'Harmony 655', skin: 11 }, { name: 'Harmony 655', skin: 11 }), true);
+  assert.equal(isSameModel({ name: 'Harmony 655', skin: 11 }, { name: 'Harmony 675', skin: 16 }), false);
+  assert.equal(isSameModel({ name: 'Harmony 655' }, { name: 'Harmony 655' }), true,
+               'and a document with no skin still matches by name');
+  assert.equal(isSameModel({ name: 'Harmony 655' }, { name: 'Harmony 675' }), false);
+});
+
+test('an unknown model matches nothing, including another unknown one', () => {
+  // The case that decides whether somebody with two undescribed documents gets asked a question about
+  // a remote nothing can name. They do not.
+  assert.equal(isSameModel(undefined, { name: 'Harmony One', skin: 54 }), false);
+  assert.equal(isSameModel({ name: 'Harmony One', skin: 54 }, undefined), false);
+  assert.equal(isSameModel(undefined, undefined), false);
+});
+
+test('the 525 and the 520 are not the same model, which is the rule stated as a comparison', () => {
+  // Danny's own rule, from the other direction. The two differ by the four teletext keys, so a document
+  // of one must never be offered for the other. Skin 18 has no drawing here, so this exercises the skin
+  // path rather than the face path, and it still separates them.
+  assert.equal(isSameModel({ name: 'Harmony 525', skin: 22 }, { name: 'Harmony 520', skin: 18 }), false);
+  assert.equal(drawingFor({ name: 'Harmony 520', skin: 18 }), undefined,
+               'and the 520 has no drawing, so nothing could have merged them by face');
 });

@@ -13,7 +13,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { RemoteDocument } from '../src/shared/remote.ts';
-import { NavigationModel, START, type Screen } from '../src/renderer/src/viewmodels/navigation.model.ts';
+import { afterChoosingModel, NavigationModel, START, type Screen } from '../src/renderer/src/viewmodels/navigation.model.ts';
 
 /** A model plus the screens it announced, in order. */
 function record() {
@@ -130,4 +130,45 @@ test('a screen resolves its remote out of the list, and says nothing when it can
   assert.equal(nav.resolve([remote('Woonkamer')])?.name, 'Woonkamer');
   assert.equal(nav.resolve([remote('Zolder')]), undefined);
   assert.equal(nav.resolve([]), undefined);
+});
+
+test('a model you already have a document of asks first, and one you do not goes straight on', () => {
+  /**
+   * Danny's question, on 21 August 2026, and the honest version of it.
+   *
+   * He asked whether the application can tell that a remote being added is one it already has a
+   * document for. It can tell that a document of the same **model** exists, and it can never tell that
+   * it is the same **unit**: a Harmony declares `iSerialNumber 0` in its USB descriptor, so enumeration
+   * has no serial, and the per unit identifiers sit in the remote's internal flash behind an opened
+   * device. So this rule matches models, and the screen it leads to says so in words.
+   */
+  const one = { name: 'Harmony One', skin: 54 } as const;
+  const six = { name: 'Harmony 600', skin: 71 } as const;
+  const woonkamer = { ...remote('Woonkamer'), model: one };
+
+  assert.deepEqual(afterChoosingModel([], one, 'chooser'), { at: 'name', model: one, origin: 'chooser' },
+                   'an empty store asks nothing');
+  assert.deepEqual(afterChoosingModel([woonkamer], six, 'device'), { at: 'name', model: six, origin: 'device' },
+                   'and neither does a different model');
+  assert.deepEqual(afterChoosingModel([woonkamer], one, 'device'),
+                   { at: 'existing', model: one, origin: 'device' },
+                   'the same model asks, and carries how it got here');
+});
+
+test('a regional twin counts as the same model, which is the case a skin comparison gets wrong', () => {
+  // The reason the rule goes through `isSameModel` and not through skin equality. A European Harmony
+  // One reports skin 59 and the chooser records 54 for the same drawing, so somebody plugging in their
+  // own remote after adding it by hand must be asked rather than quietly given a second document.
+  const fromTheChooser = { ...remote('Woonkamer'), model: { name: 'Harmony One', skin: 54 } };
+  const european = { name: 'Harmony One', skin: 59 } as const;
+
+  assert.equal(afterChoosingModel([fromTheChooser], european, 'device').at, 'existing');
+});
+
+test('a document with no model recorded matches nothing, so it never blocks adding one', () => {
+  // Documents written before the model field existed, and any whose model nobody knows. Treating an
+  // unknown model as a match would ask a question about a remote it cannot name.
+  const nameless = remote('Zolder');
+  assert.equal(nameless.model, undefined, 'the input');
+  assert.equal(afterChoosingModel([nameless], { name: 'Harmony One', skin: 54 }, 'chooser').at, 'name');
 });

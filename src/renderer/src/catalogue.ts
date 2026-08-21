@@ -132,7 +132,9 @@ function soldAs(model: RemoteModel, drawing: Model | undefined): string[] {
   for (const skin of skins) {
     const bare = MODELS_BY_SKIN[skin]?.name;
     if (bare === undefined) continue;
-    const named = fullName(bare.replace(/ EMEA$/, ''));
+    // `fullName` folds the regional suffix, since 21 August 2026. It was folded here as well until
+    // then, which was the second copy of that rule and the reason the first one was noticed late.
+    const named = fullName(bare);
     if (!seen.includes(named)) seen.push(named);
   }
   return seen;
@@ -154,6 +156,30 @@ export const SUPPORTED: readonly SupportedModel[] = Object.values(MODELS)
     return { id: drawing.id, name: drawing.label, skin, ...describe({ name: drawing.label, skin }), drawing };
   })
   .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+/**
+ * Whether two models are the same remote, as far as somebody looking at their own shelf is concerned.
+ *
+ * **This is the strongest question that can be answered, and it is weaker than it sounds.** It compares
+ * models and not units, because nothing here can identify a unit: a Harmony declares `iSerialNumber 0`
+ * in its USB descriptor, so enumeration has no serial to report, and the per unit identifiers do exist
+ * but sit in the remote's internal flash and need the device opened. So two Harmony Ones on one desk are
+ * indistinguishable to this function, by construction, and any interface built on it has to say "you
+ * already have a Harmony One" and never "you already have this remote".
+ *
+ * By **face** first, which is what makes a regional pair one answer: a European Harmony One reports skin
+ * 59 where the chooser records 54, and those are the same remote to everybody except Logitech's own
+ * table. By skin second, so two models nobody has drawn can still match. By name last, for a document
+ * written before either was recorded.
+ */
+export function isSameModel(a: RemoteModel | undefined, b: RemoteModel | undefined): boolean {
+  if (a === undefined || b === undefined) return false;
+  const faceA = drawingFor(a);
+  const faceB = drawingFor(b);
+  if (faceA !== undefined && faceB !== undefined) return faceA.id === faceB.id;
+  if (a.skin !== undefined && b.skin !== undefined) return a.skin === b.skin;
+  return a.name === b.name;
+}
 
 /** What goes into a document when somebody picks this model. */
 export function asRemoteModel(picked: SupportedModel): RemoteModel {

@@ -105,7 +105,7 @@ const LIBRARIES: readonly {
     // runs under Node. `test/app/devices.test.ts` is where that is measured, in a real window.
     name: '@harmony/usb',
     module: usb as unknown as Record<string, unknown>,
-    exports: 90,
+    exports: 93,
     entry: ['packages', 'usb', 'src', 'index.ts'],
     functions: ['listHarmony', 'skinId', 'openHarmony'],
   },

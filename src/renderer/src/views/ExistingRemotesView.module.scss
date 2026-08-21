@@ -1,0 +1,46 @@
+@use '../mantine' as m;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  max-width: m.rem(640);
+  margin-inline: auto;
+  text-align: center;
+}
+
+.title {
+  font-size: m.rem(26);
+  font-weight: 600;
+  letter-spacing: m.rem(-0.4);
+  color: var(--mantine-color-gray-9);
+}
+
+.lead {
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.6;
+  color: var(--mantine-color-gray-6);
+}
+
+// A row rather than the carousel, because the count here is one or two in practice and a carousel with
+// two tiles in it draws arrows that do nothing.
+.matches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--mantine-spacing-md);
+  margin-block-start: var(--mantine-spacing-lg);
+}
+
+.actions {
+  margin-block-start: var(--mantine-spacing-lg);
+}
+
+.footnote {
+  max-width: m.rem(460);
+  margin-block-start: var(--mantine-spacing-md);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.5;
+  color: var(--mantine-color-gray-5);
+}

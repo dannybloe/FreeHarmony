@@ -14,14 +14,16 @@ import { Text } from '@mantine/core';
 import { useEffect, useRef, useState } from 'react';
 
 import type { RemoteModel } from '../../shared/remote.ts';
-import { asRemoteModel } from './catalogue.ts';
+import { asRemoteModel, isSameModel } from './catalogue.ts';
 import { advanceOn } from './viewmodels/devices.model.ts';
+import { afterChoosingModel } from './viewmodels/navigation.model.ts';
 import { useDevices } from './viewmodels/useDevices.ts';
 import { useNavigation } from './viewmodels/useNavigation.ts';
 import { useRemotes } from './viewmodels/useRemotes.ts';
 import { AddRemoteView } from './views/AddRemoteView.tsx';
 import { AppBar } from './views/AppBar.tsx';
 import { ConnectView } from './views/ConnectView.tsx';
+import { ExistingRemotesView } from './views/ExistingRemotesView.tsx';
 import { HomeView } from './views/HomeView.tsx';
 import { NameRemoteView } from './views/NameRemoteView.tsx';
 import { RemoteView } from './views/RemoteView.tsx';
@@ -63,8 +65,10 @@ export function App() {
     if (screen.at !== 'connect') return;
     const next = advanceOn(devices, advancedFor.current);
     advancedFor.current = next.remember;
-    if (next.model !== undefined) nav.go({ at: 'name', model: next.model, origin: 'device' });
-  }, [screen.at, devices, nav]);
+    if (next.model !== undefined) {
+      nav.go(afterChoosingModel(remotes.remotes, next.model, 'device'));
+    }
+  }, [screen.at, devices, nav, remotes.remotes]);
 
   return (
     <div className={classes.shell}>
@@ -87,7 +91,7 @@ export function App() {
             picked={picked}
             onPick={setPicked}
             onContinue={(model) =>
-              nav.go({ at: 'name', model: asRemoteModel(model), origin: 'chooser' })}
+              nav.go(afterChoosingModel(remotes.remotes, asRemoteModel(model), 'chooser'))}
             onConnect={() => nav.go({ at: 'connect' })}
           />
         )}
@@ -101,12 +105,39 @@ export function App() {
           />
         )}
 
+        {screen.at === 'existing' && (() => {
+          const matches = remotes.remotes.filter((r) => isSameModel(r.model, screen.model));
+          // Every match was removed while this page was open, from another window or from Finder. The
+          // question no longer arises, so the honest thing is to ask the name straight away rather than
+          // to draw a page listing nothing.
+          if (matches.length === 0) {
+            return (
+              <NameRemoteView
+                model={screen.model}
+                origin={screen.origin}
+                busy={remotes.busy}
+                onAdd={(name, model) => void add(name, model)}
+              />
+            );
+          }
+          return (
+            <ExistingRemotesView
+              model={screen.model}
+              matches={matches}
+              fromDevice={screen.origin === 'device'}
+              onOpen={(name) => nav.go({ at: 'remote', name })}
+              onAddAnother={() =>
+                nav.go({ at: 'name', model: screen.model, origin: screen.origin })}
+            />
+          );
+        })()}
+
         {screen.at === 'connect' && (
           <ConnectView
             devices={devices}
             onBack={() => nav.back()}
             onPickByHand={() => nav.go({ at: 'add' })}
-            onContinue={(model) => nav.go({ at: 'name', model, origin: 'device' })}
+            onContinue={(model) => nav.go(afterChoosingModel(remotes.remotes, model, 'device'))}
           />
         )}
 

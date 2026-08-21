@@ -316,6 +316,31 @@ Twenty one of the 76 names in those tables are **not** Harmonys, Monster and Har
 and the list is written out rather than inferred because `Olive` and `One` are both a single capitalised
 word and no rule about the string can separate them.
 
+**A remote cannot be identified as a unit, only as a model, and that is a property of the hardware.**
+Asked on 21 August 2026: can the application tell that a remote being added is one it already has a
+document for. The honest answer is no, and the reason is not a gap in the code:
+
+* A Harmony declares **`iSerialNumber 0`** in its USB descriptor, verified on the Harmony One 3.4, the
+  Harmony 700 2.8 and the Harmony 600 0.2 images, so there is no serial string to report and enumeration
+  can never carry one. `listHarmony` dropping the serial turns out to be dropping something that is not
+  there.
+* Per unit identifiers **do** exist, three GUIDs in internal flash at `0xFF +0xF400`, matched against
+  `concordance -i` on the same unit months apart. Reaching them means opening the device and reading a
+  region where a read has restarted a remote before, and it would put a per unit identifier in a document
+  people may share.
+
+So `isSameModel` compares **faces**, and every screen built on it says "a Harmony One" and never "this
+remote". `afterChoosingModel` puts the question in front of somebody when a document of the same model
+exists, from either route in, and **adding another is a first class answer**: two identical remotes on one
+desk is the ordinary case, and silently reusing a document because the model matched is the mistake the
+screen exists to avoid.
+
+**One defect this found, one day old.** The name was derived in one place precisely so a model could not
+have two, and the derivation itself produced two: `Harmony One EMEA` for skin 59 and `Harmony One` for
+skin 54, the same face. The regional suffix is folded now, in `fullName`, and the skin is kept on the
+document so nothing is lost. The catalogue had been folding it separately for a tile's caption, which is
+the copy that should have made it obvious a day earlier.
+
 **What comes next needs opening a device**, and that is a separate step on purpose: `getVersion()` gives
 the firmware version, the board and the flash id, and it is the first time FreeHarmony would claim
 hardware that cannot be replaced.

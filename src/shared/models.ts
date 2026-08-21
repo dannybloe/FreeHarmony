@@ -37,9 +37,24 @@ export const NOT_CALLED_HARMONY: readonly string[] = [
   'Xbox',
 ];
 
-/** The name to show and to store, from Logitech's own bare spelling. */
+/**
+ * The name to show and to store, from Logitech's own bare spelling.
+ *
+ * **The regional suffix is dropped, and that is a correction made on 21 August 2026.** Without it a
+ * European Harmony One read over USB was stored as `Harmony One EMEA` while the same remote picked from
+ * the chooser was stored as `Harmony One`, so one face had two names and the whole point of deriving the
+ * name in one place was defeated by the place it was derived from. Skins 54 and 59 differ in nothing on
+ * the face and in nothing printed on the remote, so the suffix is Logitech's internal marker; the
+ * **skin** is kept on the document, so which variant it is is not lost, only the name is settled.
+ *
+ * `soldAs` in the catalogue already folded it for a tile's caption, which is the copy that should have
+ * made this obvious a day earlier.
+ */
 export function fullName(bare: string): string {
-  return NOT_CALLED_HARMONY.some((brand) => bare.startsWith(brand)) ? bare : `Harmony ${bare}`;
+  const withoutRegion = bare.replace(/ EMEA$/, '');
+  return NOT_CALLED_HARMONY.some((brand) => withoutRegion.startsWith(brand))
+    ? withoutRegion
+    : `Harmony ${withoutRegion}`;
 }
 
 /**
