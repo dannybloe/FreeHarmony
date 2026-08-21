@@ -125,6 +125,47 @@ export interface DeviceCommand {
 }
 
 /**
+ * One step in an appliance's own state machine.
+ *
+ * **This is the piece that makes a Harmony feel clever**, and the model was missing it for a day. The
+ * remote does not send a fixed list of commands when you switch activity. It keeps track of what state
+ * it believes every appliance is in, works out the difference between that and what the new activity
+ * wants, and sends only what is needed. Which is why it leaves the television alone when it is already
+ * on, and why it gets it wrong if you switched the television off with its own remote.
+ *
+ * A transition is one entry in the table that makes that possible: to go from this value to that one,
+ * send these commands. It belongs to the appliance rather than to a remote or an activity, because it
+ * is a fact about the appliance: a television with one power button needs a toggle, a television with
+ * separate on and off buttons does not.
+ */
+export interface StateTransition {
+  /**
+   * The value moved away from, and the value moved to.
+   *
+   * A negative number is a sentinel the library next door has read and not yet explained; two of them
+   * occur. It is kept as it is rather than turned into a word here, because inventing a meaning for it
+   * is exactly the kind of guess this model refuses.
+   */
+  readonly from: number;
+  readonly to: number;
+  /** Which of this appliance's own commands the remote sends to make the move, in order. */
+  readonly sends: readonly number[];
+}
+
+/**
+ * Something about an appliance that can be in more than one state: whether it is on, which input it is
+ * showing.
+ *
+ * The name is the appliance's own word for it as the configuration spells it, and `values` is how many
+ * states it has, so a power switch has two and an input selector has as many as it has inputs.
+ */
+export interface DeviceProperty {
+  readonly name: string;
+  readonly values: number;
+  readonly transitions: readonly StateTransition[];
+}
+
+/**
  * How fast an appliance can be talked to.
  *
  * Logitech's editor names all three and a person can feel all three: too little between two key
@@ -163,6 +204,8 @@ export interface DeviceDefinition {
   readonly model?: string;
   readonly kind: DeviceKind;
   readonly commands: readonly DeviceCommand[];
+  /** What can be in more than one state about it, and how to change each one. */
+  readonly properties: readonly DeviceProperty[];
   readonly timing: DeviceTiming;
   readonly origin: DefinitionOrigin;
   /** ISO 8601, so ordering never depends on a file system timestamp. */

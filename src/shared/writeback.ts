@@ -15,8 +15,12 @@
  * own, is the share of a structure's bytes the emitter computes from named fields rather than copying
  * through as an opaque run. `rebuilt` below means that structure came out at 100% or close to it.
  */
-import type { DeviceCommand, DeviceDefinition, DeviceTiming, InfraredSignal } from './library.ts';
-import type { Activity, ActivityRole, ButtonBinding, DeviceUse, RemoteContent, Step } from './content.ts';
+import type {
+  DeviceCommand, DeviceDefinition, DeviceProperty, DeviceTiming, InfraredSignal, StateTransition,
+} from './library.ts';
+import type {
+  Activity, ActivityRole, ButtonBinding, DesiredState, DeviceUse, RemoteContent, Step,
+} from './content.ts';
 
 /** What happens to a field when a configuration is written. */
 export type Writeback =
@@ -81,12 +85,34 @@ export const TIMING: Verdicts<DeviceTiming> = {
   minimumRepeats: { writeback: 'unknown', structure: 'base slot 5 or base slot 15' },
 };
 
+export const TRANSITION: Verdicts<StateTransition> = {
+  from: { writeback: 'rebuilt', structure: "base slot 13, a state variable's transitions" },
+  to: { writeback: 'rebuilt', structure: "base slot 13, a state variable's transitions" },
+  sends: { writeback: 'rebuilt', structure: 'base slot 10, the action list a transition runs' },
+};
+
+export const PROPERTY: Verdicts<DeviceProperty> = {
+  name: { writeback: 'rebuilt', structure: "base slot 0's name tree" },
+  values: { writeback: 'rebuilt', structure: "base slot 13, the record's highest value plus one" },
+  transitions: { writeback: 'rebuilt', structure: 'base slot 13' },
+};
+
+export const DESIRED: Verdicts<DesiredState> = {
+  // All three are in the file, in a key map's enter handler, as a write into a state variable. The
+  // verdict is about writing and not about reading: these can be produced, and which handler to read
+  // them out of is the open question the import records.
+  device: { writeback: 'rebuilt', structure: "base slot 9's enter handler" },
+  property: { writeback: 'rebuilt', structure: 'base slot 13, which variable the write names' },
+  value: { writeback: 'rebuilt', structure: "base slot 9's enter handler" },
+};
+
 export const DEFINITION: Verdicts<DeviceDefinition> = {
   id: { writeback: 'ours' },
   manufacturer: { writeback: 'ours' },
   model: { writeback: 'ours' },
   kind: { writeback: 'ours' },
   commands: { writeback: 'rebuilt', structure: 'base slot 5' },
+  properties: { writeback: 'rebuilt', structure: 'base slot 13 and base slot 0' },
   timing: { writeback: 'unknown', structure: 'base slot 15' },
   origin: { writeback: 'ours' },
   addedAt: { writeback: 'ours' },
@@ -121,6 +147,11 @@ export const ACTIVITY: Verdicts<Activity> = {
   roles: { writeback: 'ours' },
   onStart: { writeback: 'rebuilt', structure: "base slot 9's enter handler" },
   onStop: { writeback: 'rebuilt', structure: "base slot 9's leave handler" },
+  wants: {
+    writeback: 'rebuilt',
+    structure: "base slot 9's enter handler, as writes into state variables",
+    note: 'what an activity really is; reading it waits on which handler is the enter one',
+  },
   devices: { writeback: 'rebuilt', structure: "base slot 9, what the set's bindings send to" },
 };
 
@@ -142,7 +173,8 @@ export const CONTENT: Verdicts<RemoteContent> = {
 
 /** Every table, so a check can walk them without naming them one at a time. */
 export const TABLES: Readonly<Record<string, Readonly<Record<string, Verdict>>>> = {
-  SIGNAL, COMMAND, TIMING, DEFINITION, DEVICE_USE, STEP, ROLE, ACTIVITY, BUTTON, CONTENT,
+  SIGNAL, COMMAND, TRANSITION, PROPERTY, DESIRED, TIMING, DEFINITION, DEVICE_USE, STEP, ROLE,
+  ACTIVITY, BUTTON, CONTENT,
 };
 
 /**

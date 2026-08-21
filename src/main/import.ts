@@ -17,7 +17,9 @@
  */
 import {
   activities as readActivities,
+  deviceVariables,
   devices as readDevices,
+  infraredCodesPerList,
   irBlockWords,
   irCarrier,
   irGroups,
@@ -29,6 +31,7 @@ import {
   keyLabels,
   parse,
   payloadOf,
+  stateRecords,
 } from '@harmony/codec';
 import type { Container } from '@harmony/codec';
 
@@ -36,7 +39,7 @@ import type {
   Activity, ButtonBinding, DeviceUse, RemoteContent, Step,
 } from '../shared/content.ts';
 import type {
-  DeviceCommand, DeviceDefinition, InfraredSignal, Pulse,
+  DeviceCommand, DeviceDefinition, DeviceProperty, InfraredSignal, Pulse, StateTransition,
 } from '../shared/library.ts';
 
 /** A mark rather than a space, in a duration word. The library states the bit; this names it once. */
@@ -91,12 +94,65 @@ function signalOf(c: Container, record: number): InfraredSignal {
   };
 }
 
+/** The opcode a transition carries when it runs an action list, which is the only kind that sends. */
+const RUNS_A_LIST = 0x7f;
+
+/**
+ * What can be in more than one state about each appliance, and how the remote changes it.
+ *
+ * The configuration holds this per appliance, which is what lets a Harmony leave a television alone
+ * when it is already on. A property is a named thing with a number of values, and each entry in its
+ * table says: to get from this value to that one, run this list of commands.
+ *
+ * **Only the appliance's own commands are kept.** A transition that reaches another appliance's codes
+ * would mean the property does not belong to the device it is filed under, so it is dropped rather than
+ * stored somewhere it would be wrong, and `foreign` counts how often that happens.
+ *
+ * That count is **zero** on all four configurations, 89 transitions across 27 properties, and it is
+ * exported so a test can say so rather than a comment. It is a real closure and not bookkeeping: the
+ * pairing between a property and an appliance comes from the name tree, and which codes a transition
+ * sends comes from the action lists, so two unrelated readings agreeing is evidence the pairing is
+ * right. A nonzero count would mean one of them is wrong.
+ */
+export function propertiesOf(c: Container): { properties: Map<number, DeviceProperty[]>; foreign: number } {
+  const records = stateRecords(c);
+  const codesPerList = infraredCodesPerList(c);
+  const bySlot = new Map<number, DeviceProperty[]>();
+  const groupOf = new Map<string, number>();
+  for (const device of readDevices(c)) {
+    if (device.name !== undefined) groupOf.set(device.name, device.group);
+  }
+  let foreign = 0;
+  for (const variable of deviceVariables(c)) {
+    const slot = groupOf.get(variable.device);
+    if (slot === undefined) continue;
+    const record = records?.[variable.index];
+    if (record === undefined) continue;
+    const transitions: StateTransition[] = [];
+    for (const value of record.values) {
+      if (value.opcode !== RUNS_A_LIST) continue;
+      const sent = codesPerList.get(value.operand) ?? [];
+      const mine = sent.filter((one) => one.group === slot);
+      if (mine.length !== sent.length) foreign += 1;
+      if (mine.length === 0) continue;
+      transitions.push({ from: value.from, to: value.to, sends: mine.map((one) => one.code) });
+    }
+    const properties = bySlot.get(slot) ?? [];
+    // `second` is the highest value, so the number of states is one more, which is also the number the
+    // configuration's own name for the variable ends in.
+    properties.push({ name: variable.property, values: record.second + 1, transitions });
+    bySlot.set(slot, properties);
+  }
+  return { properties: bySlot, foreign };
+}
+
 /** Every device the configuration drives, as a provisional definition plus its use on this remote. */
 function devicesOf(c: Container, now: string, idPrefix: string): {
   uses: DeviceUse[];
   definitions: DeviceDefinition[];
 } {
   const labelled = new Map(readDevices(c).map((one) => [one.group, one]));
+  const { properties } = propertiesOf(c);
   const uses: DeviceUse[] = [];
   const definitions: DeviceDefinition[] = [];
   (irGroups(c) ?? []).forEach((group, slot) => {
@@ -112,6 +168,7 @@ function devicesOf(c: Container, now: string, idPrefix: string): {
       // label: "TV" in a name tree is what its owner typed and not a statement about what it drives.
       kind: 'other',
       commands,
+      properties: properties.get(slot) ?? [],
       timing: {},
       origin: 'from-a-configuration',
       addedAt: now,
@@ -147,6 +204,11 @@ function activitiesOf(c: Container): Activity[] {
     roles: [],
     onStart: [],
     onStop: [],
+    // Empty for the same reason as the two above it, and it is the one worth chasing: what an activity
+    // wants every appliance to be doing is written by its own enter handler, and there is a candidate
+    // way to tell that handler from the leave one, since the enter handler is the one that records the
+    // activity as running. Establishing that belongs next door, with a measurement behind it.
+    wants: [],
     devices: one.devices,
   } satisfies Activity));
 }

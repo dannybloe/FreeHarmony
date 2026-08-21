@@ -49,12 +49,16 @@ A **document** is one remote.
 
 * **What it is.** Its name, its model, when it was added, where it came from, and the configuration
   we read off it, kept as it arrived.
-* **Devices.** One per real appliance. A label, a type, the commands it knows, and its timings.
+* **Devices.** One per real appliance. A label, a type, the commands it knows, its timings, and its
+  **state machine**: what about it can be in more than one state, how many states each of those has,
+  and which commands move it from one to another.
 * **A command.** A name, what it sends, and where that came from. What it sends is either a
   protocol and a value, or the measured pulses, and those are two forms of one thing rather than two
   kinds of command.
-* **Activities.** A name, a kind, the devices it uses and the role each one plays, and what happens
-  on start and on stop.
+* **Activities.** A name, a kind, the devices it uses and the role each one plays, and above all
+  **what state it wants everything to be in**: the television on and showing input 3, the amplifier on.
+  Not a list of commands to send, which is what makes switching activity leave alone what is already
+  right.
 * **Buttons.** Per activity and per device, which button sends which command. Two populations, the
   keys the screen speaks for and the keys on the keypad, which the format keeps strictly apart.
 * **Screens.** What the remote shows: the pages, the words on them, and the artwork.
@@ -114,6 +118,39 @@ would grow the whole picture bank by **2%** on the One and by nothing measurable
 cheaper answer than reproducing an encoder we cannot reproduce anyway. What stays true is that a
 picture we did not make is carried through untouched, since re-encoding it is the thing that cannot
 be done.
+
+## The state machine, which is the part that makes a Harmony feel clever
+
+Pointed out by Danny on 21 August 2026 and it was missing from the first version of this page.
+
+The remote keeps track of what state it believes every appliance is in. An activity does not say "send
+these six commands", it says what everything should be doing, and the remote sends only the difference.
+That is why switching from watching television to listening to music does not turn the television off
+and on again, and why it gets it wrong if you turned the television off with its own remote: its belief
+is now stale.
+
+All of it is in the file, per appliance, and the library next door already reads it. Measured on the
+four configurations the tests use, 27 properties and 89 transitions:
+
+* a `Power` with two states, on every appliance
+* an `Input` with as many states as the appliance has inputs, 19 on one of them
+* and per pair of states, which commands to send to make the move
+
+So the model holds this on the **appliance**, because it is a fact about the appliance: a television
+with one power button needs a toggle where one with separate buttons does not. And an activity holds the
+**wanted state** rather than a list of actions.
+
+**One closure worth keeping.** Which appliance a property belongs to comes from the names in the file;
+which codes a transition sends comes from the action lists. Those are two unrelated readings, and they
+agree on all 89 transitions: not one sends another appliance's code. A single crossing would mean one of
+them is wrong, so the count is asserted at zero, and pairing every property with the wrong appliance
+makes both tests fail.
+
+**What is still not read**: what an activity wants. The values are in the file, written by the
+activity's own enter handler, and it waits on the same open question as its start and stop actions,
+which of a key map's handlers is the enter one. There is a candidate answer, that the enter handler is
+the one recording the activity as running, and establishing it belongs next door with a measurement
+behind it.
 
 ## Two things building it taught, both of which would have been wrong
 

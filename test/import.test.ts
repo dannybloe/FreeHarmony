@@ -14,9 +14,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { parse, payloadOf } from '@harmony/codec';
 import { require_, skipUnless } from '@harmony/lab';
 
-import { importConfiguration } from '../src/main/import.ts';
+import { importConfiguration, propertiesOf } from '../src/main/import.ts';
 import { mayBeShared } from '../src/shared/library.ts';
 
 /**
@@ -28,10 +29,14 @@ import { mayBeShared } from '../src/shared/library.ts';
  * it exceeds `buttons` wherever a button sends more than one code.
  */
 const SAMPLES = [
-  { name: 'one_config', devices: 5, activities: 8, buttons: 461, steps: 461 },
-  { name: 'h600_config', devices: 4, activities: 3, buttons: 229, steps: 241 },
-  { name: 'h525_config', devices: 4, activities: 3, buttons: 220, steps: 220 },
-  { name: 'arch8_config_a', devices: 3, activities: 1, buttons: 210, steps: 210 },
+  { name: 'one_config', devices: 5, activities: 8, buttons: 461, steps: 461,
+    properties: 9, transitions: 41 },
+  { name: 'h600_config', devices: 4, activities: 3, buttons: 229, steps: 241,
+    properties: 7, transitions: 17 },
+  { name: 'h525_config', devices: 4, activities: 3, buttons: 220, steps: 220,
+    properties: 6, transitions: 16 },
+  { name: 'arch8_config_a', devices: 3, activities: 1, buttons: 210, steps: 210,
+    properties: 5, transitions: 15 },
 ] as const;
 
 const NAMES = SAMPLES.map((one) => one.name);
@@ -129,4 +134,41 @@ test('a step never names a command the device has not got', skipUnless(...NAMES)
   // Exact, so that a reader falling silent shows up as a number rather than as a loop that ran zero
   // times and passed. The per sample figures are in `SAMPLES` and this is their sum.
   assert.equal(steps, SAMPLES.reduce((n, one) => n + one.steps, 0));
+});
+
+test('every appliance gets its state machine, and its transitions send its own codes',
+     skipUnless(...NAMES), () => {
+  // The part of a Harmony that makes switching activity feel clever: it knows what state it believes
+  // each appliance is in and sends only the difference. That table is per appliance in the file, and
+  // this is the check that it comes across whole.
+  for (const { name, properties, transitions } of SAMPLES) {
+    const imported = importConfiguration(require_(name), { now: NOW, idPrefix: name });
+    const found = imported.definitions.flatMap((one) => one.properties);
+    assert.equal(found.length, properties, `${name}: properties`);
+    assert.equal(found.reduce((n, one) => n + one.transitions.length, 0), transitions,
+                 `${name}: transitions`);
+    for (const property of found) {
+      // A property with one value cannot be switched and is still a property: the corpus has several,
+      // which is how an appliance the remote only ever turns on shows up. What is refused is zero.
+      assert.ok(property.values >= 1, `${name}: ${property.name} has no values`);
+      for (const transition of property.transitions) {
+        assert.ok(transition.sends.length > 0, `${name}: a transition that sends nothing`);
+        assert.ok(transition.to <= property.values - 1 || transition.to < 0,
+                  `${name}: ${property.name} moves to ${transition.to} of ${property.values}`);
+      }
+    }
+  }
+});
+
+test('no transition sends another appliance\'s code, which is what pins the pairing',
+     skipUnless(...NAMES), () => {
+  // Two unrelated readings agreeing. Which appliance a property belongs to comes from the names in the
+  // file; which codes a transition sends comes from the action lists. A single crossing would mean one
+  // of the two is wrong, so the count is asserted at zero rather than mentioned in a comment.
+  let crossings = 0;
+  for (const { name } of SAMPLES) {
+    const { foreign } = propertiesOf(parse(payloadOf(require_(name), name)));
+    crossings += foreign;
+  }
+  assert.equal(crossings, 0);
 });

@@ -87,6 +87,25 @@ export interface Step {
 }
 
 /**
+ * What an activity wants one appliance to be doing.
+ *
+ * **This is what an activity really is**, and saying it as a list of commands to send was the model's
+ * one structural mistake. An activity does not say "send these six codes". It says the television is on
+ * and showing input 3 and the amplifier is on. The remote compares that with what it believes is true
+ * and sends only the difference, which is why switching activity does not turn things off and on again.
+ *
+ * It also means an activity is repeatable and safe: starting the same activity twice sends nothing the
+ * second time.
+ */
+export interface DesiredState {
+  /** The device position, matching `DeviceUse.slot`. */
+  readonly device: number;
+  /** The property's name as the appliance's definition spells it. */
+  readonly property: string;
+  readonly value: number;
+}
+
+/**
  * Something the remote can be switched into: watching television, listening to music.
  *
  * `onStart` and `onStop` are Logitech's own shape and the format's too, which is the rare case where
@@ -113,6 +132,16 @@ export interface Activity {
    */
   readonly onStart: readonly Step[];
   readonly onStop: readonly Step[];
+  /**
+   * What it wants every appliance to be doing, which is the real content of an activity.
+   *
+   * Empty on an import today. The values are in the file, written by the activity's own enter handler,
+   * and reading them waits on the same unresolved question as `onStart`: which of a key map's handlers
+   * is the enter one. There is a candidate answer next door, that the enter handler is the one which
+   * records the activity as running, and establishing it is work for the library rather than a guess
+   * here.
+   */
+  readonly wants: readonly DesiredState[];
   /** The devices it drives, by position. Derivable from the roles once those exist, stated until then. */
   readonly devices: readonly number[];
 }
