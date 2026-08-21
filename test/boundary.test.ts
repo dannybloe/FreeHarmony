@@ -34,6 +34,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, sep } from 'node:path';
 
 import * as codec from '@harmony/codec';
+import * as lab from '@harmony/lab';
 import * as silhouettes from '@harmony/silhouettes';
 import * as usb from '@harmony/usb';
 import * as usbModels from '@harmony/usb/models';
@@ -59,7 +60,7 @@ function sourcesUnder(directory: string): string[] {
 /**
  * The libraries this product consumes, and what each has to answer.
  *
- * A table rather than a test each, because there are four entries now across three packages and
+ * A table rather than a test each, because there are five entries now across four packages and
  * everything below is the same claim about all of them: the sibling's oldest rule is that a derivation
  * must not exist twice, and a boundary check copied per library is exactly that. Adding another means
  * adding a row.
@@ -108,6 +109,18 @@ const LIBRARIES: readonly {
     exports: 93,
     entry: ['packages', 'usb', 'src', 'index.ts'],
     functions: ['listHarmony', 'skinId', 'openHarmony'],
+  },
+  {
+    // The only row that is a **development** dependency, and the only one this product does not ship.
+    // It locates the private lab directory so that a test can run against somebody's own configuration,
+    // which is the only way anything here can be tested at all: no configuration may ever come into
+    // this repository. Reusing the sibling's locator rather than writing a second one is the same rule
+    // as everything else in this file.
+    name: '@harmony/lab',
+    module: lab as unknown as Record<string, unknown>,
+    exports: 10,
+    entry: ['packages', 'lab', 'src', 'index.ts'],
+    functions: ['load', 'require_', 'skipUnless'],
   },
   {
     // A **subpath** rather than the package, and that is the point of the row. `@harmony/usb` proper
@@ -177,13 +190,18 @@ test('the dependency is spelled the way this project\'s package manager needs', 
   const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as {
     packageManager?: string;
     dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
   };
   assert.ok(manifest.packageManager?.startsWith('pnpm@'), 'the package manager has to be stated');
   for (const library of LIBRARIES) {
     // The declared package, which is what a manifest holds. A subpath import is not a dependency of
     // its own, and asking for one is how this check first failed when the third row arrived.
     const declared = library.pkg ?? library.name;
-    const spec = manifest.dependencies?.[declared];
+    // **Either section**, which is how it failed when the fifth row arrived: the lab locator is a
+    // development dependency, and it crosses exactly the same boundary and needs exactly the same
+    // spelling. Which section a sibling is declared in is a question about shipping, not about
+    // resolution.
+    const spec = manifest.dependencies?.[declared] ?? manifest.devDependencies?.[declared];
     assert.ok(spec?.startsWith('link:'), `${declared}: pnpm needs link:, not ${spec}`);
     assert.ok(spec?.includes('harmony-explorations'), 'the sibling checkout is load bearing');
   }

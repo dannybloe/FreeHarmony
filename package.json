@@ -21,8 +21,9 @@
     "typecheck:web": "tsc -p tsconfig.web.json",
     "typecheck": "pnpm typecheck:node && pnpm typecheck:web",
     "test:unit": "node --test 'test/*.test.ts'",
+    "test:nolab": "HARMONY_LAB=/nonexistent node --test 'test/*.test.ts'",
     "test:app": "pnpm build && node --test 'test/app/*.test.ts'",
-    "test": "pnpm test:unit && pnpm test:app",
+    "test": "pnpm test:unit && pnpm test:nolab && pnpm test:app",
     "check": "pnpm typecheck && pnpm test"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@harmony/lab": "link:../harmony-explorations/packages/lab",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",

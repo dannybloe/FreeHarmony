@@ -31,6 +31,18 @@ cannot be expressed down there can never reach a remote, however sensible it loo
 **And the emitter says what we can put back.** That is the column nobody can guess, and it is
 measured below.
 
+## Where it is
+
+`src/shared/library.ts` is the device library, `src/shared/content.ts` is what a document holds,
+`src/shared/writeback.ts` is the table below as code, and `src/main/import.ts` fills the model from a
+configuration that was read off a remote. The first three are plain data with no library behind them,
+by the same rule as the rest of `src/shared`; the fourth is the only file here that turns the library's
+values into ours, which is why it sits in the main process.
+
+**The table is enforced by the compiler**, not by a habit: every entry in `writeback.ts` is a mapped
+type over the interface it describes, so adding a field to the model fails the typecheck until somebody
+has said what happens to it.
+
 ## The model, in plain words
 
 A **document** is one remote.
@@ -102,6 +114,26 @@ would grow the whole picture bank by **2%** on the One and by nothing measurable
 cheaper answer than reproducing an encoder we cannot reproduce anyway. What stays true is that a
 picture we did not make is carried through untouched, since re-encoding it is the thing that cannot
 be done.
+
+## Two things building it taught, both of which would have been wrong
+
+**Marks and spaces are stated, not implied.** The obvious way to hold an infrared code is a list of
+durations that alternate, starting with a mark, which is how raw infrared is written nearly everywhere.
+Measured across four configurations: of 1729 duration blocks, 599 begin with a **space** and only 154
+strictly alternate. Both reasons are ordinary. A code that repeats begins with the gap before it, and a
+single duration caps at 32767 microseconds, so a long pause is several spaces in a row. Assuming the
+alternation would have silently mangled 91% of the codes in the corpus, and nothing would have failed
+until somebody pressed a button.
+
+**There are two kinds of absence and they must not be confused.** What an activity was for, and which
+device does the sound in it, are gone because the compiler discarded them: no amount of better reading
+brings them back, and that is the argument for the model. But an activity's **start** and **stop**
+actions are in the file, in its key map's own enter and leave handlers, and they come out empty today
+only because which of three tags is the leave handler has never been established next door. The first
+version of the import filled the start actions from the button that starts the activity, which reads
+correctly and measures zero, because that button selects the key map and the codes live one hop
+further along. So the model marks these two as waiting on a reading rather than as lost, and the test
+asserts they are empty, which is what stops the next person filling them from a guess.
 
 ## What this means for version 1
 

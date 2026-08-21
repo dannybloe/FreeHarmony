@@ -30,6 +30,9 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
     devDependencies:
+      '@harmony/lab':
+        specifier: link:../harmony-explorations/packages/lab
+        version: link:../harmony-explorations/packages/lab
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
