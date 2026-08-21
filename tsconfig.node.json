@@ -23,6 +23,11 @@
   // that reaches for `window` is named `useSomething.ts`, is not claimed here, and would fail to
   // compile if it were. So the rule is checked by the typechecker on every run instead of by
   // somebody reading a diff.
+  //
+  // `src/renderer/src/catalogue.ts` is claimed here for the same reason and by name rather than by a
+  // pattern: it is the lookup from a document's model to a drawing, it touches no DOM, and a Node test
+  // walks it. Being in this project is what keeps that true.
   "include": ["bin", "build", "test", "src/main", "src/preload", "src/shared",
-              "src/renderer/src/**/*.model.ts", "electron.vite.config.ts"]
+              "src/renderer/src/**/*.model.ts", "src/renderer/src/catalogue.ts",
+              "electron.vite.config.ts"]
 }

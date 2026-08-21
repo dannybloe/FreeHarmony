@@ -11,7 +11,7 @@
  * at remotes, not properties of remotes, which is why they are here and not in `RemoteDocument`.
  */
 import type { RemotesApi } from '../../../shared/api.ts';
-import type { RemoteDocument } from '../../../shared/remote.ts';
+import type { RemoteDocument, RemoteModel } from '../../../shared/remote.ts';
 
 export interface RemotesState {
   /** `loading` only before the first answer. A later reload keeps the list and sets `busy`. */
@@ -43,9 +43,9 @@ export class RemotesModel {
     return this.#run(async () => ({ remotes: await this.#api.list() }));
   }
 
-  create(name: string): Promise<void> {
+  create(name: string, model?: RemoteModel): Promise<void> {
     return this.#run(async () => {
-      await this.#api.create(name);
+      await this.#api.create(name, model);
       return { remotes: await this.#api.list() };
     });
   }

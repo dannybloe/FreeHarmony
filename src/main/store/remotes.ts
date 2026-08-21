@@ -29,7 +29,7 @@ import { createHash } from 'node:crypto';
 import { cp, mkdir, readdir, readFile, rename as renamePath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { BaseConfiguration, RemoteDocument, StoredRemote } from '../../shared/remote.ts';
+import type { BaseConfiguration, RemoteDocument, RemoteModel, StoredRemote } from '../../shared/remote.ts';
 import { byMostRecentlyChanged, cleanName, whyNameIsRefused } from '../../shared/remote.ts';
 
 const MANIFEST = 'remote.json';
@@ -84,12 +84,23 @@ export class RemoteStore {
     return { ...stored, name };
   }
 
-  async create(name: string): Promise<RemoteDocument> {
+  /**
+   * A new document, with the model it is about where the caller knows it.
+   *
+   * The model is optional at this seam and not further in: a document written before the field
+   * existed has none, and the store's job is to keep what it was told rather than to invent one. The
+   * spread is what `exactOptionalPropertyTypes` demands, and it is the right shape anyway, since an
+   * absent key and a key holding `undefined` should not both end up in somebody's JSON.
+   */
+  async create(name: string, model?: RemoteModel): Promise<RemoteDocument> {
     const wanted = this.#acceptable(name);
     if (await this.#exists(wanted)) throw new Error(`there is already a remote called ${wanted}`);
 
     const at = this.#now();
-    const stored: StoredRemote = { provenance: 'created-empty', createdAt: at, updatedAt: at };
+    const stored: StoredRemote = {
+      provenance: 'created-empty', createdAt: at, updatedAt: at,
+      ...(model === undefined ? {} : { model }),
+    };
     await mkdir(join(this.folderOf(wanted), BACKUPS), { recursive: true });
     await this.#write(wanted, stored);
     return { ...stored, name: wanted };

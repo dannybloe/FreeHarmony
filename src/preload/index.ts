@@ -25,7 +25,7 @@ async function call(method: (typeof REMOTE_METHODS)[number], ...args: unknown[])
 const api: FreeHarmonyApi = {
   remotes: {
     list: () => call('list') as ReturnType<FreeHarmonyApi['remotes']['list']>,
-    create: (name) => call('create', name) as ReturnType<FreeHarmonyApi['remotes']['create']>,
+    create: (name, model) => call('create', name, model) as ReturnType<FreeHarmonyApi['remotes']['create']>,
     rename: (name, to) => call('rename', name, to) as ReturnType<FreeHarmonyApi['remotes']['rename']>,
     duplicate: (name) => call('duplicate', name) as ReturnType<FreeHarmonyApi['remotes']['duplicate']>,
     remove: (name) => call('remove', name) as ReturnType<FreeHarmonyApi['remotes']['remove']>,

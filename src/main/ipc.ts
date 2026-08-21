@@ -18,7 +18,7 @@ import { RemoteStore } from './store/remotes.ts';
 export function registerRemoteHandlers(store: RemoteStore): void {
   const api: RemotesApi = {
     list: () => store.list(),
-    create: (name) => store.create(name),
+    create: (name, model) => store.create(name, model),
     rename: (name, to) => store.rename(name, to),
     duplicate: (name) => store.duplicate(name),
     remove: (name) => store.remove(name),

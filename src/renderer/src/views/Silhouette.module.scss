@@ -1,0 +1,18 @@
+// Sizing, and nothing else. What a drawing looks like is decided by the custom properties the
+// library reads, which a parent sets; what size it is is decided here.
+
+.frame {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  // The height comes from whoever places this, and the width follows from the model's own
+  // proportions. That is the arrangement the library was built for: every model is drawn to the same
+  // case height, so a 525 and a One shown at one height are shown at one scale.
+  height: 100%;
+
+  svg {
+    display: block;
+    height: 100%;
+    width: auto;
+  }
+}

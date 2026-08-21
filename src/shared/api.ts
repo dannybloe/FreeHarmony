@@ -10,7 +10,7 @@
  * with methods, a class instance or a parsed container cannot pass, and that constraint is a feature:
  * the configuration bytes stay in the main process because they cannot casually leave it.
  */
-import type { RemoteDocument } from './remote.ts';
+import type { RemoteDocument, RemoteModel } from './remote.ts';
 
 /** The name the API is published under on `window`. One constant, so no side spells it by hand. */
 export const API_NAMESPACE = 'freeharmony';
@@ -22,8 +22,13 @@ export const API_NAMESPACE = 'freeharmony';
 export interface RemotesApi {
   /** Every remote this machine holds, most recently changed first. */
   list(): Promise<RemoteDocument[]>;
-  /** A new entry with nothing behind it. It cannot be written to a device, see `isWritable`. */
-  create(name: string): Promise<RemoteDocument>;
+  /**
+   * A new document with nothing behind it. It cannot be written to a device, see `isWritable`.
+   *
+   * The model is optional because it genuinely is: it is known when somebody picked one from the list
+   * or when a remote reported it, and unknown otherwise, and an unknown model is drawn as a name.
+   */
+  create(name: string, model?: RemoteModel): Promise<RemoteDocument>;
   /** Moves the folder. Refused if the new name is unusable or already taken. */
   rename(name: string, to: string): Promise<RemoteDocument>;
   /** A complete copy under the first free name, base configuration included. */

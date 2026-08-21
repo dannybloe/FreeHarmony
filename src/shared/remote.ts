@@ -45,12 +45,37 @@ export interface BaseConfiguration {
 }
 
 /**
+ * Which remote a document is about.
+ *
+ * **The name is always there and the skin often is not**, which is the whole shape of this type. A
+ * skin is the number a remote reports over USB, and it is what a drawing is looked up by; a document
+ * somebody created by picking a model from a list has one because we chose it, and a document that
+ * came from a remote has one because the remote said so. What has no skin is a model nobody has
+ * measured, and the honest thing there is to keep the name and draw nothing.
+ *
+ * The name is Logitech's own word, "Harmony One", so that a document says what its owner would say.
+ */
+export interface RemoteModel {
+  readonly name: string;
+  /** The skin the hardware reports. Absent where it is not known, which is a real case. */
+  readonly skin?: number;
+}
+
+/**
  * `remote.json`: everything about a remote that its folder name cannot carry.
  *
  * No name and no identifier, which is the point. Adding either would put a fact in two places.
  */
 export interface StoredRemote {
   readonly provenance: Provenance;
+  /**
+   * Which remote this is, where that is known.
+   *
+   * Optional, and it stays optional rather than being backfilled with a guess: a document written
+   * before this field existed genuinely does not know, and a default would be a claim about somebody
+   * else's equipment. The interface draws such a document as a tile with a name and no picture.
+   */
+  readonly model?: RemoteModel;
   /** ISO 8601, both, so ordering never depends on a file system timestamp. */
   readonly createdAt: string;
   readonly updatedAt: string;

@@ -59,6 +59,38 @@ test('the manifest holds no name and no identifier, so no fact is in two places'
   await cleanup();
 });
 
+test('a remote records which model it is, and a duplicate stays the same model', async () => {
+  // The field the whole first screen depends on: without it there is nothing to draw. It is written
+  // through to the manifest rather than kept in memory, and it survives a copy, because a duplicate is
+  // the same piece of hardware as far as anybody looking at it is concerned.
+  const { root, store, cleanup } = await freshStore();
+  const model = { name: 'Harmony One', skin: 54 };
+  const made = await store.create('Woonkamer', model);
+
+  assert.deepEqual(made.model, model);
+  const manifest = JSON.parse(await readFile(join(root, 'Woonkamer', 'remote.json'), 'utf8')) as
+    Record<string, unknown>;
+  assert.deepEqual(Object.keys(manifest).sort(), ['createdAt', 'model', 'provenance', 'updatedAt']);
+  assert.deepEqual(manifest['model'], model);
+
+  const copy = await store.duplicate('Woonkamer');
+  assert.deepEqual(copy.model, model);
+  await cleanup();
+});
+
+test('a remote with no model is not given one, since a default would be a claim about somebody else', async () => {
+  // The documents written before the field existed, and every remote whose model nobody knows. The
+  // key has to be **absent** rather than present and null, or the interface has a third case to draw.
+  const { root, store, cleanup } = await freshStore();
+  const made = await store.create('Zolder');
+
+  assert.equal(made.model, undefined);
+  const manifest = JSON.parse(await readFile(join(root, 'Zolder', 'remote.json'), 'utf8')) as
+    Record<string, unknown>;
+  assert.ok(!('model' in manifest), `the manifest carries a model it was never told: ${JSON.stringify(manifest)}`);
+  await cleanup();
+});
+
 test('a created remote knows where it came from and that nothing is behind it', async () => {
   const { store, cleanup } = await freshStore();
   const remote = await store.create('bedroom');
