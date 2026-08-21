@@ -1,0 +1,128 @@
+// A tile. Glass, a soft lift on hover, and a ring when it is the chosen one.
+
+@use '../mantine' as m;
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: m.rem(2);
+  width: m.rem(186);
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-sm) var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-lg);
+  // Translucent white over the page's own wash, which is what makes a card read as glass rather than
+  // as a white rectangle. The blur is what sells it; without it this is just a pale box.
+  background: rgb(255 255 255 / 66%);
+  backdrop-filter: blur(m.rem(12));
+  box-shadow:
+    0 m.rem(1) m.rem(2) rgb(16 24 40 / 4%),
+    0 m.rem(10) m.rem(26) rgb(16 24 40 / 5%);
+  cursor: pointer;
+  text-align: center;
+  transition: translate 140ms ease, box-shadow 140ms ease, border-color 140ms ease,
+              background 140ms ease;
+
+  @include m.hover {
+    translate: 0 m.rem(-3);
+    border-color: var(--mantine-color-indigo-2);
+    background: rgb(255 255 255 / 84%);
+    box-shadow:
+      0 m.rem(2) m.rem(4) rgb(16 24 40 / 5%),
+      0 m.rem(18) m.rem(38) rgb(49 46 129 / 10%);
+  }
+
+  &:active {
+    translate: 0 m.rem(-1);
+  }
+
+  // The keyboard's own outline, kept rather than removed, and drawn as the same ring the mouse gets.
+  &:focus-visible {
+    outline: none;
+    border-color: var(--mantine-color-indigo-4);
+    box-shadow: 0 0 0 m.rem(3) var(--mantine-color-indigo-1);
+  }
+}
+
+.selected {
+  border-color: var(--mantine-color-indigo-5);
+  background: rgb(255 255 255 / 92%);
+  box-shadow:
+    0 0 0 m.rem(3) var(--mantine-color-indigo-1),
+    0 m.rem(16) m.rem(34) rgb(49 46 129 / 12%);
+}
+
+// Where the picture goes. A fixed height so every tile in a row lines up whatever is in it, which is
+// the arrangement the drawings were normalised for: every model is drawn to the same case height.
+.stage {
+  display: grid;
+  place-items: center;
+  height: m.rem(200);
+  width: 100%;
+  // The keys of a drawing are pale, so they need something behind them. A vertical wash reads as a
+  // surface the remote is lying on rather than as a coloured panel.
+  background: linear-gradient(180deg, rgb(255 255 255 / 0%), var(--mantine-color-gray-0));
+  border-radius: var(--mantine-radius-md);
+
+  // The drawing itself, coloured from here rather than in the library: every fill in it reads a custom
+  // property, so one rule dresses the whole remote and there is no second drawing to keep in step.
+  --case-fill: var(--mantine-color-gray-1);
+  --case-stroke: var(--mantine-color-gray-6);
+  --recess-fill: var(--mantine-color-gray-2);
+  --key-fill: var(--mantine-color-white);
+  --key-stroke: var(--mantine-color-gray-4);
+  --key-text: var(--mantine-color-gray-7);
+}
+
+.title {
+  margin-block-start: var(--mantine-spacing-xs);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.caption {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-6);
+}
+
+// The initial that stands in for a drawing nobody has made.
+.unknown {
+  display: grid;
+  place-items: center;
+  width: m.rem(78);
+  height: m.rem(78);
+  border-radius: 50%;
+  font-size: m.rem(30);
+  font-weight: 600;
+  color: var(--mantine-color-indigo-4);
+  background: var(--mantine-color-indigo-0);
+}
+
+.add {
+  border-style: dashed;
+  border-color: var(--mantine-color-gray-3);
+  background: rgb(255 255 255 / 42%);
+  box-shadow: none;
+
+  .stage {
+    background: none;
+  }
+
+  @include m.hover {
+    border-color: var(--mantine-color-indigo-3);
+    background: rgb(255 255 255 / 70%);
+    box-shadow: 0 m.rem(12) m.rem(28) rgb(49 46 129 / 8%);
+  }
+}
+
+.plus {
+  display: grid;
+  place-items: center;
+  width: m.rem(72);
+  height: m.rem(72);
+  border-radius: 50%;
+  color: var(--mantine-color-indigo-5);
+  background: rgb(255 255 255 / 70%);
+  border: 1px solid var(--mantine-color-gray-2);
+}

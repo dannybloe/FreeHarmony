@@ -12,12 +12,14 @@ import { modelForSkin } from '@harmony/usb/models';
 
 import { asRemoteModel, drawingFor, SUPPORTED } from '../src/renderer/src/catalogue.ts';
 
-test('three models are offered, oldest hardware first, each with its own facts', () => {
+test('three models are offered, in the order somebody reads them, each with its own facts', () => {
   // Exact, not a floor. Three of the forty models Logitech retired are drawn, and when a fourth is
   // drawn next door this number moves in a diff somebody reads.
+  //
+  // The order is a claim about the screen and not about the hardware: 525, 600, One is how a person
+  // says it, where by architecture it came out 525, One, 600.
   assert.equal(SUPPORTED.length, 3);
-  assert.deepEqual(SUPPORTED.map((m) => m.name), ['Harmony 525', 'Harmony One', 'Harmony 600']);
-  assert.deepEqual(SUPPORTED.map((m) => m.drawing.architecture), [9, 12, 14]);
+  assert.deepEqual(SUPPORTED.map((m) => m.name), ['Harmony 525', 'Harmony 600', 'Harmony One']);
   for (const model of SUPPORTED) {
     assert.ok(model.skin > 0, `${model.name} has no skin to record`);
     assert.ok(model.facts.length >= 1, `${model.name} says nothing about itself`);
@@ -37,7 +39,7 @@ test('a tile is a face, and it names every model number that face is sold as', (
   // numbers on it, rather than getting a picture each. Today every one of the three answers with a
   // single number, and that is the honest answer rather than a missing feature: the only aliases in
   // Logitech's table for these three are regional twins of the same name.
-  assert.deepEqual(SUPPORTED.map((m) => m.soldAs), [['525'], ['One'], ['600']]);
+  assert.deepEqual(SUPPORTED.map((m) => m.soldAs), [['525'], ['600'], ['One']]);
 });
 
 test('a regional twin folds into its own number instead of appearing beside it', () => {

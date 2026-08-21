@@ -36,7 +36,12 @@ test('every stylesheet of ours is found, so the sweep below cannot be empty', as
   // Named rather than counted, because this population grows with the interface: a count would move on
   // every new component, where a missing name means a file was renamed and the sweep stopped seeing it.
   const found = (await stylesheets()).map((path) => relative(RENDERER, path));
-  for (const wanted of ['src/App.module.scss', 'src/_mantine.scss', 'src/views/RemotesView.module.scss']) {
+  // Named rather than counted, and the names move when a view does: this list found the removal of
+  // `RemotesView.module.scss` the moment Home replaced it, which is what it is for.
+  for (const wanted of ['src/App.module.scss', 'src/_mantine.scss',
+                        'src/views/AppBar.module.scss', 'src/views/Carousel.module.scss',
+                        'src/views/HomeView.module.scss', 'src/views/RemoteTile.module.scss',
+                        'src/views/RemoteView.module.scss', 'src/views/Silhouette.module.scss']) {
     assert.ok(found.includes(wanted), `${wanted} is no longer where the sweep looks. Found: ${found}`);
   }
 });

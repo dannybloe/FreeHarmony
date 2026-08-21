@@ -68,6 +68,24 @@ export function PlugGlyph({ size = 16, className }: GlyphProps) {
   );
 }
 
+/**
+ * A chevron, pointing where it is told.
+ *
+ * One glyph for three jobs, the two carousel arrows and the way back, because they are the same shape
+ * and three near identical paths would be three things to keep in step. Rotation is a transform on the
+ * whole drawing rather than a second path, which is also why it stays crisp at any size.
+ */
+export function ChevronGlyph({ towards, size = 20, className }: GlyphProps & {
+  readonly towards: 'left' | 'right';
+}) {
+  const turn = towards === 'left' ? 180 : 0;
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden="true">
+      <path {...stroke} strokeWidth={2} d="M9.5 4.5 17 12l-7.5 7.5" transform={`rotate(${turn} 12 12)`} />
+    </svg>
+  );
+}
+
 /** More: the menu a row hides its less common actions behind. */
 export function DotsGlyph({ size = 18, className }: GlyphProps) {
   return (

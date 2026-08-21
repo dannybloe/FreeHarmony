@@ -101,8 +101,11 @@ function factsAbout(drawing: Model): string[] {
  * Every model with a drawing, in the order they are offered.
  *
  * Three of the forty models Logitech retired, so a remote whose model is not here is the ordinary
- * case rather than a fault. Ordered oldest to newest by architecture, which happens to put the
- * simplest first.
+ * case rather than a fault.
+ *
+ * Ordered by name, with numbers read as numbers, so the row reads 525, 600, One. By architecture it
+ * read 525, One, 600, which is correct about the hardware and wrong on a screen: nobody looking for
+ * their own remote knows which generation of chip is in it.
  */
 export const SUPPORTED: readonly SupportedModel[] = Object.values(MODELS)
   .map((drawing) => ({
@@ -113,7 +116,7 @@ export const SUPPORTED: readonly SupportedModel[] = Object.values(MODELS)
     drawing,
     facts: factsAbout(drawing),
   }))
-  .sort((a, b) => a.drawing.architecture - b.drawing.architecture);
+  .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
 /**
  * The drawing for a document's model, or `undefined` when there is none.

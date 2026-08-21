@@ -1,0 +1,83 @@
+@use '../mantine' as m;
+
+.page {
+  display: grid;
+  place-items: start center;
+  padding-block-start: var(--mantine-spacing-md);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: m.rem(6);
+  width: 100%;
+  max-width: m.rem(520);
+  padding: var(--mantine-spacing-xl);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-lg);
+  background: rgb(255 255 255 / 62%);
+  backdrop-filter: blur(m.rem(12));
+  box-shadow: 0 m.rem(16) m.rem(38) rgb(16 24 40 / 6%);
+  text-align: center;
+}
+
+.plug {
+  display: grid;
+  place-items: center;
+  width: m.rem(92);
+  height: m.rem(92);
+  margin-block-end: var(--mantine-spacing-xs);
+  border-radius: 50%;
+  color: var(--mantine-color-indigo-5);
+  background:
+    radial-gradient(circle at 50% 30%, var(--mantine-color-white), var(--mantine-color-indigo-0));
+  border: 1px solid var(--mantine-color-indigo-1);
+}
+
+.title {
+  font-size: m.rem(24);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.lead {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+.steps {
+  margin: var(--mantine-spacing-md) 0 0;
+  padding-inline-start: var(--mantine-spacing-lg);
+  text-align: start;
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.6;
+  color: var(--mantine-color-gray-7);
+}
+
+// The honest box. Amber rather than red: nothing is wrong, something is simply not here yet.
+.pending {
+  width: 100%;
+  margin-block-start: var(--mantine-spacing-lg);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--mantine-color-yellow-2);
+  background: var(--mantine-color-yellow-0);
+  text-align: start;
+}
+
+.pendingTitle {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  color: var(--mantine-color-yellow-9);
+}
+
+.pendingBody {
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.5;
+  color: var(--mantine-color-yellow-9);
+}
+
+.actions {
+  margin-block-start: var(--mantine-spacing-lg);
+}

@@ -1,0 +1,106 @@
+@use '../mantine' as m;
+
+.add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: m.rem(4);
+}
+
+.title {
+  font-size: m.rem(27);
+  font-weight: 600;
+  letter-spacing: m.rem(-0.4);
+  color: var(--mantine-color-gray-9);
+}
+
+.lead {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+.routes {
+  display: grid;
+  // The connect route is a fixed column and the chooser takes the rest, which is the sketch: one door
+  // on the left, a shelf of models on the right.
+  grid-template-columns: m.rem(210) 1fr;
+  gap: var(--mantine-spacing-lg);
+  align-items: start;
+
+  @include m.smaller-than(m.$breakpoint-md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.connect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: m.rem(2);
+  padding: var(--mantine-spacing-lg) var(--mantine-spacing-md);
+  border: 1px dashed var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-lg);
+  background: rgb(255 255 255 / 48%);
+  backdrop-filter: blur(m.rem(10));
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 140ms ease, background 140ms ease, translate 140ms ease;
+
+  @include m.hover {
+    translate: 0 m.rem(-2);
+    border-color: var(--mantine-color-indigo-3);
+    background: rgb(255 255 255 / 74%);
+  }
+}
+
+.plug {
+  display: grid;
+  place-items: center;
+  width: m.rem(64);
+  height: m.rem(64);
+  margin-block-end: var(--mantine-spacing-xs);
+  border-radius: 50%;
+  color: var(--mantine-color-indigo-5);
+  background: var(--mantine-color-indigo-0);
+}
+
+.connectTitle {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.connectCaption {
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.4;
+  color: var(--mantine-color-gray-6);
+}
+
+.chooser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-md) var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-lg);
+  background: rgb(255 255 255 / 40%);
+  backdrop-filter: blur(m.rem(10));
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+  padding-inline: m.rem(6);
+}
+
+.facts {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-6);
+}

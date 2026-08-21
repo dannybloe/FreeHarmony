@@ -1,0 +1,81 @@
+@use '../mantine' as m;
+
+.page {
+  display: grid;
+  // The remote on the left at a size worth looking at, the decision on the right.
+  grid-template-columns: m.rem(300) 1fr;
+  gap: var(--mantine-spacing-xl);
+  align-items: start;
+
+  @include m.smaller-than(m.$breakpoint-md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  height: m.rem(460);
+  padding: var(--mantine-spacing-lg);
+  border-radius: var(--mantine-radius-lg);
+  border: 1px solid var(--mantine-color-gray-2);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 12%, rgb(255 255 255 / 92%), rgb(255 255 255 / 34%));
+  backdrop-filter: blur(m.rem(12));
+  box-shadow: 0 m.rem(14) m.rem(34) rgb(16 24 40 / 6%);
+
+  // At this size the printed words on the face are legible, so the drawing gets a little more contrast
+  // than it has in a tile.
+  --case-fill: var(--mantine-color-gray-1);
+  --case-stroke: var(--mantine-color-gray-6);
+  --recess-fill: var(--mantine-color-gray-2);
+  --key-fill: var(--mantine-color-white);
+  --key-stroke: var(--mantine-color-gray-5);
+  --key-text: var(--mantine-color-gray-8);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+  max-width: m.rem(420);
+}
+
+.title {
+  font-size: m.rem(26);
+  font-weight: 600;
+  letter-spacing: m.rem(-0.4);
+  color: var(--mantine-color-gray-9);
+}
+
+.also {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: m.rem(6) var(--mantine-spacing-xs);
+  margin: var(--mantine-spacing-xs) 0 var(--mantine-spacing-md);
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: m.rem(3) var(--mantine-spacing-xs);
+    border-radius: var(--mantine-radius-sm);
+    font-size: var(--mantine-font-size-xs);
+    color: var(--mantine-color-indigo-9);
+    background: var(--mantine-color-indigo-0);
+  }
+}
+
+.field {
+  margin-block-start: var(--mantine-spacing-xs);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-start: var(--mantine-spacing-md);
+}

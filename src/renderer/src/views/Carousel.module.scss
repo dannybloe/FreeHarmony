@@ -1,0 +1,81 @@
+// The strip and its two arrows. Layout here; what a tile looks like belongs to whoever puts one in.
+
+@use '../mantine' as m;
+
+.frame {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+}
+
+// The same row with no arrows in it, so the tiles start at the page's own margin rather than inside
+// two empty gutters.
+.frameStill {
+  composes: frame;
+  grid-template-columns: 1fr;
+}
+
+.strip {
+  display: flex;
+  align-items: stretch;
+  gap: var(--mantine-spacing-md);
+  overflow-x: auto;
+  // **Proximity, not mandatory**, and that was measured rather than preferred. Under mandatory
+  // snapping the browser must always sit on a snap point, so it keeps whichever child it snapped to
+  // aligned when the content changes: on the first paint the only tile is the one that adds a remote,
+  // the list then arrives and pushes it to the end, and the strip scrolls itself to the far right. It
+  // opened 90 pixels in, at exactly its maximum. Proximity still snaps when a drag is released near a
+  // tile and never moves the strip on its own.
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--mantine-spacing-xs);
+  // Room for a tile to lift on hover without its shadow being clipped by the scroll box.
+  padding: m.rem(6) m.rem(4) m.rem(14);
+
+  // The scrollbar is deliberately gone: the arrows say there is more, and a permanent grey bar under a
+  // row of cards is the difference between an interface and a web page from 2009.
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+  }
+}
+
+.arrow {
+  display: grid;
+  place-items: center;
+  width: m.rem(40);
+  height: m.rem(40);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 50%;
+  color: var(--mantine-color-gray-7);
+  // Glass rather than a filled button, so the arrows sit on the page instead of on top of it.
+  background: rgb(255 255 255 / 62%);
+  backdrop-filter: blur(m.rem(8));
+  box-shadow: 0 m.rem(1) m.rem(2) rgb(0 0 0 / 4%);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease, scale 120ms ease;
+
+  @include m.hover {
+    color: var(--mantine-color-indigo-7);
+    border-color: var(--mantine-color-indigo-2);
+    background: rgb(255 255 255 / 88%);
+  }
+
+  &:active {
+    scale: 0.94;
+  }
+
+  &:disabled {
+    // Kept in place rather than hidden, so the row does not shift its whole width when an end is
+    // reached. Faded far enough to read as unavailable.
+    opacity: 0.28;
+    cursor: default;
+    color: var(--mantine-color-gray-5);
+  }
+}

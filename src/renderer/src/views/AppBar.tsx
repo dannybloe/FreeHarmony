@@ -1,46 +1,41 @@
 /**
- * The bar across the top: the name, and the two ways a remote gets into the application.
+ * The bar across the top: the name, and the way back.
  *
- * It holds no state and decides nothing. Both actions are handed in, because whether adding a remote
- * is possible right now is a question about the store and this is a view.
+ * It holds no state and decides nothing. Whether there is anywhere to go back to is a question about
+ * navigation, so it arrives as a property.
  *
- * **Attaching is offered and refused for now**, with the reason on the button rather than in a
- * document: it means reading a configuration off a connected remote, and this application cannot talk
- * to one yet. Showing the shape of the screen with one route not yet arrived is better than a screen
- * that changes shape later, and a disabled control that says why is not a dead end.
+ * The two buttons it used to carry are gone. Adding a remote belongs on Home, beside the remotes it
+ * would join, and a permanent toolbar of actions is what a bar becomes when nobody decides where an
+ * action lives.
  */
-import { Button, Group, Title, Tooltip } from '@mantine/core';
+import { Title, Tooltip } from '@mantine/core';
 
-import { BeamMark, PlugGlyph, PlusGlyph, PulseTrain } from './Glyphs.tsx';
+import { BeamMark, ChevronGlyph, PulseTrain } from './Glyphs.tsx';
 import classes from './AppBar.module.scss';
 
 interface AppBarProps {
-  readonly onAdd: () => void;
-  readonly busy: boolean;
+  readonly canGoBack: boolean;
+  readonly onBack: () => void;
 }
 
-export function AppBar({ onAdd, busy }: AppBarProps) {
+export function AppBar({ canGoBack, onBack }: AppBarProps) {
   return (
     <header className={classes.bar}>
       <PulseTrain className={classes.pulse} />
 
-      <Group gap="sm" wrap="nowrap">
+      <div className={classes.left}>
+        {canGoBack && (
+          <Tooltip label="Back" withArrow openDelay={400}>
+            <button type="button" className={classes.back} onClick={onBack} aria-label="Back">
+              <ChevronGlyph towards="left" size={20} />
+            </button>
+          </Tooltip>
+        )}
         <BeamMark size={26} className={classes.mark} />
         <Title order={1} className={classes.wordmark}>
           Free<span className={classes.wordmarkTail}>Harmony</span>
         </Title>
-      </Group>
-
-      <Group gap="sm" wrap="nowrap">
-        <Tooltip label="Reading a remote over USB comes later" withArrow>
-          <Button variant="default" size="sm" disabled leftSection={<PlugGlyph />}>
-            Attach a remote
-          </Button>
-        </Tooltip>
-        <Button size="sm" onClick={onAdd} disabled={busy} leftSection={<PlusGlyph />}>
-          New remote
-        </Button>
-      </Group>
+      </div>
     </header>
   );
 }

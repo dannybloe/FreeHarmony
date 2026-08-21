@@ -1,0 +1,95 @@
+@use '../mantine' as m;
+
+.page {
+  display: grid;
+  grid-template-columns: m.rem(300) 1fr;
+  gap: var(--mantine-spacing-xl);
+  align-items: start;
+
+  @include m.smaller-than(m.$breakpoint-md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  height: m.rem(460);
+  padding: var(--mantine-spacing-lg);
+  border-radius: var(--mantine-radius-lg);
+  border: 1px solid var(--mantine-color-gray-2);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 12%, rgb(255 255 255 / 92%), rgb(255 255 255 / 34%));
+  backdrop-filter: blur(m.rem(12));
+  box-shadow: 0 m.rem(14) m.rem(34) rgb(16 24 40 / 6%);
+
+  --case-fill: var(--mantine-color-gray-1);
+  --case-stroke: var(--mantine-color-gray-6);
+  --recess-fill: var(--mantine-color-gray-2);
+  --key-fill: var(--mantine-color-white);
+  --key-stroke: var(--mantine-color-gray-5);
+  --key-text: var(--mantine-color-gray-8);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: m.rem(2);
+  max-width: m.rem(440);
+}
+
+.name {
+  font-size: m.rem(30);
+  font-weight: 600;
+  letter-spacing: m.rem(-0.5);
+  color: var(--mantine-color-gray-9);
+  cursor: text;
+}
+
+.model {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+.unknown {
+  display: grid;
+  place-items: center;
+  width: m.rem(120);
+  height: m.rem(120);
+  border-radius: 50%;
+  font-size: m.rem(46);
+  font-weight: 600;
+  color: var(--mantine-color-indigo-4);
+  background: var(--mantine-color-indigo-0);
+}
+
+// A definition list rather than a table: three facts, each with a word for what it is.
+.details {
+  display: grid;
+  grid-template-columns: m.rem(120) 1fr;
+  gap: m.rem(6) var(--mantine-spacing-sm);
+  margin: var(--mantine-spacing-lg) 0 0;
+  font-size: var(--mantine-font-size-sm);
+
+  dt {
+    color: var(--mantine-color-gray-6);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--mantine-color-gray-8);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: var(--mantine-spacing-xs);
+  margin-block-start: var(--mantine-spacing-xl);
+}
+
+.confirm {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--mantine-spacing-xs);
+  margin-block-start: var(--mantine-spacing-lg);
+}

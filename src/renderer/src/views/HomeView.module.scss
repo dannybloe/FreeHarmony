@@ -1,0 +1,26 @@
+@use '../mantine' as m;
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: m.rem(4);
+}
+
+.title {
+  font-size: m.rem(27);
+  font-weight: 600;
+  letter-spacing: m.rem(-0.4);
+  color: var(--mantine-color-gray-9);
+}
+
+.lead {
+  max-width: m.rem(560);
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}

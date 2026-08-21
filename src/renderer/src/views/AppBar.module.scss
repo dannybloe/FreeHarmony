@@ -1,34 +1,66 @@
-// The top bar. Every value is a theme variable, so the primary colour is decided in `theme.ts` and
-// nowhere else.
+// The top bar: glass over whatever scrolls beneath it, and a hairline instead of a rule.
 
 @use '../mantine' as m;
 
 .bar {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 10;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--mantine-spacing-md);
-  padding: var(--mantine-spacing-md) var(--mantine-spacing-xl);
-  border-block-end: 1px solid var(--mantine-color-gray-2);
-  // A wash rather than a flat panel, so the page has a top edge without a heavy rule. Both stops are
-  // theme colours, which keeps it in step if the primary colour ever changes.
-  background: linear-gradient(110deg, var(--mantine-color-indigo-0) 0%, var(--mantine-color-white) 55%);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-xl);
+  border-block-end: 1px solid rgb(16 24 40 / 6%);
+  background: rgb(255 255 255 / 68%);
+  backdrop-filter: blur(m.rem(14)) saturate(140%);
 }
 
-// The pulse train sits behind the bar's contents, bleeding off the right edge. It is decoration, faint
-// enough to read as texture, and it is never the thing anybody looks at.
+// The pulse train behind the bar's contents, bleeding off the right edge. Decoration, faint enough to
+// read as texture, and never the thing anybody looks at.
 .pulse {
   position: absolute;
   inset-block-start: 50%;
   inset-inline-end: m.rem(-40);
   translate: 0 -50%;
-  width: m.rem(420);
-  height: m.rem(44);
+  width: m.rem(380);
+  height: m.rem(30);
   color: var(--mantine-color-indigo-6);
-  opacity: 0.14;
+  opacity: 0.16;
   pointer-events: none;
+  // Faded at both ends, so it reads as a signal passing through rather than as a shape somebody cut
+  // off at the edge of the bar. Without this the first thing the eye finds is the cut.
+  mask-image: linear-gradient(90deg, transparent, black 22%, black 72%, transparent);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+}
+
+.back {
+  display: grid;
+  place-items: center;
+  width: m.rem(32);
+  height: m.rem(32);
+  margin-inline-end: m.rem(2);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 50%;
+  color: var(--mantine-color-gray-7);
+  background: rgb(255 255 255 / 70%);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, scale 120ms ease;
+
+  @include m.hover {
+    color: var(--mantine-color-indigo-7);
+    border-color: var(--mantine-color-indigo-2);
+  }
+
+  &:active {
+    scale: 0.94;
+  }
 }
 
 .mark {
@@ -36,7 +68,7 @@
 }
 
 .wordmark {
-  font-size: m.rem(21);
+  font-size: m.rem(20);
   font-weight: 650;
   letter-spacing: m.rem(-0.3);
   line-height: 1.2;
