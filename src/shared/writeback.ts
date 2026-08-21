@@ -130,10 +130,18 @@ export const STEP: Verdicts<Step> = {
 };
 
 export const ROLE: Verdicts<ActivityRole> = {
-  role: { writeback: 'ours' },
+  kind: { writeback: 'ours' },
   // Ours as well, and not because the number has nowhere to live: a device position is stated all over
   // a configuration. It is the **pairing** that is ours, and half of an invented pair is still invented.
   device: { writeback: 'ours' },
+  // The name is ours; the value it selects is in the file, as this appliance's input property. So the
+  // choice survives a round trip and the word for it does not.
+  input: { writeback: 'ours', note: "the value is in the file as the input property's value" },
+  // The order is not a field anywhere: it is the order the enter handler's instructions sit in, which
+  // is why it can be written back at all.
+  powerOnOrder: { writeback: 'rebuilt', structure: "the order of base slot 9's enter handler" },
+  powerOffOrder: { writeback: 'rebuilt', structure: "the order of base slot 9's leave handler" },
+  delayAfterMs: { writeback: 'unknown', structure: 'base slot 15, group unknown' },
 };
 
 export const ACTIVITY: Verdicts<Activity> = {

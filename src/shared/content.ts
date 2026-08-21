@@ -57,20 +57,53 @@ export type ActivityKind =
   | 'other';
 
 /**
- * What one device does in one activity.
+ * What one appliance does in one activity, and what state it has to be in to do it.
  *
- * The idea is Logitech's and it is the best thing in their model: an activity is not a macro, it is a
- * set of jobs with a device doing each one. That is what lets an application say "the sound comes from
- * the receiver" and change it in one place instead of editing five button bindings.
+ * **The best idea in Logitech's model, and this is their shape.** Their own editor's records for the two
+ * activities that produced our calibration configurations were read on 21 August 2026, and an activity
+ * there is not a macro: it is a set of jobs with one appliance doing each one, and per job the input
+ * that appliance has to be switched to and the position it takes in the power up order. Their own list
+ * of actions to run on entering was **empty** on both, which is the strongest evidence that this is the
+ * real content of an activity and the commands are what a compiler works out from it.
  *
  * **Not recoverable from a configuration.** The compiled form knows that a volume key sends a code to
- * device 3. That device 3 is the one doing the sound is exactly the kind of intent a compiler discards.
+ * appliance 3. That appliance 3 is the one doing the sound, and that it had to be switched to BD first,
+ * is exactly what a compiler discards.
  */
 export interface ActivityRole {
-  readonly role: 'picture' | 'sound' | 'source' | 'channels' | 'playback';
+  readonly kind: RoleKind;
   /** The device position, matching `DeviceUse.slot`. */
   readonly device: number;
+  /**
+   * The input this appliance has to be on, by the name the appliance uses: "HDMI 1", "BD".
+   *
+   * A name and not a number, because that is what a person picks and what their television prints on
+   * its own screen. The number it corresponds to is in the configuration, as the value of the
+   * appliance's input property; the name is ours.
+   */
+  readonly input?: string;
+  /**
+   * Where this appliance comes in the order of switching on, and of switching off.
+   *
+   * **Needed, and it was missing from the first version of this model.** An amplifier that powers on
+   * after the television has already been told which input to use has missed the instruction, so the
+   * order is part of what an activity is rather than a detail of how it runs.
+   */
+  readonly powerOnOrder?: number;
+  readonly powerOffOrder?: number;
+  /** How long to wait before dealing with the next appliance, where an appliance needs it. */
+  readonly delayAfterMs?: number;
 }
+
+/**
+ * The job an appliance does in an activity.
+ *
+ * Four of these were seen in Logitech's own records, under their names: a display doing the picture, a
+ * volume role doing the sound, a channel changing role, and a play movie role. `other` is here because
+ * four observations are not a vocabulary, and a games console or a lighting controller will need
+ * something; what is refused is inventing names nobody has seen.
+ */
+export type RoleKind = 'picture' | 'sound' | 'channels' | 'film' | 'other';
 
 /**
  * Send one command to one device.
@@ -133,13 +166,19 @@ export interface Activity {
   readonly onStart: readonly Step[];
   readonly onStop: readonly Step[];
   /**
-   * What it wants every appliance to be doing, which is the real content of an activity.
+   * What every appliance has to be doing, appliance by appliance and property by property.
    *
-   * Empty on an import today. The values are in the file, written by the activity's own enter handler,
-   * and reading them waits on the same unresolved question as `onStart`: which of a key map's handlers
-   * is the enter one. There is a candidate answer next door, that the enter handler is the one which
-   * records the activity as running, and establishing it is work for the library rather than a guess
-   * here.
+   * **This and `roles` are the same thing at two levels, and which one is the source depends on where
+   * the document came from.** A document somebody builds here has roles, and the wanted state follows
+   * from them: an appliance in a role is on, and a role's input names the value its input property
+   * takes. A document imported from a remote has no roles at all, because the compiler discarded them,
+   * and then this is the only form the intent survives in. So roles are edited and this is computed,
+   * except on an import, where there is nothing to compute it from.
+   *
+   * Empty on an import today for a further reason. The values are in the file, written by the
+   * activity's own enter handler, and reading them waits on which of a key map's handlers is the enter
+   * one. There is a candidate answer next door, that the enter handler is the one which records the
+   * activity as running, and establishing it is work for the library rather than a guess here.
    */
   readonly wants: readonly DesiredState[];
   /** The devices it drives, by position. Derivable from the roles once those exist, stated until then. */

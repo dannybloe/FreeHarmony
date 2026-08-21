@@ -140,6 +140,17 @@ So the model holds this on the **appliance**, because it is a fact about the app
 with one power button needs a toggle where one with separate buttons does not. And an activity holds the
 **wanted state** rather than a list of actions.
 
+**Logitech's own editor agrees, which was checked afterwards rather than copied.** Their records for the
+two activities that produced our calibration configurations were read on 21 August 2026. An activity
+there carries one **role** per appliance, typed by the job it does, and each role names the input that
+appliance has to be switched to, by name, plus its position in the power up and power down order. Their
+own lists of actions to run on entering and leaving are **empty on both**. So a role with an input and an
+order is the shape, and the commands are what a compiler works out. Two things of theirs the model
+adopted on the strength of that: the power order, which was missing and is needed, since an amplifier
+that powers on after the television has been told which input to use has missed the instruction; and the
+input as a **name** rather than a number, because that is what a person picks and what their television
+prints on its own screen.
+
 **One closure worth keeping.** Which appliance a property belongs to comes from the names in the file;
 which codes a transition sends comes from the action lists. Those are two unrelated readings, and they
 agree on all 89 transitions: not one sends another appliance's code. A single crossing would mean one of
