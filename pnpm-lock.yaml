@@ -11,6 +11,9 @@ importers:
       '@harmony/codec':
         specifier: link:../harmony-explorations/packages/codec
         version: link:../harmony-explorations/packages/codec
+      '@harmony/silhouettes':
+        specifier: link:../harmony-explorations/packages/silhouettes
+        version: link:../harmony-explorations/packages/silhouettes
       '@mantine/core':
         specifier: 9.5.1
         version: 9.5.1(@mantine/hooks@9.5.1(react@19.2.8))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

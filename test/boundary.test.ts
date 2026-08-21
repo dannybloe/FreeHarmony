@@ -34,6 +34,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, sep } from 'node:path';
 
 import * as codec from '@harmony/codec';
+import * as silhouettes from '@harmony/silhouettes';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -53,12 +54,68 @@ function sourcesUnder(directory: string): string[] {
   return found;
 }
 
-test('the library imports at all, which is the whole point of this first commit', () => {
-  // A count rather than a floor, per the sibling's own rule about bounds: 361 exports on 14 August 2026.
-  // It moves when the library gains or loses one, and then it moves in a diff somebody reads.
-  assert.equal(Object.keys(codec).length, 361, 'the codec export surface');
-  for (const name of ['parse', 'inventory', 'devices', 'activities', 'trailerChecksum']) {
-    assert.equal(typeof (codec as Record<string, unknown>)[name], 'function', `${name} is missing`);
+/**
+ * The libraries this product consumes, and what each has to answer.
+ *
+ * A table rather than a test each, because there are two now and everything below is the same claim
+ * about both: the sibling's oldest rule is that a derivation must not exist twice, and a boundary check
+ * copied per library is exactly that. Adding a third means adding a row.
+ *
+ * The export counts are exact, never a floor, per the sibling's own rule about bounds. They move when a
+ * library gains or loses an export, and then they move in a diff somebody reads.
+ */
+const LIBRARIES: readonly {
+  name: string;
+  module: Record<string, unknown>;
+  exports: number;
+  entry: readonly string[];
+  functions: readonly string[];
+}[] = [
+  {
+    name: '@harmony/codec',
+    module: codec as unknown as Record<string, unknown>,
+    exports: 361,
+    entry: ['packages', 'codec', 'src', 'index.ts'],
+    functions: ['parse', 'inventory', 'devices', 'activities', 'trailerChecksum'],
+  },
+  {
+    name: '@harmony/silhouettes',
+    module: silhouettes as unknown as Record<string, unknown>,
+    exports: 30,
+    entry: ['packages', 'silhouettes', 'src', 'index.ts'],
+    functions: ['toSvg', 'keyOf', 'keyOfScan'],
+  },
+];
+
+test('both libraries import at all, which is the whole point of the boundary', () => {
+  for (const library of LIBRARIES) {
+    assert.equal(Object.keys(library.module).length, library.exports, `${library.name} export surface`);
+    for (const name of library.functions) {
+      assert.equal(typeof library.module[name], 'function', `${library.name}: ${name} is missing`);
+    }
+  }
+});
+
+test('the drawing library answers for the three remotes this product supports', () => {
+  /**
+   * The one claim that is about what the second library is **for** rather than about the boundary.
+   *
+   * The interface has to be able to draw the chosen remote and colour a key in it, so what has to hold
+   * is that a model is reachable by name, that its buttons are addressable individually, and that no
+   * colour is baked into the file. That last one is the requirement the drawings were rebuilt for, and
+   * it is checkable here without a config, which nothing in this repository may hold.
+   */
+  const models = silhouettes.MODELS as Record<string, { label: string; keys: readonly unknown[] }>;
+  assert.deepEqual(Object.keys(models).sort(), ['h525', 'h600', 'one']);
+  const BUTTONS: Readonly<Record<string, number>> = { h525: 50, h600: 54, one: 44 };
+  for (const [id, model] of Object.entries(models)) {
+    assert.equal(model.keys.length, BUTTONS[id], `${id}: button count`);
+    const svg = silhouettes.toSvg(model as Parameters<typeof silhouettes.toSvg>[0]);
+    // Addressable per key, which is what lets this product highlight one.
+    assert.ok(svg.includes('data-name="VolumeUp"'), `${id}: no key is addressable by name`);
+    // And colourable from outside: every fill reads a custom property, so a device group is a stylesheet
+    // rule here and not a second drawing.
+    assert.ok(svg.includes('var(--key-fill'), `${id}: a fill is not replaceable`);
   }
 });
 
@@ -68,12 +125,14 @@ test('the dependency resolves to a real path outside node_modules, which is why 
   // link that leaves the tree. Asserting the resolved path is what would have caught the wrong spelling
   // before it cost an afternoon.
   const require_ = createRequire(import.meta.url);
-  const resolved = realpathSync(require_.resolve('@harmony/codec'));
-  assert.ok(
-    !resolved.split(sep).includes('node_modules'),
-    `resolved inside node_modules, so Node will refuse to strip its types: ${resolved}`,
-  );
-  assert.ok(resolved.endsWith(join('packages', 'codec', 'src', 'index.ts')), resolved);
+  for (const library of LIBRARIES) {
+    const resolved = realpathSync(require_.resolve(library.name));
+    assert.ok(
+      !resolved.split(sep).includes('node_modules'),
+      `${library.name} resolved inside node_modules, so Node will refuse to strip its types: ${resolved}`,
+    );
+    assert.ok(resolved.endsWith(join(...library.entry)), resolved);
+  }
 });
 
 test('the dependency is spelled the way this project\'s package manager needs', () => {
@@ -85,9 +144,11 @@ test('the dependency is spelled the way this project\'s package manager needs', 
     dependencies?: Record<string, string>;
   };
   assert.ok(manifest.packageManager?.startsWith('pnpm@'), 'the package manager has to be stated');
-  const spec = manifest.dependencies?.['@harmony/codec'];
-  assert.ok(spec?.startsWith('link:'), `pnpm needs link:, not ${spec}`);
-  assert.ok(spec?.includes('harmony-explorations'), 'the sibling checkout is load bearing');
+  for (const library of LIBRARIES) {
+    const spec = manifest.dependencies?.[library.name];
+    assert.ok(spec?.startsWith('link:'), `${library.name}: pnpm needs link:, not ${spec}`);
+    assert.ok(spec?.includes('harmony-explorations'), 'the sibling checkout is load bearing');
+  }
 });
 
 test('nothing here re-implements the format, which is the one rule that protects the split', () => {

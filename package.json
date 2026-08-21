@@ -16,6 +16,7 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "inventory": "node bin/inventory.ts",
+    "screenshot": "pnpm build && node bin/screenshot.ts",
     "typecheck:node": "tsc -p tsconfig.node.json",
     "typecheck:web": "tsc -p tsconfig.web.json",
     "typecheck": "pnpm typecheck:node && pnpm typecheck:web",
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "@harmony/codec": "link:../harmony-explorations/packages/codec",
+    "@harmony/silhouettes": "link:../harmony-explorations/packages/silhouettes",
     "@mantine/core": "9.5.1",
     "@mantine/hooks": "9.5.1",
     "react": "19.2.8",
