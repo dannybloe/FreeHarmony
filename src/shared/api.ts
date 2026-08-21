@@ -10,7 +10,9 @@
  * with methods, a class instance or a parsed container cannot pass, and that constraint is a feature:
  * the configuration bytes stay in the main process because they cannot casually leave it.
  */
+import type { RemoteContent } from './content.ts';
 import type { AttachedRemote, HardwareReading } from './devices.ts';
+import type { DeviceDefinition } from './library.ts';
 import type { RemoteDocument, RemoteModel } from './remote.ts';
 
 /** The name the API is published under on `window`. One constant, so no side spells it by hand. */
@@ -62,9 +64,42 @@ export interface DevicesApi {
   readHardware(productId: number): Promise<HardwareReading>;
 }
 
+/**
+ * The appliances, described once and shared between remotes.
+ *
+ * Its own namespace, and the third one, because it answers about a **different object**: `remotes` is
+ * about documents somebody owns and `devices` about hardware on the bus, and this is about televisions
+ * and amplifiers, which outlive both. A definition is addressed by its identifier, which never changes,
+ * unlike a remote, which is addressed by its name because its name is its folder.
+ */
+export interface LibraryApi {
+  /** Every appliance this machine has a description of, by identifier. */
+  list(): Promise<DeviceDefinition[]>;
+  /** One appliance. Refused when there is no such identifier. */
+  get(id: string): Promise<DeviceDefinition>;
+  /** Write one, new or corrected. The identifier is the identity and may not be changed by this. */
+  put(definition: DeviceDefinition): Promise<DeviceDefinition>;
+  remove(id: string): Promise<void>;
+  /**
+   * Which appliances a document refers to and this machine has not got.
+   *
+   * The cost of keeping the library outside the document, as a question the window can ask before it
+   * draws a screen with holes in it.
+   */
+  missingFor(content: RemoteContent): Promise<string[]>;
+  /**
+   * Appliances that send the same things and are therefore probably one appliance, grouped.
+   *
+   * Reports and never merges. Merging changes what every document referring to either one points at,
+   * so it is a decision for a person rather than for a library.
+   */
+  likelyDuplicates(): Promise<DeviceDefinition[][]>;
+}
+
 export interface FreeHarmonyApi {
   readonly remotes: RemotesApi;
   readonly devices: DevicesApi;
+  readonly library: LibraryApi;
 }
 
 /** Which half of the API a channel belongs to. Derived, so it cannot name a namespace that is gone. */
@@ -76,9 +111,12 @@ export type Namespace = keyof FreeHarmonyApi;
  */
 export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove'] as const;
 export const DEVICE_METHODS = ['attached', 'readHardware'] as const;
+export const LIBRARY_METHODS =
+  ['list', 'get', 'put', 'remove', 'missingFor', 'likelyDuplicates'] as const;
 
 export type RemoteMethod = (typeof REMOTE_METHODS)[number];
 export type DeviceMethod = (typeof DEVICE_METHODS)[number];
+export type LibraryMethod = (typeof LIBRARY_METHODS)[number];
 
 /**
  * Every namespace and its methods, so that anything walking the whole surface walks this.
@@ -90,6 +128,7 @@ export type DeviceMethod = (typeof DEVICE_METHODS)[number];
 export const METHODS: { readonly [N in Namespace]: readonly (keyof FreeHarmonyApi[N] & string)[] } = {
   remotes: REMOTE_METHODS,
   devices: DEVICE_METHODS,
+  library: LIBRARY_METHODS,
 };
 
 /**
@@ -129,3 +168,4 @@ type Exhaustive<Listed extends string, Api> = [Listed] extends [keyof Api]
 
 export const REMOTE_METHODS_ARE_EXHAUSTIVE: Exhaustive<RemoteMethod, RemotesApi> = true;
 export const DEVICE_METHODS_ARE_EXHAUSTIVE: Exhaustive<DeviceMethod, DevicesApi> = true;
+export const LIBRARY_METHODS_ARE_EXHAUSTIVE: Exhaustive<LibraryMethod, LibraryApi> = true;

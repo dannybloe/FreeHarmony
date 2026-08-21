@@ -85,25 +85,25 @@ test('a request from the page reaches the store on disk, and every method does',
     `${api}.create('Woonkamer')`);
   assert.equal(made.name, 'Woonkamer');
   assert.equal(made.provenance, 'created-empty');
-  assert.deepEqual(await readdir(app.store), ['Woonkamer'], 'the folder is named after the remote');
+  assert.deepEqual(await readdir(app.remotes), ['Woonkamer'], 'the folder is named after the remote');
 
   const manifest = JSON.parse(
-    await readFile(join(app.store, 'Woonkamer', 'remote.json'), 'utf8')) as Record<string, unknown>;
+    await readFile(join(app.remotes, 'Woonkamer', 'remote.json'), 'utf8')) as Record<string, unknown>;
   assert.deepEqual(Object.keys(manifest).sort(), ['createdAt', 'provenance', 'updatedAt'],
                    'and the name is not in it as well');
 
   await app.evaluate(`${api}.rename('Woonkamer', 'Studeerkamer')`);
-  assert.deepEqual(await readdir(app.store), ['Studeerkamer'], 'a rename moved the folder');
+  assert.deepEqual(await readdir(app.remotes), ['Studeerkamer'], 'a rename moved the folder');
 
   const copy = await app.evaluate<{ name: string }>(`${api}.duplicate('Studeerkamer')`);
   assert.equal(copy.name, 'Studeerkamer copy');
-  assert.deepEqual((await readdir(app.store)).sort(), ['Studeerkamer', 'Studeerkamer copy']);
+  assert.deepEqual((await readdir(app.remotes)).sort(), ['Studeerkamer', 'Studeerkamer copy']);
   assert.deepEqual(await app.evaluate<string[]>(`${api}.list().then((r) => r.map((x) => x.name))`),
                    ['Studeerkamer copy', 'Studeerkamer'], 'most recently changed first, from the store');
 
   await app.evaluate(`${api}.remove('Studeerkamer copy')`);
   await app.evaluate(`${api}.remove('Studeerkamer')`);
-  assert.deepEqual(await readdir(app.store), [], 'and removing takes the folders with it');
+  assert.deepEqual(await readdir(app.remotes), [], 'and removing takes the folders with it');
 });
 
 test('a refusal crosses as a thrown error carrying the store rule word for word', async (t) => {
@@ -129,5 +129,5 @@ test('a refusal crosses as a thrown error carrying the store rule word for word'
                    { error: 'Error', message: 'there is already a remote called Woonkamer' });
   assert.deepEqual(await refusal(`${api}.rename('Zolder', 'Zolderkamer')`),
                    { error: 'Error', message: 'there is no remote called Zolder' });
-  assert.deepEqual(await readdir(app.store), ['Woonkamer'], 'and nothing was created by any of them');
+  assert.deepEqual(await readdir(app.remotes), ['Woonkamer'], 'and nothing was created by any of them');
 });

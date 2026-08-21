@@ -13,9 +13,10 @@ import { ipcMain } from 'electron';
 
 import { channelFor, METHODS, type FreeHarmonyApi, type Namespace } from '../shared/api.ts';
 import { attachedRemotes, readHardware } from './devices.ts';
+import { DeviceLibrary } from './store/library.ts';
 import { RemoteStore } from './store/remotes.ts';
 
-export function registerHandlers(store: RemoteStore): void {
+export function registerHandlers(store: RemoteStore, library: DeviceLibrary): void {
   register('remotes', {
     list: () => store.list(),
     create: (name, model, hardware) => store.create(name, model, hardware),
@@ -29,6 +30,15 @@ export function registerHandlers(store: RemoteStore): void {
     // The clock is the main process's, not the window's: a timestamp on a document should be the
     // machine's own and not something a page could be wrong about.
     readHardware: (productId) => readHardware(productId, () => new Date().toISOString()),
+  });
+
+  register('library', {
+    list: () => library.list(),
+    get: (id) => library.get(id),
+    put: (definition) => library.put(definition),
+    remove: (id) => library.remove(id),
+    missingFor: (content) => library.missingFor(content),
+    likelyDuplicates: () => library.likelyDuplicates(),
   });
 }
 

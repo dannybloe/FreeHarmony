@@ -24,11 +24,27 @@ import { app } from 'electron';
  * since the application otherwise touches no network at all.
  */
 export function storeRoot(): string {
-  return elsewhere() ?? join(app.getPath('documents'), 'FreeHarmony', 'remotes');
+  return join(base(), 'remotes');
 }
 
 /**
- * Where the store goes instead, if something has said so.
+ * Where the device library lives: beside the remotes, not inside one.
+ *
+ * That placement **is** the decision of 21 August 2026 expressed on disk. A television belongs to three
+ * remotes, so it cannot sit in the folder of one of them, and a person looking at their own documents
+ * should be able to see that arrangement without being told it.
+ */
+export function libraryRoot(): string {
+  return join(base(), 'devices');
+}
+
+/** The one folder both of them sit in, so the override moves both together or neither. */
+function base(): string {
+  return elsewhere() ?? join(app.getPath('documents'), 'FreeHarmony');
+}
+
+/**
+ * Where both of them go instead, if something has said so.
  *
  * This exists for one caller: the end to end test in `test/app`, which drives the built application
  * over the developer tools protocol and has to create and delete entries to prove the bridge reaches

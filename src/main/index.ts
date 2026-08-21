@@ -22,7 +22,8 @@ import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, shell } from 'electron';
 
 import { registerHandlers } from './ipc.ts';
-import { storeRoot } from './store/location.ts';
+import { libraryRoot, storeRoot } from './store/location.ts';
+import { DeviceLibrary } from './store/library.ts';
 import { RemoteStore } from './store/remotes.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -120,7 +121,8 @@ void app.whenReady().then(() => {
   // The store is constructed once and handed to the handlers, rather than each handler reaching for
   // a location. That is what keeps `store/remotes.ts` free of Electron and therefore testable.
   if (STAY_HIDDEN) app.dock?.hide();
-  registerHandlers(new RemoteStore({ root: storeRoot() }));
+  registerHandlers(new RemoteStore({ root: storeRoot() }),
+                   new DeviceLibrary({ root: libraryRoot() }));
   refuseNavigationAwayFromTheApplication(createWindow());
 });
 

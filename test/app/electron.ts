@@ -50,8 +50,16 @@ async function electronBinary(): Promise<string> {
 }
 
 export interface RunningApplication {
-  /** The store the application was pointed at, so a test can look at what its requests did on disk. */
+  /**
+   * The folder the application was pointed at, so a test can look at what its requests did on disk.
+   *
+   * The **base**, holding both of the application's own folders. `remotes` and `devices` below are
+   * where they actually are, and a test uses those rather than rebuilding the layout, because the
+   * layout is `src/main/store/location.ts`'s decision and one copy of it is enough.
+   */
   readonly store: string;
+  readonly remotes: string;
+  readonly devices: string;
   /** Evaluates an expression in the page, awaiting it if it is a promise. Throws what the page threw. */
   evaluate<T>(expression: string): Promise<T>;
   /**
@@ -194,6 +202,8 @@ function talkTo(socket: WebSocket, store: string, child: ChildProcess,
 
   return {
     store,
+    remotes: join(store, 'remotes'),
+    devices: join(store, 'devices'),
 
     async evaluate<T>(expression: string): Promise<T> {
       // `awaitPromise` is what lets a test say `await api.list()` and get the list rather than a

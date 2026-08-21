@@ -48,6 +48,17 @@ const api: FreeHarmonyApi = {
       call('devices', 'readHardware', productId) as
         ReturnType<FreeHarmonyApi['devices']['readHardware']>,
   },
+  library: {
+    list: () => call('library', 'list') as ReturnType<FreeHarmonyApi['library']['list']>,
+    get: (id) => call('library', 'get', id) as ReturnType<FreeHarmonyApi['library']['get']>,
+    put: (definition) =>
+      call('library', 'put', definition) as ReturnType<FreeHarmonyApi['library']['put']>,
+    remove: (id) => call('library', 'remove', id) as ReturnType<FreeHarmonyApi['library']['remove']>,
+    missingFor: (content) =>
+      call('library', 'missingFor', content) as ReturnType<FreeHarmonyApi['library']['missingFor']>,
+    likelyDuplicates: () =>
+      call('library', 'likelyDuplicates') as ReturnType<FreeHarmonyApi['library']['likelyDuplicates']>,
+  },
 };
 
 contextBridge.exposeInMainWorld(API_NAMESPACE, api);
