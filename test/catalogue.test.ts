@@ -39,7 +39,11 @@ test('a tile is a face, and it names every model number that face is sold as', (
   // numbers on it, rather than getting a picture each. Today every one of the three answers with a
   // single number, and that is the honest answer rather than a missing feature: the only aliases in
   // Logitech's table for these three are regional twins of the same name.
-  assert.deepEqual(SUPPORTED.map((m) => m.soldAs), [['525'], ['600'], ['One']]);
+  //
+  // The numbers are spelled the way a screen spells them, through `fullName`, because that is what a
+  // caption puts beside a tile: nobody selling a remote called it "One".
+  assert.deepEqual(SUPPORTED.map((m) => m.soldAs),
+                   [['Harmony 525'], ['Harmony 600'], ['Harmony One']]);
 });
 
 test('a regional twin folds into its own number instead of appearing beside it', () => {
@@ -49,7 +53,7 @@ test('a regional twin folds into its own number instead of appearing beside it',
   // were a choice. The 600 pair, skins 71 and 73, is the same case and is what makes this a rule.
   const one = SUPPORTED.find((m) => m.name === 'Harmony One');
   assert.deepEqual(one?.drawing.skins, [54, 59], 'the drawing claims both, which is the input');
-  assert.deepEqual(one?.soldAs, ['One'], 'and the tile says one number, which is the output');
+  assert.deepEqual(one?.soldAs, ['Harmony One'], 'and the tile says one number, which is the output');
 });
 
 test('every skin one drawing claims agrees about the hardware the face shows', () => {
@@ -78,8 +82,11 @@ test('the 525 does not share its tile with the 520, because that is a different 
   // skin and the tile therefore says one number, which is the correct answer and not a gap.
   const h525 = SUPPORTED.find((m) => m.name === 'Harmony 525');
   assert.deepEqual(h525?.drawing.skins, [22]);
-  assert.deepEqual(h525?.soldAs, ['525']);
-  assert.ok(!(h525?.soldAs.includes('520') ?? true), 'the 520 is a different keypad');
+  assert.deepEqual(h525?.soldAs, ['Harmony 525']);
+  assert.ok(!(h525?.soldAs.includes('Harmony 520') ?? true), 'the 520 is a different keypad');
+  // And the reason it cannot creep back in: the record's own `alias` field says 520, so `soldAs` has
+  // to be reading the drawing's skins rather than that field. This is the assertion that says which.
+  assert.equal(modelForSkin(22)?.alias, '520', 'the table does pair them, which is the temptation');
 });
 
 test('a skin finds its drawing, and a regional twin finds the same one', () => {

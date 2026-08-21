@@ -20,10 +20,16 @@
  * table's own comments, so one drawing serves every skin whose keypad it matches and a tile lists the
  * model numbers those skins are sold as. Where that is one number it says one; where two model numbers
  * share a face it says both, which is the whole reason this is computed rather than written out.
+ *
+ * **`describe` is the single derivation and `SUPPORTED` is built out of it**, rather than the chooser
+ * having its own copy. That matters now that a model can arrive from the USB bus as well as from the
+ * chooser: a Harmony 655 attached to this machine has a name and a skin and no drawing, and it has to
+ * be describable by the same code that describes a Harmony One somebody picked from a list.
  */
 import { DETAIL, MODELS, type Model } from '@harmony/silhouettes';
-import { modelForSkin } from '@harmony/usb/models';
+import { MODELS_BY_SKIN, modelForSkin } from '@harmony/usb/models';
 
+import { fullName } from '../../shared/models.ts';
 import type { RemoteModel } from '../../shared/remote.ts';
 
 /** How much of a drawing to show. Named here so a view asks for a purpose, not for a layer list. */
@@ -34,8 +40,18 @@ export const DRAWING_DETAIL = {
   tile: DETAIL.thumbnail,
 } as const;
 
-/** A model somebody can pick, with the facts worth showing beside it. */
-export interface SupportedModel {
+/** Everything a screen can honestly say about a model, drawing included where there is one. */
+export interface ModelDescription {
+  /** `undefined` is the ordinary case: three of the forty retired models are drawn. */
+  readonly drawing: Model | undefined;
+  /** Short phrases, measured first and Logitech's own figures last. May be empty. */
+  readonly facts: readonly string[];
+  /** Every model number this face is sold as, most familiar first. May be empty. */
+  readonly soldAs: readonly string[];
+}
+
+/** A model somebody can pick out of the chooser, which is a described model with a drawing. */
+export interface SupportedModel extends ModelDescription {
   readonly id: string;
   /** Logitech's own name, which is what a document stores and what a screen shows. */
   readonly name: string;
@@ -48,75 +64,8 @@ export interface SupportedModel {
    * read over USB later states its own.
    */
   readonly skin: number;
-  /**
-   * Every model number this one face is sold as, in the order the skins are claimed.
-   *
-   * Usually one. Two where Logitech sold the same keypad under two numbers, which is what a chooser
-   * has to show: somebody holding the other number should recognise their own remote instead of
-   * concluding it is unsupported.
-   *
-   * **A regional variant is not a second number.** Skins 54 and 59 are the Harmony One and the
-   * European Harmony One, which differ in nothing on the face and in nothing printed on it, so the
-   * suffix is Logitech's internal marker and adding it to a tile would be noise.
-   */
-  readonly soldAs: readonly string[];
   readonly drawing: Model;
-  readonly facts: readonly string[];
 }
-
-/** The model numbers a drawing's skins are sold as, with regional duplicates folded together. */
-function soldAs(drawing: Model): string[] {
-  const seen: string[] = [];
-  for (const skin of drawing.skins) {
-    const named = modelForSkin(skin)?.name;
-    if (named === undefined) continue;
-    const withoutRegion = named.replace(/ EMEA$/, '');
-    if (!seen.includes(withoutRegion)) seen.push(withoutRegion);
-  }
-  return seen;
-}
-
-/**
- * What is worth saying about a model, in words.
- *
- * The first two are **measured**, off the drawing: the buttons were counted and the display was read
- * out of a config. The device ceiling is **Logitech's own figure** and no config in the corpus next
- * door reaches any stated maximum, so it is phrased as "up to" and never as a promise. That
- * distinction is not decoration: one of these numbers can be checked and the other has to be taken
- * on somebody's word.
- */
-function factsAbout(drawing: Model): string[] {
-  const facts = [`${drawing.keys.length} buttons`];
-  const screen = drawing.screen;
-  if (screen !== undefined) {
-    const size = `${screen.pixels.width} by ${screen.pixels.height} pixels`;
-    facts.push(screen.touch ? `a touch screen of ${size}` : `a screen of ${size}`);
-  }
-  const stated = modelForSkin(drawing.skins[0]);
-  if (stated !== undefined) facts.push(`up to ${stated.maxDevices} devices`);
-  return facts;
-}
-
-/**
- * Every model with a drawing, in the order they are offered.
- *
- * Three of the forty models Logitech retired, so a remote whose model is not here is the ordinary
- * case rather than a fault.
- *
- * Ordered by name, with numbers read as numbers, so the row reads 525, 600, One. By architecture it
- * read 525, One, 600, which is correct about the hardware and wrong on a screen: nobody looking for
- * their own remote knows which generation of chip is in it.
- */
-export const SUPPORTED: readonly SupportedModel[] = Object.values(MODELS)
-  .map((drawing) => ({
-    id: drawing.id,
-    name: drawing.label,
-    skin: drawing.skins[0] ?? 0,
-    soldAs: soldAs(drawing),
-    drawing,
-    facts: factsAbout(drawing),
-  }))
-  .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
 /**
  * The drawing for a document's model, or `undefined` when there is none.
@@ -132,6 +81,79 @@ export function drawingFor(model: RemoteModel | undefined): Model | undefined {
   const bySkin = skin === undefined ? undefined : all.find((d) => d.skins.includes(skin));
   return bySkin ?? all.find((drawing) => drawing.label === model.name);
 }
+
+/**
+ * What is worth saying about a model, in words, and in the order of how much it can be trusted.
+ *
+ * The buttons and the display are **measured**, off the drawing: the keys were counted and the screen
+ * was read out of a config. Where there is no drawing they are simply absent, and the panel kind stands
+ * in, which is Logitech's word rather than ours. The device ceiling is Logitech's figure too and no
+ * config in the corpus next door reaches any stated maximum, so it is phrased as "up to" and never as a
+ * promise. That ordering is not decoration: some of these numbers can be checked and the rest have to
+ * be taken on somebody's word.
+ */
+export function describe(model: RemoteModel): ModelDescription {
+  const drawing = drawingFor(model);
+  const stated = modelForSkin(model.skin ?? drawing?.skins[0]);
+  const facts: string[] = [];
+
+  if (drawing !== undefined) {
+    facts.push(`${drawing.keys.length} buttons`);
+    const screen = drawing.screen;
+    if (screen !== undefined) {
+      const size = `${screen.pixels.width} by ${screen.pixels.height} pixels`;
+      facts.push(screen.touch ? `a touch screen of ${size}` : `a screen of ${size}`);
+    }
+  } else if (stated !== undefined && stated.panel !== 'none') {
+    facts.push(stated.touch ? 'a touch screen' : `a ${stated.panel} screen`);
+  }
+
+  if (stated !== undefined) facts.push(`up to ${stated.maxDevices} devices`);
+
+  return { drawing, facts, soldAs: soldAs(model, drawing) };
+}
+
+/**
+ * The model numbers this face is sold as, with regional duplicates folded together.
+ *
+ * **The skins are the authority and the record's `alias` field is deliberately not consulted.** An
+ * alias is the same specification row under another number, and the model table's own comment says
+ * why that is not the same hardware: skin 22 is the Harmony 525 and its alias the 520, and the two
+ * differ by four teletext keys. Different keys, different remote, so it does not share this face and
+ * must not be listed as though it did. A drawing states which skins it serves and nothing else may.
+ *
+ * **A regional variant is not a second number either.** Skins 54 and 59 are the Harmony One and the
+ * European Harmony One, which differ in nothing on the face and in nothing printed on it, so the
+ * suffix is Logitech's internal marker and putting it on a tile would be noise.
+ */
+function soldAs(model: RemoteModel, drawing: Model | undefined): string[] {
+  const skins = drawing?.skins ?? (model.skin === undefined ? [] : [model.skin]);
+  const seen: string[] = [];
+  for (const skin of skins) {
+    const bare = MODELS_BY_SKIN[skin]?.name;
+    if (bare === undefined) continue;
+    const named = fullName(bare.replace(/ EMEA$/, ''));
+    if (!seen.includes(named)) seen.push(named);
+  }
+  return seen;
+}
+
+/**
+ * Every model with a drawing, in the order they are offered.
+ *
+ * Three of the forty models Logitech retired, so a remote whose model is not here is the ordinary
+ * case rather than a fault.
+ *
+ * Ordered by name, with numbers read as numbers, so the row reads 525, 600, One. By architecture it
+ * read 525, One, 600, which is correct about the hardware and wrong on a screen: nobody looking for
+ * their own remote knows which generation of chip is in it.
+ */
+export const SUPPORTED: readonly SupportedModel[] = Object.values(MODELS)
+  .map((drawing) => {
+    const skin = drawing.skins[0] ?? 0;
+    return { id: drawing.id, name: drawing.label, skin, ...describe({ name: drawing.label, skin }), drawing };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
 /** What goes into a document when somebody picks this model. */
 export function asRemoteModel(picked: SupportedModel): RemoteModel {

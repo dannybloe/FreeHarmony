@@ -86,17 +86,10 @@
   color: var(--mantine-color-gray-6);
 }
 
-// The initial that stands in for a drawing nobody has made.
+// The initial that stands in for a drawing nobody has made. The shape is `m.stand-in`, shared with
+// the naming page, so the two cannot drift apart.
 .unknown {
-  display: grid;
-  place-items: center;
-  width: m.rem(78);
-  height: m.rem(78);
-  border-radius: 50%;
-  font-size: m.rem(30);
-  font-weight: 600;
-  color: var(--mantine-color-indigo-4);
-  background: var(--mantine-color-indigo-0);
+  @include m.stand-in(78, 30);
 }
 
 .add {

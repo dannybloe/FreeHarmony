@@ -13,13 +13,24 @@
  * copy would be showing a remote that had since been renamed or deleted. Renaming follows the new
  * name; deleting drops the screen and anything behind it that pointed at the same remote.
  */
-import type { RemoteDocument } from '../../../shared/remote.ts';
+import type { RemoteDocument, RemoteModel } from '../../../shared/remote.ts';
+
+/** Where the model on the naming screen came from, which is the one thing that screen words differently. */
+export type ModelOrigin = 'chooser' | 'device';
 
 export type Screen =
   | { readonly at: 'home' }
   | { readonly at: 'add' }
-  /** Choosing a model by hand. The id, not the model, so this state stays plain data. */
-  | { readonly at: 'name'; readonly modelId: string }
+  /**
+   * Naming a new remote, carrying the model it is going to be.
+   *
+   * The model itself rather than a drawing's id, and that is a correction: an id could only name a
+   * model this application has drawn, and a remote read off the USB bus is usually not one. Three of
+   * the forty retired models are drawn, so the screen has to work with a name and a skin and no
+   * picture, and `RemoteModel` is exactly that. It is also plain data, which is the rule this module
+   * holds to, and it is exactly what the document will be created with.
+   */
+  | { readonly at: 'name'; readonly model: RemoteModel; readonly origin: ModelOrigin }
   | { readonly at: 'connect' }
   | { readonly at: 'remote'; readonly name: string };
 

@@ -1,7 +1,7 @@
 /**
  * The window's half of the bridge, and the only code that runs in both worlds.
  *
- * It publishes exactly the methods `RemotesApi` declares and nothing else. In particular it does not
+ * It publishes exactly the methods the shared API declares and nothing else. In particular it does not
  * expose `ipcRenderer`, which would hand the page every channel in the application including any
  * added later: the point of a bridge is that it is narrower than the thing it bridges.
  *
@@ -11,11 +11,20 @@
  */
 import { contextBridge, ipcRenderer } from 'electron';
 
-import { API_NAMESPACE, channelFor, REMOTE_METHODS, type FreeHarmonyApi } from '../shared/api.ts';
+import {
+  API_NAMESPACE,
+  channelFor,
+  type FreeHarmonyApi,
+  type Namespace,
+} from '../shared/api.ts';
 
 /** Unwraps the main process's answer, so that a refusal on that side becomes a thrown error here. */
-async function call(method: (typeof REMOTE_METHODS)[number], ...args: unknown[]): Promise<unknown> {
-  const answer = (await ipcRenderer.invoke(channelFor(method), ...args)) as
+async function call<N extends Namespace>(
+  namespace: N,
+  method: keyof FreeHarmonyApi[N] & string,
+  ...args: unknown[]
+): Promise<unknown> {
+  const answer = (await ipcRenderer.invoke(channelFor(namespace, method), ...args)) as
     | { ok: true; value: unknown }
     | { ok: false; message: string };
   if (!answer.ok) throw new Error(answer.message);
@@ -24,11 +33,17 @@ async function call(method: (typeof REMOTE_METHODS)[number], ...args: unknown[])
 
 const api: FreeHarmonyApi = {
   remotes: {
-    list: () => call('list') as ReturnType<FreeHarmonyApi['remotes']['list']>,
-    create: (name, model) => call('create', name, model) as ReturnType<FreeHarmonyApi['remotes']['create']>,
-    rename: (name, to) => call('rename', name, to) as ReturnType<FreeHarmonyApi['remotes']['rename']>,
-    duplicate: (name) => call('duplicate', name) as ReturnType<FreeHarmonyApi['remotes']['duplicate']>,
-    remove: (name) => call('remove', name) as ReturnType<FreeHarmonyApi['remotes']['remove']>,
+    list: () => call('remotes', 'list') as ReturnType<FreeHarmonyApi['remotes']['list']>,
+    create: (name, model) =>
+      call('remotes', 'create', name, model) as ReturnType<FreeHarmonyApi['remotes']['create']>,
+    rename: (name, to) =>
+      call('remotes', 'rename', name, to) as ReturnType<FreeHarmonyApi['remotes']['rename']>,
+    duplicate: (name) =>
+      call('remotes', 'duplicate', name) as ReturnType<FreeHarmonyApi['remotes']['duplicate']>,
+    remove: (name) => call('remotes', 'remove', name) as ReturnType<FreeHarmonyApi['remotes']['remove']>,
+  },
+  devices: {
+    attached: () => call('devices', 'attached') as ReturnType<FreeHarmonyApi['devices']['attached']>,
   },
 };
 

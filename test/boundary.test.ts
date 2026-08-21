@@ -35,6 +35,7 @@ import { dirname, join, sep } from 'node:path';
 
 import * as codec from '@harmony/codec';
 import * as silhouettes from '@harmony/silhouettes';
+import * as usb from '@harmony/usb';
 import * as usbModels from '@harmony/usb/models';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -58,9 +59,14 @@ function sourcesUnder(directory: string): string[] {
 /**
  * The libraries this product consumes, and what each has to answer.
  *
- * A table rather than a test each, because there are two now and everything below is the same claim
- * about both: the sibling's oldest rule is that a derivation must not exist twice, and a boundary check
- * copied per library is exactly that. Adding a third means adding a row.
+ * A table rather than a test each, because there are four entries now across three packages and
+ * everything below is the same claim about all of them: the sibling's oldest rule is that a derivation
+ * must not exist twice, and a boundary check copied per library is exactly that. Adding another means
+ * adding a row.
+ *
+ * Four entries and three packages, because `@harmony/usb` appears twice: once as the package the main
+ * process imports and once as the `models` subpath the window imports. Both are boundaries this product
+ * depends on and they have different consequences, so both get a row.
  *
  * The export counts are exact, never a floor, per the sibling's own rule about bounds. They move when a
  * library gains or loses an export, and then they move in a diff somebody reads.
@@ -90,6 +96,20 @@ const LIBRARIES: readonly {
     functions: ['toSvg', 'keyOf', 'keyOfScan'],
   },
   {
+    // The package proper, imported by the **main process** and by nothing in the window. It is the row
+    // that carries a native binding: `node-hid` is loaded dynamically inside `listHarmony`, so this
+    // import on its own pulls nothing native in, which is exactly why a static import here is safe and
+    // why an Electron main process that never touches USB pays nothing for the dependency.
+    //
+    // That the binding does load under Electron's own ABI is not checkable from here, because this test
+    // runs under Node. `test/app/devices.test.ts` is where that is measured, in a real window.
+    name: '@harmony/usb',
+    module: usb as unknown as Record<string, unknown>,
+    exports: 90,
+    entry: ['packages', 'usb', 'src', 'index.ts'],
+    functions: ['listHarmony', 'skinId', 'openHarmony'],
+  },
+  {
     // A **subpath** rather than the package, and that is the point of the row. `@harmony/usb` proper
     // pulls in the HID transport and its native binding; this entry is a table that imports nothing,
     // so a window can hold Logitech's own model figures without holding a device driver.
@@ -102,7 +122,7 @@ const LIBRARIES: readonly {
   },
 ];
 
-test('both libraries import at all, which is the whole point of the boundary', () => {
+test('every library imports at all, which is the whole point of the boundary', () => {
   for (const library of LIBRARIES) {
     assert.equal(Object.keys(library.module).length, library.exports, `${library.name} export surface`);
     for (const name of library.functions) {

@@ -58,3 +58,24 @@ $breakpoint-xl: 88em;
 @function rem($value) {
   @return math.div(math.div($value, $value * 0 + 1), 16) * 1rem;
 }
+
+/// The circle that stands in for a drawing nobody has made, at whatever size the caller wants.
+///
+/// A mixin rather than a class two stylesheets compose, and the reason is mechanical: CSS modules can
+/// compose a class out of another file, but the file it reaches for is read as plain CSS, so a `.scss`
+/// on the other end fails on its first Sass comment. Measured on 21 August 2026, which is why this is
+/// here and not a `composes:` line.
+///
+/// It exists at all because the initial appears twice, in a tile and on the naming page, and most
+/// models will land on it: three of the forty Logitech retired are drawn.
+@mixin stand-in($size, $type-size) {
+  display: grid;
+  place-items: center;
+  width: rem($size);
+  height: rem($size);
+  border-radius: 50%;
+  font-size: rem($type-size);
+  font-weight: 600;
+  color: var(--mantine-color-indigo-4);
+  background: var(--mantine-color-indigo-0);
+}

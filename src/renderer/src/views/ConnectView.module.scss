@@ -55,8 +55,8 @@
   color: var(--mantine-color-gray-7);
 }
 
-// The honest box. Amber rather than red: nothing is wrong, something is simply not here yet.
-.pending {
+// The amber box. Nothing is wrong, something is simply not what the happy path wanted.
+.note {
   width: 100%;
   margin-block-start: var(--mantine-spacing-lg);
   padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
@@ -66,18 +66,78 @@
   text-align: start;
 }
 
-.pendingTitle {
+.noteTitle {
   font-size: var(--mantine-font-size-sm);
   font-weight: 600;
   color: var(--mantine-color-yellow-9);
 }
 
-.pendingBody {
+.noteBody {
   font-size: var(--mantine-font-size-xs);
   line-height: 1.5;
   color: var(--mantine-color-yellow-9);
 }
 
 .actions {
+  display: flex;
+  gap: var(--mantine-spacing-xs);
   margin-block-start: var(--mantine-spacing-lg);
+}
+
+// The plug breathes while nothing is attached and settles once something is. The animation is on the
+// glow rather than on the glyph, so the icon itself never moves: a pulsing picture reads as a button.
+.waiting {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+.found {
+  color: var(--mantine-color-teal-6);
+  border-color: var(--mantine-color-teal-2);
+  background:
+    radial-gradient(circle at 50% 30%, var(--mantine-color-white), var(--mantine-color-teal-0));
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(99 102 241 / 22%); }
+  50% { box-shadow: 0 0 0 m.rem(12) rgb(99 102 241 / 0%); }
+}
+
+// Reduced motion turns the pulse off rather than speeding it up, because the state it signals is also
+// written next to it in words.
+@media (prefers-reduced-motion: reduce) {
+  .waiting { animation: none; }
+}
+
+.searching {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  margin: var(--mantine-spacing-md) 0 0;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+.dots {
+  display: inline-flex;
+  gap: m.rem(4);
+
+  i {
+    width: m.rem(5);
+    height: m.rem(5);
+    border-radius: 50%;
+    background: var(--mantine-color-indigo-4);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  i:nth-child(2) { animation-delay: 0.2s; }
+  i:nth-child(3) { animation-delay: 0.4s; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots i { animation: none; opacity: 0.6; }
 }

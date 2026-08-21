@@ -11,10 +11,12 @@
  * handlers below are where those two are wired, deliberately in one place.
  */
 import { Text } from '@mantine/core';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { RemoteModel } from '../../shared/remote.ts';
-import { SUPPORTED } from './catalogue.ts';
+import { asRemoteModel } from './catalogue.ts';
+import { advanceOn } from './viewmodels/devices.model.ts';
+import { useDevices } from './viewmodels/useDevices.ts';
 import { useNavigation } from './viewmodels/useNavigation.ts';
 import { useRemotes } from './viewmodels/useRemotes.ts';
 import { AddRemoteView } from './views/AddRemoteView.tsx';
@@ -31,6 +33,10 @@ export function App() {
   // Which model is highlighted in the chooser. View state, and it belongs to this flow rather than to
   // navigation: leaving the page and coming back should not remember a half made choice.
   const [picked, setPicked] = useState<string | undefined>(undefined);
+  // The USB bus is only watched while the Connect screen is up. Passing the condition in rather than
+  // mounting the hook conditionally is what keeps the polling in one place and stops it running for the
+  // life of the window: nothing else in this application asks about hardware.
+  const devices = useDevices(screen.at === 'connect');
 
   const add = async (name: string, model: RemoteModel) => {
     await remotes.create(name, model);
@@ -47,6 +53,18 @@ export function App() {
     await remotes.remove(name);
     nav.removed(name);
   };
+
+  // A recognised remote moves the flow on by itself, which is what the sketch asked for: you plug it in
+  // and you are being asked what to call it. The decision is `advanceOn`, in the view model, where a
+  // test can walk it; what is left here is the change of screen and the memory it needs, because a ref
+  // is a React thing and a rule is not.
+  const advancedFor = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (screen.at !== 'connect') return;
+    const next = advanceOn(devices, advancedFor.current);
+    advancedFor.current = next.remember;
+    if (next.model !== undefined) nav.go({ at: 'name', model: next.model, origin: 'device' });
+  }, [screen.at, devices, nav]);
 
   return (
     <div className={classes.shell}>
@@ -68,20 +86,29 @@ export function App() {
           <AddRemoteView
             picked={picked}
             onPick={setPicked}
-            onContinue={(model) => nav.go({ at: 'name', modelId: model.id })}
+            onContinue={(model) =>
+              nav.go({ at: 'name', model: asRemoteModel(model), origin: 'chooser' })}
             onConnect={() => nav.go({ at: 'connect' })}
           />
         )}
 
-        {screen.at === 'name' && (() => {
-          const model = SUPPORTED.find((m) => m.id === screen.modelId);
-          // A screen naming a model that is not in the catalogue cannot be drawn, and going home is the
-          // honest response. It arises if a drawing is withdrawn next door while this window is open.
-          if (model === undefined) return <Text size="sm">That model is no longer available.</Text>;
-          return <NameRemoteView model={model} busy={remotes.busy} onAdd={(name, m) => void add(name, m)} />;
-        })()}
+        {screen.at === 'name' && (
+          <NameRemoteView
+            model={screen.model}
+            origin={screen.origin}
+            busy={remotes.busy}
+            onAdd={(name, model) => void add(name, model)}
+          />
+        )}
 
-        {screen.at === 'connect' && <ConnectView onBack={() => nav.back()} />}
+        {screen.at === 'connect' && (
+          <ConnectView
+            devices={devices}
+            onBack={() => nav.back()}
+            onPickByHand={() => nav.go({ at: 'add' })}
+            onContinue={(model) => nav.go({ at: 'name', model, origin: 'device' })}
+          />
+        )}
 
         {screen.at === 'remote' && (() => {
           const remote = nav.resolve(remotes.remotes);

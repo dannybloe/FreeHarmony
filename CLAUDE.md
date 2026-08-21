@@ -40,15 +40,24 @@ guards against in code.
 2026 as eight numbered steps, hours before the backlog was decided, so it still reads as though it carries
 the order by itself. That is a known inconsistency and not a second plan.
 
-**Status: the boundary works and there is no interface.** It stopped being a placeholder on 14 August
-2026: `bin/inventory.ts` takes a config file, hands it to `@harmony/codec` and prints the architecture,
-the build date, the devices with the route that named each one, and the activities with the devices each
-drives. Run against a real Harmony 600 config it names four devices and three activities. That is the
-whole application so far, and it is deliberately a script rather than a window.
+**Status: the first loop through the application runs, and it can see a remote on the cable.** Five
+screens and the way between them, built on 21 August 2026 from Danny's own sketches: Home with a
+carousel of the remotes somebody has added, an Add page offering either the USB route or a model
+chooser, a naming page, a Connect page, and the page of one remote where it can be renamed, duplicated
+or removed. That is the CRUD without the U, in his words, plus **reading which model is attached**.
 
-The format knowledge it stands on is in the other repository: a config reads off a remote byte for byte,
-every byte of it is attributed, and a config's devices, activities, button bindings and drawn screens all
-come back by name.
+Reading stops at the model, deliberately and per his scope: enumeration says which remote is on the
+cable, a document is created for it, and nothing is opened and nothing of a configuration is read.
+
+**Status before this, kept because it is still what the boundary rests on**: `bin/inventory.ts` takes a
+config file, hands it to `@harmony/codec` and prints the architecture, the build date, the devices with
+the route that named each one, and the activities with the devices each drives. Run against a real
+Harmony 600 config it names four devices and three activities. It is still the only thing here that
+reads a configuration at all.
+
+The format knowledge all of this stands on is in the other repository: a config reads off a remote byte
+for byte, every byte of it is attributed, and a config's devices, activities, button bindings and drawn
+screens all come back by name.
 
 ## The boundary, and the one rule that protects it
 
@@ -137,6 +146,20 @@ published by the preload script and consumed by the window, so a method whose ar
 breaks the typecheck on three sides at once. Everything crossing it is plain data, which is not a
 convention but the channel's own constraint, and it is the reason the configuration bytes cannot
 casually leave the main process.
+
+**The bridge has two namespaces now**, `remotes` and `devices`, and `channelFor` takes the namespace as
+a parameter rather than there being one function per half. `METHODS` in `src/shared/api.ts` is a mapped
+type over the namespaces, so a namespace added to `FreeHarmonyApi` and not added there does not compile,
+and the window surface test walks it instead of a list written out by hand. That is what made the test
+notice the second namespace arriving rather than needing to be told about it.
+
+**One correction worth carrying, because it made a check stricter by accident and could have gone the
+other way.** The exhaustiveness assertion that says a method list names every method of its interface was
+written out longhand and passed for weeks. Making it generic broke it, because a conditional type
+**distributes over a naked type parameter**: `Listed extends keyof Api` was evaluated once per method,
+and the inner test then asked whether all five methods extend one of them. Both sides are wrapped in a
+tuple now, which compares the unions whole. It failed loudly here; the same mistake in the other
+direction is a check that silently passes.
 
 **And it is checked in a running window, because nothing else can check it.** The store tests and the
 view model tests exercise the two ends separately, against a temporary directory on one side and a
@@ -246,6 +269,56 @@ the other way round. A default that skips the expensive half is a default that s
 
 There is no continuous integration yet, so `pnpm check` is the whole gate and it is on whoever
 commits. That is what issues #9 and #10 are for.
+
+## Reading a remote, and how far that goes
+
+Built on 21 August 2026 and **it is enumeration only**. `src/main/devices.ts` asks the operating system
+which Harmonys are on the USB bus, reads the skin out of each one's `bcdDevice`, and looks that up in
+Logitech's own table. Nothing is opened, no command is sent, and no byte of anybody's configuration is
+read. The distinction is the sibling repository's and it is worth keeping in the wording as well as in
+the code: `listHarmony` looks, `openHarmony` claims.
+
+**The risk of this step was a native module and it was measured first, not last.** `node-hid` is a
+binding compiled against an ABI, and a binding built for Node does not load under Electron. Measured on
+21 August 2026 with a throwaway probe of nine lines: it **loads under Electron 43 with no rebuild**,
+seeing 37 HID devices on this machine, so `@electron/rebuild` is not needed and
+`pnpm-workspace.yaml` needs no build approval. `test/app/devices.test.ts` is what keeps that true, in a
+real window, because a unit test talks to a fake and cannot see an ABI.
+
+**A failure to enumerate reaches the window**, and the first version swallowed it into an empty array on
+the reasoning that a page waiting for a cable has nothing useful to say about a fault. That was wrong
+twice over. It made the view model's `failed` state unreachable, so the amber note on the Connect page
+was dead code and the test asserting it was testing a fake; and it made an empty array mean two things at
+once, a bus with nothing on it and a binding that would not load, which is exactly what nothing outside
+the main process can then tell apart.
+
+**Two guards decide whether a recognised remote carries somebody onwards**, and each rules out a real
+mistake:
+
+* `theRecognisedOne` insists on **exactly one** attached remote whose model can be named. With two on
+  the bus nothing here can tell which was meant, and choosing would name the other one's model. With a
+  model nothing names, there is nothing to fill a naming page in with, so the honest move is to say what
+  was seen and offer the chooser.
+* `advanceOn` insists it happens **once per arrival and not once per poll**. Without it, back from the
+  naming page lands on Connect with the remote still plugged in, the condition is still true, and the
+  back arrow becomes a button that does nothing. It forgets when the bus empties, so unplugging and
+  plugging back in still works.
+
+Both are plain functions in `devices.model.ts` rather than conditions inside a component, which is the
+layer rule doing its job: three of the four states are awkward or impossible to arrange on the bench and
+all of them are one line in `test/devices.test.ts`.
+
+**A model is spelled in one place.** `@harmony/silhouettes` labels a drawing `Harmony One` and Logitech's
+table calls the same thing `One`, so `src/shared/models.ts` derives the full spelling from the table and
+`test/models.test.ts` asserts every drawing's own label agrees with it. Without that, a remote picked from
+the chooser and the same remote read over USB would arrive in somebody's documents under two names.
+Twenty one of the 76 names in those tables are **not** Harmonys, Monster and Harman Kardon and the rest,
+and the list is written out rather than inferred because `Olive` and `One` are both a single capitalised
+word and no rule about the string can separate them.
+
+**What comes next needs opening a device**, and that is a separate step on purpose: `getVersion()` gives
+the firmware version, the board and the flash id, and it is the first time FreeHarmony would claim
+hardware that cannot be replaced.
 
 ## Never write to a remote
 

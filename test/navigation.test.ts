@@ -28,6 +28,9 @@ function remote(name: string): RemoteDocument {
   };
 }
 
+/** The model the naming screen carries. A name and a skin, which is all a document ever stores. */
+const A_HARMONY_ONE = { name: 'Harmony One', skin: 54 } as const;
+
 test('it starts on Home, where there is nowhere to go back to', () => {
   const { nav } = record();
   assert.deepEqual(nav.screen, START);
@@ -37,8 +40,8 @@ test('it starts on Home, where there is nowhere to go back to', () => {
 test('the whole flow Danny sketched, forwards and then all the way back', () => {
   const { nav } = record();
   nav.go({ at: 'add' });
-  nav.go({ at: 'name', modelId: 'one' });
-  assert.deepEqual(nav.screen, { at: 'name', modelId: 'one' });
+  nav.go({ at: 'name', model: A_HARMONY_ONE, origin: 'chooser' });
+  assert.deepEqual(nav.screen, { at: 'name', model: A_HARMONY_ONE, origin: 'chooser' });
   assert.equal(nav.canGoBack, true);
 
   nav.back();
@@ -54,7 +57,7 @@ test('the other route in: connect, and back from it lands where you came from', 
   const { nav } = record();
   nav.go({ at: 'add' });
   nav.go({ at: 'connect' });
-  nav.go({ at: 'name', modelId: 'h600' });
+  nav.go({ at: 'name', model: { name: 'Harmony 600', skin: 71 }, origin: 'device' });
 
   nav.back();
   assert.deepEqual(nav.screen, { at: 'connect' }, 'not the chooser, which is where a rule would go');
@@ -65,7 +68,7 @@ test('the other route in: connect, and back from it lands where you came from', 
 test('going home clears the way back, so a fresh start is a fresh start', () => {
   const { nav } = record();
   nav.go({ at: 'add' });
-  nav.go({ at: 'name', modelId: 'one' });
+  nav.go({ at: 'name', model: A_HARMONY_ONE, origin: 'chooser' });
   nav.home();
 
   assert.deepEqual(nav.screen, START);

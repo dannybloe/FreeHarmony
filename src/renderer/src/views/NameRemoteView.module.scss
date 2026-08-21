@@ -79,3 +79,20 @@
   justify-content: flex-end;
   margin-block-start: var(--mantine-spacing-md);
 }
+
+// Where a model was read off the bus rather than picked. Above the name, because it is the reason the
+// name is already there.
+.origin {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
+  letter-spacing: m.rem(0.3);
+  text-transform: uppercase;
+  color: var(--mantine-color-indigo-6);
+}
+
+// The stand-in for a drawing nobody has made, at the size of the drawing it replaces. The same mixin
+// the tile uses, so a model with no picture is recognisably the same shape in a row and on its own
+// page rather than two hand written circles that drift.
+.unknown {
+  @include m.stand-in(150, 60);
+}

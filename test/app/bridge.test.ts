@@ -16,29 +16,37 @@ import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { API_NAMESPACE, REMOTE_METHODS } from '../../src/shared/api.ts';
+import { API_NAMESPACE, METHODS } from '../../src/shared/api.ts';
 import { whyNameIsRefused } from '../../src/shared/remote.ts';
 import { launch } from './electron.ts';
 
 test('the page is given exactly the surface the shared contract declares', async (t) => {
+  // Walked from `METHODS` rather than from a list written out here, which is what made this test catch
+  // the `devices` namespace arriving: it asserted `['remotes']` and had to be told about the second
+  // half. A hand written expectation is the thing that would have needed telling twice.
   const app = await launch();
   t.after(() => app.close());
 
   assert.deepEqual(
-    await app.evaluate<string[]>(`Object.keys(window['${API_NAMESPACE}'])`),
-    ['remotes'],
-    'nothing is published beside the one namespace',
+    (await app.evaluate<string[]>(`Object.keys(window['${API_NAMESPACE}']).sort()`)),
+    Object.keys(METHODS).sort(),
+    'the namespaces, and nothing beside them',
   );
-  assert.deepEqual(
-    (await app.evaluate<string[]>(`Object.keys(window['${API_NAMESPACE}'].remotes).sort()`)),
-    [...REMOTE_METHODS].sort(),
-    'and inside it, the methods of RemotesApi and no others',
-  );
-  assert.deepEqual(
-    await app.evaluate<string[]>(
-      `Object.values(window['${API_NAMESPACE}'].remotes).map((m) => typeof m)`),
-    REMOTE_METHODS.map(() => 'function'),
-  );
+
+  for (const [namespace, methods] of Object.entries(METHODS)) {
+    assert.deepEqual(
+      (await app.evaluate<string[]>(
+        `Object.keys(window['${API_NAMESPACE}'].${namespace}).sort()`)),
+      [...methods].sort(),
+      `${namespace}: the methods its interface declares and no others`,
+    );
+    assert.deepEqual(
+      await app.evaluate<string[]>(
+        `Object.values(window['${API_NAMESPACE}'].${namespace}).map((m) => typeof m)`),
+      methods.map(() => 'function'),
+      `${namespace}: every one of them is callable`,
+    );
+  }
 });
 
 test('the page has no route to the machine except the bridge', async (t) => {
