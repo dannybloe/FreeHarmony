@@ -14,6 +14,7 @@ import { Text } from '@mantine/core';
 import { useEffect, useRef, useState } from 'react';
 
 import type { HardwareReading } from '../../shared/devices.ts';
+import { headingOnRemote } from '../../shared/library.ts';
 import type { RemoteModel } from '../../shared/remote.ts';
 import { api } from './api.ts';
 import { asRemoteModel, isSameModel } from './catalogue.ts';
@@ -105,10 +106,12 @@ export function App() {
     await contents.reload();
   };
 
-  const assignButton = async (
-    name: string, scan: number, slot: number, activity: number, command?: number,
-  ) => {
-    await api().remotes.assignButton(name, scan, slot, activity, command);
+  // Pointing a key at a command writes **every activity that drives the device**, which is the rail in
+  // `main/content.ts`: the map belongs to the device and a configuration stores it per activity. Nothing
+  // here narrows it to one activity, because an override is a deliberate act and there is no control for
+  // it yet; the page says where the change lands before it is made.
+  const assignButton = async (name: string, scan: number, slot: number, command?: number) => {
+    await api().remotes.assignButton(name, scan, slot, command);
     await contents.reload();
   };
 
@@ -277,10 +280,17 @@ export function App() {
                 definition={definitionIn(
                   library.state,
                   held?.content.devices.find((one) => one.slot === screen.slot)?.definition)}
+                // What every position on this remote is called, which the device page needs because a key
+                // is often another device's. Named through the same function the tiles use, so the word is
+                // the same word; it needs the library, which is why it is worked out here.
+                names={new Map((held?.content.devices ?? []).map((one) =>
+                  [one.slot,
+                   headingOnRemote(one.label, definitionIn(library.state, one.definition), one.slot)
+                     .title]))}
                 busy={remotes.busy}
                 onLabel={(label) => void labelDevice(remote.name, screen.slot, label)}
-                onAssign={(scan, activity, command) =>
-                  void assignButton(remote.name, scan, screen.slot, activity, command)}
+                onAssign={(scan, command) =>
+                  void assignButton(remote.name, scan, screen.slot, command)}
               />
             );
           }

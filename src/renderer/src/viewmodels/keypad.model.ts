@@ -1,106 +1,136 @@
 /**
- * What each key on a drawing is doing on one device's page, as plain data.
+ * What each key on a drawing does for one device, as plain data.
  *
- * **No React and no DOM**, which is the point of it being here: the interesting part of a clickable keypad
- * is not the click, it is the four states a key can be in, and three of those are easy to get wrong in a
- * way a screenshot cannot show. So the states are computed by a function a test can walk with a drawing
- * and a document and nothing else, and the view's whole job is to paint them.
+ * **This is the device's own button map, which is what device mode is.** Press Devices on a Harmony, pick
+ * the television, and every key drives the television. That is the ordinary way to reach a command an
+ * activity does not carry, and it is the whole subject of a page about a device. `CLAUDE.md`'s first
+ * section is the operating concept and it is worth reading before changing anything here.
  *
- * **The fourth state is the one this project has to be honest about.** A key is drawn from measured
- * geometry, and its scan code is a separate measurement that mostly has not been made: 36 of a Harmony
- * 600's 54 keys have one, 34 of a Harmony One's 44, and **none at all** of a Harmony 525's 50. A key with
- * no code cannot be pointed at anything, ever, by anybody, and that is not the same as a key nobody has
- * pointed at yet. Drawing them alike would be the interface claiming a capability it has not got, so
- * `unmeasured` exists and the page says what it means when one is pressed.
+ * **A configuration does not state that map, it states one per activity**, so the map is worked out from the
+ * activities that drive the device. The derivation is `shared/buttonmap.ts` and it is shared with the writer
+ * on purpose: the sentence this page shows before a change and the change itself must not be able to
+ * disagree. What is left here is the part that is genuinely a view's: which of five words to say.
  *
- * `taken` is the other one worth stating. Within one activity a key sends to one place, because the remote
- * would otherwise have to choose, so a key already pointed at another position is shown as belonging to
- * that position rather than as free. The same key in a different activity is a different question, which
- * is why every function here takes one.
+ * The first version of this file read one activity at a time and offered a chooser, which was the wrong
+ * question on a page about a device. The second read the whole remote instead of the driving activities, so
+ * a key free in every activity that drives this device but spoken for in some unrelated one showed as
+ * another device's: 31 of a Harmony 600's 36 placeable keys, on the very configuration its test uses.
+ *
+ * **The states are about the map and not about the differences between activities**, which is the third
+ * version and the one worth stating. A key can differ across activities in three ways and only one of them
+ * leaves the device's map without an answer: two commands. The other two, another device holding it and
+ * nothing holding it, are ordinary and common, and they say where a change reaches rather than what the map
+ * says. Those belong in the panel beside the chooser, per key, before anything is written; folding them into
+ * a colour would have marked 27 of a Harmony One's 30 bound keys as a conflict.
+ *
+ * No React and no DOM, so every state below is walkable by a test.
+ *
+ * **One state exists because this project has to be honest about its own reach.** A key is drawn from
+ * measured geometry and its scan code is a separate measurement, mostly not made: 36 of a Harmony 600's
+ * 54 keys have one, 34 of a Harmony One's 44, and none at all of a Harmony 525's 50. A key with no code
+ * cannot be pointed at anything by anybody, which is not the same as a key nobody has pointed at yet.
  */
 import type { Key, Model } from '@harmony/silhouettes';
 import { elementId } from '@harmony/silhouettes';
 
-import type { ButtonBinding } from '../../../shared/content.ts';
+import type { Activity, ButtonBinding } from '../../../shared/content.ts';
+import type { KeyInActivity } from '../../../shared/buttonmap.ts';
+import { drivingActivities, heldOnThisRemote, keyAcrossActivities, keypadBindings }
+  from '../../../shared/buttonmap.ts';
 
 export type KeyState =
-  /** Sends to the device whose page this is. */
+  /** Sends one command to this device. */
   | 'mine'
-  /** Sends to another position on this remote. */
+  /**
+   * Sends **two different commands** to this device, depending on which activity is running.
+   *
+   * The one case where the device's map has no answer, so a page about the device may not pick one. Nine
+   * of 1105 pairs of a device and a key in the corpus, and an amplifier whose input differs per activity is
+   * the real example.
+   *
+   * Deliberately narrow. Two other things make the activities not uniform, a key another device holds in
+   * some of them and a key nothing has in some of them, and both are ordinary: 27 of the first device's 30
+   * keys on the Harmony One in the lab are another device's key in at least one of the eight activities
+   * that drive it. Colouring those as a conflict would mark almost the whole keypad as a problem. They are
+   * facts about **where a change reaches**, so they belong in the panel beside the chooser and are said
+   * there, per key, before anything is written.
+   */
+  | 'contested'
+  /** Every activity that drives this device has this key on another device, so there is no room for it. */
   | 'taken'
-  /** Nothing is bound to it, and something could be. */
+  /** Nothing has it in at least one activity that drives this device, so something could. */
   | 'free'
   /** Its code has never been measured on this model, so nothing can ever be bound to it here. */
   | 'unmeasured';
 
 export interface KeyOnScreen {
-  /** Logitech's own word for the key where we have it, which is what the page shows. */
+  /** Logitech's own word for the key where we have it, which is what a page shows. */
   readonly name: string;
-  /** The element the drawing gives it, so the view can find it without guessing. */
+  /** The element the drawing gives it, so a view can find it without guessing. */
   readonly id: string;
   readonly scan?: number;
   readonly state: KeyState;
-  /** Which commands it sends, by position in the device's own list. Only for `mine`. */
-  readonly sends: readonly number[];
-  /** Which position owns it. Only for `taken`. */
+  /**
+   * Which command it sends for this device, by position in the device's own list.
+   *
+   * Only for `mine`, which is the state that means there is one answer. A `contested` key has two and the
+   * page has to say so rather than pick, which is what `perActivity` is for.
+   */
+  readonly command?: number;
+  /** What it does in each activity that drives this device, in the document's order. */
+  readonly perActivity: readonly KeyInActivity[];
+  /** The activities a change would be written into: this device's already, or free. */
+  readonly writable: readonly number[];
+  /** The activities another device holds it in, which a change leaves alone. */
+  readonly held: readonly number[];
+  /** Which device holds it. Only for `taken`. */
   readonly ownedBy?: number;
 }
 
+export { keypadBindings, drivingActivities };
+
 /**
- * The keypad bindings of one activity.
+ * Every key on the drawing, in the drawing's own order, with what it does for one device.
  *
- * **Every keypad binding in the corpus that sends a code belongs to an activity**, all 1122 of them across
- * five configurations and three architectures. Which is what a Harmony is for: the volume key sends to the
- * amplifier while you are listening to music and to the television while you are watching it, so the same
- * key has as many answers as there are activities and a page has to pick one.
- *
- * **That is a claim about these files and not about the format**, and the difference was Danny's point on
- * 22 August 2026. A Harmony also has a **device mode**, where the keypad drives one device with no activity
- * running, and a map for that would be a keypad binding with no activity. The measurement says these
- * configurations carry none: of 48 keypad maps in them, exactly the 16 an activity installs send an
- * infrared code, and the other 32 send nothing at any depth, 10 of them binding fifty or more keys to
- * comparisons and mode entries, which is a menu. Whether a remote in device mode remaps its keypad at all
- * is a question for the bench, and `test/import.test.ts` states the population so a sample that carries one
- * fails rather than being absorbed.
- *
- * An earlier version of this page read the bindings with no context, which is a real place in the format
- * and is empty in every file here, so it showed no assignments at all on a configuration holding 220.
- *
- * A screen key is a separate population that shares no code with the keypad, and it is a later round.
+ * `activities` carries the declared device lists, which is what says who drives what.
  */
-export function keypadBindings(
-  buttons: readonly ButtonBinding[], activity: number,
-): readonly ButtonBinding[] {
-  return buttons.filter((one) =>
-    one.surface === 'keypad' && one.scan !== undefined && one.inActivity === activity);
-}
-
-/** Every key on the drawing, in the drawing's own order, with what it is doing in one activity. */
 export function keypadFor(
-  drawing: Model, buttons: readonly ButtonBinding[], slot: number, activity: number,
+  drawing: Model,
+  buttons: readonly ButtonBinding[],
+  slot: number,
+  activities: readonly Activity[],
 ): readonly KeyOnScreen[] {
-  const bound = keypadBindings(buttons, activity);
-  return drawing.keys.map((key) => describeKey(key, bound, slot));
+  return drawing.keys.map((key) => describeKey(key, buttons, slot, activities));
 }
 
-function describeKey(key: Key, bound: readonly ButtonBinding[], slot: number): KeyOnScreen {
+function describeKey(
+  key: Key, buttons: readonly ButtonBinding[], slot: number, activities: readonly Activity[],
+): KeyOnScreen {
   const id = elementId(key.name);
   if (key.scan === undefined) {
-    // A candidate set is still no code. The Harmony 525's four soft keys are known to be four of
-    // `{30, 31, 38, 39}` and nothing says which, so binding one would be a guess written into a document.
-    return { name: key.name, id, state: 'unmeasured', sends: [] };
+    // A candidate set is still no code. A Harmony 525's four soft keys are known to be four of a set of
+    // four and nothing says which is which, so binding one would be a guess written into a document.
+    return {
+      name: key.name, id, state: 'unmeasured', perActivity: [], writable: [], held: [],
+    };
   }
   const scan = key.scan;
-  const here = bound.find((one) => one.scan === scan);
-  if (here === undefined) return { name: key.name, id, scan, state: 'free', sends: [] };
-  const owner = here.sends[0]?.device;
-  if (owner === slot) {
-    return { name: key.name, id, scan, state: 'mine', sends: here.sends.map((step) => step.command) };
+  const across = keyAcrossActivities(buttons, slot, activities, scan);
+  const at = { name: key.name, id, scan, ...across };
+
+  if (across.commands.length === 0) {
+    // Nothing of this device's on this key. Free where a driving activity leaves room, and otherwise
+    // somebody else's, which includes the case where no activity drives this device at all: then the
+    // page refuses the write in its own words and the drawing still says something true about the remote.
+    if (across.writable.length > 0) return { ...at, state: 'free' };
+    const owner = heldOnThisRemote(buttons, scan, slot);
+    return { ...at, state: 'taken', ...(owner === undefined ? {} : { ownedBy: owner }) };
   }
-  return {
-    name: key.name, id, scan, state: 'taken', sends: [],
-    ...(owner === undefined ? {} : { ownedBy: owner }),
-  };
+
+  // Two commands is the one state where the device's map has no answer. Everything else about how the
+  // activities differ is a fact about where a change reaches, and the panel says it per key.
+  if (across.commands.length > 1) return { ...at, state: 'contested' };
+  return { ...at, state: 'mine', command: across.commands[0]! };
 }
 
 /**

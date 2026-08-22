@@ -84,7 +84,7 @@ export function Keypad({ drawing, keys, picked, onPick }: KeypadProps) {
   );
 }
 
-/** The colour key, so the four states are readable without pressing anything. */
+/** The colour key, so the five states are readable without pressing anything. */
 export function KeypadLegend({ children }: { readonly children: ReactNode }) {
   return <div className={classes.legend}>{children}</div>;
 }

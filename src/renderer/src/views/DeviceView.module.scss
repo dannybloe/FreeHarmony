@@ -47,6 +47,9 @@
 }
 
 .right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
   position: sticky;
   // Level with the top of the drawing rather than centred on it: the keys at the bottom of a remote are as
   // pressable as the ones at the top, and a panel that moved with the pointer would be worse than one that
@@ -69,4 +72,36 @@
   font-size: m.rem(17);
   font-weight: 600;
   color: var(--mantine-color-gray-9);
+}
+
+// A key the activities disagree about. Set apart rather than styled as a warning: nine of 1105 pairs in
+// the corpus are like this, so it is a real state of a real remote and not a fault to be alarmed about.
+.contested {
+  display: grid;
+  gap: m.rem(4);
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border-inline-start: m.rem(3) solid var(--mantine-color-gray-4);
+  background: var(--mantine-color-gray-0);
+  border-radius: var(--mantine-radius-sm);
+}
+
+// Activity on the left, what it sends on the right, so the eye can run down the second column and see the
+// disagreement rather than read every line.
+.perActivity {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: m.rem(2);
+  font-size: var(--mantine-font-size-sm);
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--mantine-spacing-sm);
+  }
+
+  li span:last-child {
+    color: var(--mantine-color-gray-7);
+  }
 }

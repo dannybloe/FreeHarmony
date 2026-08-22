@@ -116,8 +116,8 @@ test('the colours a drawing is made of are declared in one place', async () => {
   // for: a red key is red on every screen. Six, so a palette cannot half exist.
   assert.equal(palette.length, 6, palette.join('\n'));
   // The state overrides, counted exactly rather than bounded, since a floor here would pass with the
-  // whole keypad uncoloured: two states with three properties each, and one stroke on the chosen key.
-  assert.equal(states.length, 7, states.join('\n'));
+  // whole keypad uncoloured: three states with three properties each, and one stroke on the chosen key.
+  assert.equal(states.length, 10, states.join('\n'));
 });
 
 test('every view that draws a remote takes its colours from that mixin', async () => {

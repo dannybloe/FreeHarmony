@@ -32,9 +32,17 @@ const ACTIVITIES = 3;
 
 /** The model the sample was read off, so a document can carry a drawing. Skin 71 is the Harmony 600. */
 const A_HARMONY_600 = { name: 'Harmony 600', skin: 71 };
-/** Its keys, from `packages/silhouettes`, of which 18 have no measured scan code. */
+/**
+ * What the drawn keypad says about this configuration's first device, key by key, exactly.
+ *
+ * Every one of the 54 keys, so a state that stops being painted shows as a total that no longer adds up.
+ * The three figures are the measurement that corrected this page: **nothing** is another device's here,
+ * because a key is only that if no activity driving this device leaves room for it, and 31 are free
+ * because this device is driven by all three activities and holds five keys in them. An earlier keypad
+ * read the whole remote instead and reported 31 taken, on this very file.
+ */
+const PAINTED = { unmeasured: 18, free: 31, mine: 5 };
 const KEYS = 54;
-const UNMEASURED = 18;
 
 test('a document with a configuration behind it reaches the page as devices and activities',
      skipUnless(SAMPLE), async (t) => {
@@ -179,9 +187,9 @@ test('a button on the drawn remote is pressed, given a command, and the document
   // four states and cannot prove any of that.
   //
   // It also happens to be the test that would have caught the defect this page was built on top of. Every
-  // keypad binding in a configuration names an activity, so a page reading the context free ones shows an
-  // empty remote; the assertion below is that a key drawn from a real configuration reports the command it
-  // already sends, which is false unless the activity is being read.
+  // keypad binding in the fifteen configurations here names an activity, so a page reading the context
+  // free ones shows an empty remote; the assertion below is that a key drawn from a real configuration
+  // reports the command it already sends, which is false unless the activities are being read.
   const app = await launch();
   t.after(() => app.close());
 
@@ -259,16 +267,9 @@ test('a button on the drawn remote is pressed, given a command, and the document
   })()`);
 
   const painted = await byState();
+  assert.deepEqual(painted, PAINTED, 'the drawn keypad, key by key');
   assert.equal(Object.values(painted).reduce((a, b) => a + b, 0), KEYS,
-               'every key of a Harmony 600');
-  assert.equal(painted['unmeasured'], UNMEASURED,
-               'and the ones whose code has never been measured');
-  // **The assertion the page exists for.** This device is already driven by keys in this activity, so some
-  // of them are its own. Greater than zero rather than an exact number, because which activity the page
-  // opens on is the document's own ordering and this test may not read the equipment's names; the exact
-  // per activity figures are asserted in `test/import.test.ts` against the corpus.
-  assert.ok((painted['mine'] ?? 0) > 0, `no key drives this device: ${JSON.stringify(painted)}`);
-  assert.ok((painted['taken'] ?? 0) > 0, `no key drives another: ${JSON.stringify(painted)}`);
+               'every key of a Harmony 600 and no more');
 
   // Now press one of this device's own keys and read back what the panel says it sends. The name comes
   // out of the drawing rather than out of the configuration, so it is ours to quote.
@@ -292,10 +293,17 @@ test('a button on the drawn remote is pressed, given a command, and the document
   assert.match(sends, /^Command \d+$/, 'the chooser says which command this key already sends');
 
   // **And the write half**, which is the whole point of the page and the one thing no unit test reaches:
-  // a free key, a command chosen from the list, and the document on disk saying so afterwards. Through
-  // the bridge for the choosing, because Mantine's chooser is a listbox rather than a `select` and
-  // scripting it is scripting somebody else's component; what is being checked here is that the page
-  // hands the right three numbers over, so the handler is called with what a click would give it.
+  // a key with room for it, a command, and the document on disk saying so afterwards. Through the bridge
+  // for the choosing, because Mantine's chooser is a listbox rather than a `select` and scripting it is
+  // scripting somebody else's component; what is being checked is the writer's own reach, called with what
+  // a click on the page would give it.
+  //
+  // **A free key, and finding one is the measurement that corrected this page.** Every one of this Harmony
+  // 600's 36 placeable keys is bound somewhere on the remote, so an earlier version of the keypad, which
+  // read the whole remote rather than the activities that drive this device, showed 31 of them as another
+  // device's and this test found nothing to press. Free means there is room for it in **at least one**
+  // activity that drives this device, which is not the same as nothing being in the way anywhere: the key
+  // this picks up is another device's in two of the three, which is the ordinary shape of a Harmony.
   const free = await app.evaluate<{ name: string; scan: number }>(`(() => {
     const key = document.querySelector('.key-group[data-state=free]');
     return { name: key.getAttribute('data-name'), scan: Number(key.getAttribute('data-scan')) };
@@ -304,18 +312,46 @@ test('a button on the drawn remote is pressed, given a command, and the document
 
   const before = await app.evaluate<DocumentContents>(
     `window['${API_NAMESPACE}'].remotes.contents('living room')`);
-  const activity = before.content.buttons.find((one) => one.surface === 'keypad')?.inActivity;
-  assert.ok(activity !== undefined, 'the configuration binds keypad keys inside activities');
+  // Every activity that drives this position, off the document's own declarations, which is what the
+  // writer uses. More than one, because that is the whole rail: a page about a device edits the device's
+  // map, and a configuration stores that map once per activity.
+  const driving = before.content.activities
+    .filter((one) => one.devices.includes(0)).map((one) => one.slot);
+  assert.ok(driving.length > 1,
+            `the first device is driven by several activities: ${JSON.stringify(driving)}`);
 
-  await app.evaluate(`window['${API_NAMESPACE}'].remotes`
-    + `.assignButton('living room', ${free.scan}, 0, ${activity}, 3)`);
+  // Where the write should land and where it must not, worked out here from the document rather than asked
+  // of the code under test: the driving activities that have nothing on this key, against the ones another
+  // device already has it in. That is what makes this an assertion and not an echo.
+  const holders = new Map(before.content.buttons
+    .filter((one) => one.surface === 'keypad' && one.scan === free.scan
+      && one.inActivity !== undefined)
+    .map((one) => [one.inActivity as number, one.sends[0]?.device]));
+  const room = driving.filter((one) => !holders.has(one));
+  const held = driving.filter((one) => holders.has(one));
+  assert.ok(room.length > 0 && held.length > 0,
+            `a key with room in one activity and taken in another: ${JSON.stringify([room, held])}`);
+
+  const wrote = await app.evaluate<{ activities: number[]; held: number[] }>(
+    `window['${API_NAMESPACE}'].remotes.assignButton('living room', ${free.scan}, 0, 3)`);
+  assert.deepEqual(wrote.activities, room, 'written into the activities with room for it');
+  assert.deepEqual(wrote.held, held, 'and it names the ones another device already has it in');
+
   const after = await app.evaluate<DocumentContents>(
     `window['${API_NAMESPACE}'].remotes.contents('living room')`);
 
   const written = after.content.buttons.filter(
-    (one) => one.surface === 'keypad' && one.scan === free.scan && one.inActivity === activity);
-  assert.equal(written.length, 1, 'one binding for one key in one activity');
-  assert.deepEqual(written[0]?.sends, [{ device: 0, command: 3 }]);
+    (one) => one.surface === 'keypad' && one.scan === free.scan);
+  const ours = written.filter((one) => one.sends[0]?.device === 0);
+  assert.deepEqual(ours.map((one) => one.inActivity).sort((a, b) => (a ?? 0) - (b ?? 0)), room);
+  for (const one of ours) assert.deepEqual(one.sends, [{ device: 0, command: 3 }]);
+  // **And the other device kept its key**, which is the half that would be silently destructive: writing
+  // every driving activity is the obvious implementation and it steals keys.
+  for (const activity of held) {
+    const there = written.find((one) => one.inActivity === activity);
+    assert.equal(there?.sends[0]?.device, holders.get(activity),
+                 `activity ${activity} kept the device it had this key on`);
+  }
   // Nothing else moved. Exact, because a writer that rebuilt the list would pass a bound and fail this.
-  assert.equal(after.content.buttons.length, before.content.buttons.length + 1);
+  assert.equal(after.content.buttons.length, before.content.buttons.length + room.length);
 });

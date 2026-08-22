@@ -1,4 +1,4 @@
-// The clickable remote. Four states, each a `--key-fill` on one key's own group, which is the whole
+// The clickable remote. Five states, each a `--key-fill` on one key's own group, which is the whole
 // mechanism the drawing library was built for: nothing in the SVG carries a colour, every fill reads a
 // custom property, and a property set on a key group is inherited by the shapes inside it.
 
@@ -13,7 +13,7 @@
   justify-content: center;
   // Tall rather than wide: Danny asked for the remote drawn vertically down the left of the page, so the
   // height is what is stated and the width follows from the model's own proportions.
-  height: m.rem(560);
+  height: m.rem(620);
   padding-block: m.rem(4);
 
   :global(.key-group) {
@@ -27,6 +27,23 @@
     --key-fill: var(--mantine-color-indigo-2);
     --key-stroke: var(--mantine-color-indigo-6);
     --key-text: var(--mantine-color-indigo-9);
+  }
+
+  // Sends to this device, and the activities disagree about which command. Deliberately **not** a third
+  // colour: it is the same fact as `mine`, unsettled, so it is the same hue paler with a broken outline.
+  // A configuration stores a keypad map per activity and the device's map is what those agree on, so a
+  // key nine of 1105 pairs disagree about has to look like a question rather than like an error.
+  :global(.key-group[data-state='contested']) {
+    --key-fill: var(--mantine-color-indigo-0);
+    --key-stroke: var(--mantine-color-indigo-6);
+    --key-text: var(--mantine-color-indigo-9);
+  }
+
+  // The dash is on the outline of the key itself, not on an added shape: the shapes in the drawing are
+  // the product's own and nothing gets added to them.
+  :global(.key-group[data-state='contested'] .key),
+  :global(.key-group[data-state='contested'] .rocker-fill) {
+    stroke-dasharray: 4 2.5;
   }
 
   // Sends to another position on this remote. Present, spoken for, not yours: a warmer grey rather than a
@@ -82,7 +99,7 @@
   gap: m.rem(6);
 }
 
-// A key, at the size of a word. The same four fills as above, stated once more here because a swatch is
+// A key, at the size of a word. The same five fills as above, stated once more here because a swatch is
 // not a key group and cannot inherit from one.
 .swatch {
   width: m.rem(14);
@@ -94,6 +111,12 @@
   &[data-state='mine'] {
     border-color: var(--mantine-color-indigo-6);
     background: var(--mantine-color-indigo-2);
+  }
+
+  &[data-state='contested'] {
+    border-color: var(--mantine-color-indigo-6);
+    border-style: dashed;
+    background: var(--mantine-color-indigo-0);
   }
 
   &[data-state='taken'] {

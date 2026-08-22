@@ -319,7 +319,12 @@ test('a position can be named, renamed and have its name taken away again', asyn
   }
 });
 
-/** Two devices and two activities, which is the least a keypad question can be asked about. */
+/**
+ * Two devices and two activities, both driving both devices, which is the least a keypad question needs.
+ *
+ * Both activities drive both devices on purpose: a keypad map belongs to an activity, so a device an
+ * activity does not drive has nowhere for a binding to live, and that refusal has its own test below.
+ */
 async function aRemoteWithTwoActivities(at: Bench, buttons: ButtonBinding[] = []): Promise<void> {
   await at.store.create('bedroom');
   await writeContent(at.store, 'bedroom', {
@@ -330,62 +335,142 @@ async function aRemoteWithTwoActivities(at: Bench, buttons: ButtonBinding[] = []
   });
 }
 
-test('a key sends to one device within one activity, and a second is refused rather than silent',
-     async () => {
+test('setting a device\'s button writes every activity that drives it, and says which', async () => {
+  // **The rail, and it is the whole reason this function is not a one line edit.** A page about a device
+  // edits the device's own button map, which is what device mode is on a Harmony. A configuration stores
+  // no such map: it stores one keypad map per activity, and the device's map is what those agree on,
+  // section 151 next door. So one assignment has to land in every activity that drives the device.
+  //
+  // Write one only and the remote behaves exactly as before in the activity somebody is sitting in, the
+  // checksum still passes, and nothing tells them. That is the failure this test exists for.
   const at = await bench();
   try {
     await aRemoteWithTwoActivities(at);
 
-    const bound = await assignButton(at.store, 'bedroom', 12, 0, 0, 7);
-    assert.deepEqual(bound.buttons,
-                     [{ surface: 'keypad', scan: 12, inActivity: 0, sends: [{ device: 0, command: 7 }] }]);
+    const bound = await assignButton(at.store, 'bedroom', 12, 0, 7);
+    assert.deepEqual(bound.activities, [0, 1], 'both activities drive position 1');
+    assert.deepEqual(bound.held, [], 'and nothing was in the way of either');
+    assert.equal(bound.content.buttons.length, 2, 'so both got the binding');
+    assert.deepEqual(bound.content.buttons.map((one) => one.inActivity).sort(), [0, 1]);
+    for (const binding of bound.content.buttons) {
+      assert.deepEqual(binding.sends, [{ device: 0, command: 7 }]);
+      assert.equal(binding.scan, 12);
+      assert.equal(binding.surface, 'keypad');
+    }
 
-    // Pointing the same key at another command of the same device replaces rather than accumulating: in one
-    // activity a key sends one thing, so two bindings for one scan would be a document the remote has to
-    // choose from.
-    const moved = await assignButton(at.store, 'bedroom', 12, 0, 0, 9);
-    assert.equal(moved.buttons.length, 1);
-    assert.deepEqual(moved.buttons[0]?.sends, [{ device: 0, command: 9 }]);
+    // Changing it replaces both rather than accumulating: in one activity a key sends one thing.
+    const moved = await assignButton(at.store, 'bedroom', 12, 0, 9);
+    assert.equal(moved.content.buttons.length, 2);
+    assert.deepEqual([...new Set(moved.content.buttons.map((one) => one.sends[0]?.command))], [9]);
 
-    // **The refusal is the point.** Nothing about the format stops two devices claiming one key, and a
-    // document that did would send both codes or one at random. So the second device is told no, in
-    // words, rather than quietly winning.
-    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 1, 0, 3),
-                         /already sends to position 1/);
-    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 4, 0, 3),
-                         /nothing at position 5/);
-    // And an activity the document has not got, since an activity is what makes a keypad binding mean
-    // anything and a number nobody checked would write one that means nothing.
-    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 0, 9, 3),
-                         /no activity 10/);
-
-    // Clearing it frees the key, and then the other device may have it.
-    assert.deepEqual((await assignButton(at.store, 'bedroom', 12, 0, 0)).buttons, []);
-    assert.deepEqual((await assignButton(at.store, 'bedroom', 12, 1, 0, 3)).buttons[0]?.sends,
-                     [{ device: 1, command: 3 }]);
+    // Clearing it takes every copy, which is the same rail in the other direction: a key cleared in one
+    // activity and left in another is a key that still works, which is not what anybody asked for.
+    const cleared = await assignButton(at.store, 'bedroom', 12, 0);
+    assert.deepEqual(cleared.content.buttons, []);
+    assert.deepEqual(cleared.activities, [0, 1]);
+    assert.deepEqual((await storedContentOf(at.store, 'bedroom'))?.buttons, []);
   } finally {
     await rm(at.root, { recursive: true, force: true });
   }
 });
 
-test('the same key in another activity is another question, and neither edit touches the other',
-     async () => {
-  // **What an activity is for**, as a test: the volume key sends to the amplifier while you are listening
-  // to music and to the television while you are watching it. So one scan carries one binding per activity,
-  // and editing one must leave the others exactly where they were.
+test('an override is one activity, and it is asked for rather than arrived at', async () => {
+  // The other half of the rail. A per activity override is real, it is what nine of the corpus's 1105
+  // device and key pairs are, and it has to be a deliberate act rather than the side effect of an edit.
   const at = await bench();
   try {
     await aRemoteWithTwoActivities(at);
+    await assignButton(at.store, 'bedroom', 12, 0, 7);
 
-    await assignButton(at.store, 'bedroom', 12, 0, 0, 7);
-    const both = await assignButton(at.store, 'bedroom', 12, 1, 1, 3);
-    assert.equal(both.buttons.length, 2, 'one key, two activities, two bindings');
-    assert.deepEqual(both.buttons.map((one) => [one.inActivity, one.sends[0]?.device]).sort(),
-                     [[0, 0], [1, 1]]);
+    const overridden = await assignButton(at.store, 'bedroom', 12, 0, 40, 1);
+    assert.deepEqual(overridden.activities, [1], 'only the one that was asked for');
+    const byActivity = new Map(overridden.content.buttons
+      .map((one) => [one.inActivity, one.sends[0]?.command]));
+    assert.deepEqual([...byActivity].sort(), [[0, 7], [1, 40]], 'and the other one is untouched');
 
-    // Clearing it in one leaves the other alone, which is the half a single assertion above cannot show.
-    const cleared = await assignButton(at.store, 'bedroom', 12, 0, 0);
-    assert.deepEqual(cleared.buttons.map((one) => one.inActivity), [1]);
+    // An activity that does not drive the device is refused rather than written, since the binding would
+    // sit in a map that never runs for it.
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 0, 3, 5),
+                         /activity 6 on bedroom does not drive position 1/);
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('a device no activity drives has nowhere to put a button, and is told so', async () => {
+  // **The refusal a person will actually hit**, and it is the product's own shape rather than a limit of
+  // this code: a keypad map belongs to an activity in every configuration here, so a device nothing runs
+  // for has nowhere for a keypad binding to live. Creating an activity is what comes first.
+  const at = await bench();
+  try {
+    await at.store.create('bedroom');
+    await writeContent(at.store, 'bedroom', {
+      devices: [{ slot: 0 }, { slot: 1 }],
+      activities: [{ slot: 0, roles: [], onStart: [], onStop: [], wants: [], devices: [0] }],
+      buttons: [], filledFrom: 'here',
+    });
+
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 1, 3),
+                         /no activity on bedroom drives position 2/);
+    // And the one that is driven works, so the refusal is about the device and not about the remote.
+    assert.deepEqual((await assignButton(at.store, 'bedroom', 12, 0, 3)).activities, [0]);
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('an activity where another device has the key is left alone, and named', async () => {
+  // **The case that decided the shape of this function**, and both blunt answers are wrong. A key that
+  // drives the television in one activity and the amplifier in another is how a Harmony is set up: 27 of
+  // the first device's 30 keys on the Harmony One in the lab are like that, across the eight activities
+  // that drive it. Writing every driving activity would take those keys off the other device, which is a
+  // destructive edit nobody asked for. Refusing outright, which this did for a day, would block 27 of 30.
+  //
+  // So it writes where there is room and answers with what it left, which is what lets a page say so
+  // before the change rather than leave somebody reading an unchanged activity as a failed save.
+  const at = await bench();
+  try {
+    await aRemoteWithTwoActivities(at);
+    // Position 2 holds the key in the second activity only.
+    await assignButton(at.store, 'bedroom', 12, 1, 5, 1);
+
+    const bound = await assignButton(at.store, 'bedroom', 12, 0, 7);
+    assert.deepEqual(bound.activities, [0], 'written where there was room');
+    assert.deepEqual(bound.held, [1], 'and it names the one it did not touch');
+    const byActivity = new Map(bound.content.buttons
+      .map((one) => [one.inActivity, one.sends[0]]));
+    assert.deepEqual([...byActivity].sort(),
+                     [[0, { device: 0, command: 7 }], [1, { device: 1, command: 5 }]],
+                     'the other device keeps its key in the activity it had it in');
+
+    // Naming that activity explicitly is a different question and is refused, because there it is not a
+    // limit on the reach of an edit about the device: it is an instruction to take another device's key.
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 0, 7, 1),
+                         /already sends to position 2 in that activity/);
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 0, 7, 4),
+                         /does not drive position 1/);
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 4, 3),
+                         /nothing at position 5/);
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('a key every driving activity gives to another device is refused, and nothing is half written',
+     async () => {
+  // Where there is no room at all the answer is a refusal, and it names the device that has to give the
+  // key up rather than the code. Checked **before** anything is written, which is the half a check written
+  // per activity would get wrong: it would take the key in the first activity and then refuse.
+  const at = await bench();
+  try {
+    await aRemoteWithTwoActivities(at);
+    await assignButton(at.store, 'bedroom', 12, 1, 5);
+    const before = await storedContentOf(at.store, 'bedroom');
+
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 0, 7),
+                         /sends to position 2 in every activity that drives position 1/);
+    assert.deepEqual(await storedContentOf(at.store, 'bedroom'), before,
+                     'the document is byte for byte what it was');
   } finally {
     await rm(at.root, { recursive: true, force: true });
   }
@@ -401,81 +486,12 @@ test('a screen key on the same code is a different population and is never touch
                                          sends: [{ device: 1, command: 40 }] };
     await aRemoteWithTwoActivities(at, [onTheScreen]);
 
-    const bound = await assignButton(at.store, 'bedroom', 12, 0, 0, 7);
-    assert.equal(bound.buttons.length, 2, 'the screen key kept its own');
-    assert.deepEqual(bound.buttons.filter((one) => one.surface === 'screen'), [onTheScreen]);
+    const bound = await assignButton(at.store, 'bedroom', 12, 0, 7);
+    assert.equal(bound.content.buttons.length, 3, 'the screen key kept its own');
+    assert.deepEqual(bound.content.buttons.filter((one) => one.surface === 'screen'), [onTheScreen]);
 
-    const cleared = await assignButton(at.store, 'bedroom', 12, 0, 0);
-    assert.deepEqual(cleared.buttons, [onTheScreen]);
-  } finally {
-    await rm(at.root, { recursive: true, force: true });
-  }
-});
-
-test('a document that has only ever been projected is written down before it is edited',
-     { ...skipUnless(SAMPLES[0]) }, async () => {
-  // **The defect this exists for, with the failing case first.** A document can hold a configuration and no
-  // contents file of its own, which is every document written before that file existed, and `contentsOf`
-  // serves those by projecting the bytes on demand. The editing path reads the file. So the first rename or
-  // button assignment on such a document started from nothing at all: the page showed four devices and the
-  // edit wrote a document with none.
-  //
-  // Nothing failed and nothing could, because starting from empty contents is the **correct** answer for a
-  // remote nobody has imported into, and from inside `editContent` the two cases look identical. It was
-  // found by a window test refusing to assign a button, saying the remote had nothing at position 1 about a
-  // document whose page was showing four.
-  const at = await bench();
-  try {
-    await at.store.create('living room');
-    await at.store.attachConfiguration('living room', 'configuration.bin', require_(SAMPLES[0]),
-                                       'read-from-device', NOW);
-
-    // The state the defect needs: contents on the page, no contents on disk.
-    const projected = await contentsOf(at.store, at.library, 'living room');
-    assert.equal(projected?.content.devices.length, 4, 'the page is being shown four devices');
-    assert.equal(await storedContentOf(at.store, 'living room'), undefined, 'and none is written down');
-
-    // The negative, which is what makes this a check rather than a description: an edit straight into
-    // `editContent` here starts from empty contents and refuses, because the position it is told about does
-    // not exist in what it read.
-    await assert.rejects(() => labelDeviceUse(at.store, 'living room', 0, 'the telly'),
-                         /nothing at position 1/);
-
-    // And with the projection settled first, which is what the three editing methods now do.
-    await settleContent(at.store, at.library, 'living room');
-    const settled = await storedContentOf(at.store, 'living room');
-    assert.deepEqual(settled, projected?.content, 'written down exactly as it was projected');
-
-    const named = await labelDeviceUse(at.store, 'living room', 0, 'the telly');
-    assert.equal(named.devices.length, 4, 'and the other three are still there');
-    assert.equal(named.devices.find((one) => one.slot === 0)?.label, 'the telly');
-
-    // Settling twice changes nothing, since after the first time the file is the truth. Without this the
-    // second edit would throw away whatever the first one wrote.
-    await labelDeviceUse(at.store, 'living room', 1, 'the amplifier');
-    await settleContent(at.store, at.library, 'living room');
-    const after = await storedContentOf(at.store, 'living room');
-    assert.equal(after?.devices.find((one) => one.slot === 0)?.label, 'the telly');
-    assert.equal(after?.devices.find((one) => one.slot === 1)?.label, 'the amplifier');
-  } finally {
-    await rm(at.root, { recursive: true, force: true });
-  }
-});
-
-test('a document with no configuration at all is left alone, since empty contents are right for it',
-     async () => {
-  // The other arm, and it is the reason the fix is a settle rather than a refusal: a remote nobody has
-  // imported into genuinely has no contents, and being able to say what it drives anyway is what the
-  // shared library exists for.
-  const at = await bench();
-  try {
-    await at.store.create('bedroom');
-    await settleContent(at.store, at.library, 'bedroom');
-    assert.equal(await storedContentOf(at.store, 'bedroom'), undefined, 'nothing was written');
-
-    const content = await addDeviceUse(at.store, 'bedroom', 'appliance-aaaa');
-    assert.equal(content.filledFrom, 'here');
-    assert.deepEqual(content.devices, [{ slot: 0, definition: 'appliance-aaaa' }]);
+    const cleared = await assignButton(at.store, 'bedroom', 12, 0);
+    assert.deepEqual(cleared.content.buttons, [onTheScreen]);
   } finally {
     await rm(at.root, { recursive: true, force: true });
   }

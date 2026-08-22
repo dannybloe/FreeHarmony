@@ -13,6 +13,90 @@ plan names the milestone rather than restating it.
 **The order of work is not in that document, it is in GitHub**, and the next section says where the line
 runs.
 
+## How a Harmony works, and why this comes before everything else
+
+**Read this before designing anything.** It is the operating concept of the product, and it is here at
+the top because its absence has already cost a whole screen: on 22 August 2026 a device page was built
+that showed a keypad per **activity**, on the strength of a correct measurement over fifteen
+configuration files, and the thing being built was the **device mode** editor. The measurement could not
+have said so. Nothing in either repository described what a Harmony does.
+
+A configuration is a program and the firmware is its interpreter, so the format work can always say what
+a byte does. It can never say what the product is for. **The order for a design question is: what does
+the remote do, then what does the file say about it, then what can we read.** When the first answer is not
+written down, ask Danny. He has the remotes on the desk and has used them for years, and one sentence
+from him is worth an afternoon of counting.
+
+### The two things a Harmony can be doing
+
+**An activity.** "Watch TV", "Listen to Music". Pressing it switches the right equipment on, sets the
+inputs, and gives the keypad a map that spans **several devices at once**: volume to the amplifier,
+channels to the set top box, transport to whatever is playing. That is what a Harmony is for and what it
+was sold on.
+
+**Device mode.** Press **Devices** and the screen lists your equipment. Pick the television and **every
+button on the remote now drives the television and nothing else**. Getting back is per model, and the
+wording differs: a Harmony One offers **Current Activity** on its panel, a Harmony 600 offers
+**Activity**, a Harmony 525 has its own Activities key, and on a Harmony 885 you press Devices again.
+
+Both map the whole keypad. Neither is a special case of the other.
+
+### Device mode is not a corner of the product
+
+It is the ordinary way to reach a command that is not on an activity's map, and most commands are not: an
+activity binds the thirty or so buttons that make sense while you are watching television, and a
+television answers to a hundred and more.
+
+The flow, in Danny's words: you have chosen an activity, you want an obscure setting of your television
+that you almost never touch and that no button in the activity map carries, so you switch to device TV,
+press the button for that setting, and switch back to Current Activity.
+
+Every model works this way and each reaches it differently, which is worth getting right because a
+drawing here has to agree with it. The **Harmony 525** and the **Harmony 885** have a Devices key printed
+as such. The **Harmony One** has one on its touch panel. The **Harmony 600 does not have one at all**:
+its screen writes "Devices" above the centre key of the three below the display, which is why the traced
+drawing of a 600 carries no such key and must not grow one. It is intrinsic to the product, not a feature
+of a generation.
+
+### What that means for this application
+
+**A button map belongs to a device before it belongs to an activity.** Logitech's own software is
+authored that way, and the corpus agrees from the other side, `docs/findings.md` section 151 next door:
+of 1105 pairs of a device and a button across fifteen configurations, **1096 send the same command in
+every activity that binds them**, and 47 of 50 devices agree everywhere. An activity's map is the device
+map plus that activity's own overrides.
+
+So, and these are requirements rather than preferences:
+
+* **A page about a device shows the device's map.** Showing one activity's map on a device's page answers
+  a question nobody asked. A page about an activity shows the activity's, which is a different screen.
+* **A change to a device's button has to reach every activity that inherited it.** Change it in one place
+  and it is invisible in the activity somebody is actually sitting in, which is the worst failure
+  available: the file changed, the checksum still passes, and the remote behaves exactly as before.
+* **Except where another device already has that button in one of those activities**, which is the
+  ordinary case and not an edge: of the first device's 30 bound keys on the Harmony One in the lab, 27 are
+  another device's key in at least one of the eight activities that drive it. A key that works the
+  television while you are watching television and the amplifier while you are listening to music is how a
+  Harmony is set up. So a change goes where there is room for it, leaves those alone, and **says which
+  before it is made**. Writing all of them steals keys; refusing outright blocks 27 of 30. One derivation
+  answers both halves, `src/shared/buttonmap.ts`, so the sentence a page shows and the change itself
+  cannot disagree.
+* **The screen keys are a second population and are not the keypad.** They share no scan code with it on
+  three of the four architectures and exactly one on the fourth. A device mode's screen shows that
+  device's commands a few at a time; the keypad is the other question. An interface must keep them apart.
+
+### The one thing that is open, and must not be guessed
+
+**Where device mode's own keypad map lives is unknown.** No keypad map in any configuration here sends an
+infrared code outside an activity: 158 maps, 65 installed by the configuration, 50 of those by an
+activity, and exactly those 50 send codes. Three readings remain and none is established. Do not close it
+by inventing a mechanism, and do not restate the dead version of it, which is the phrase
+`every keypad binding belongs to an activity` in the superseded table next door.
+
+The long form of all of this, with citations and the per model differences, is
+`../harmony-explorations/docs/how-a-harmony-works.md`, and the ritual that makes it get read is the
+`how-a-harmony-works` skill.
+
 ## Where the backlog lives
 
 Decided on 14 August 2026: the work is planned as a **backlog** in GitHub rather than as a fixed list in a
