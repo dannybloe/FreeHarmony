@@ -1,0 +1,56 @@
+// Settings that belong to this computer. One block today, and the layout says there will be more.
+
+@use '../mantine' as m;
+
+.preferences {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-xl) var(--mantine-spacing-lg);
+  // Narrow on purpose: this is a column of fields and a form the width of a window is a form nobody can
+  // read across.
+  max-inline-size: m.rem(560);
+}
+
+.heading {
+  display: grid;
+  gap: m.rem(2);
+}
+
+.title {
+  margin: 0;
+  font-size: m.rem(22);
+  font-weight: 700;
+  letter-spacing: m.rem(-0.4);
+  color: var(--mantine-color-gray-9);
+}
+
+.under,
+.explain {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-md);
+  background: rgb(255 255 255 / 62%);
+}
+
+.blockTitle {
+  margin: 0;
+  font-size: m.rem(17);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  margin-block-start: m.rem(4);
+}

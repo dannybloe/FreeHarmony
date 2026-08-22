@@ -90,6 +90,26 @@ const api: FreeHarmonyApi = {
     inUseOn: (id) => call('library', 'inUseOn', id) as
       ReturnType<FreeHarmonyApi['library']['inUseOn']>,
   },
+
+  /**
+   * Logitech's service. **The password goes one way only**: `rememberAccount` takes one and nothing here
+   * hands one back, which is a property of the interface rather than a promise in a comment.
+   */
+  logitech: {
+    account: () => call('logitech', 'account') as ReturnType<FreeHarmonyApi['logitech']['account']>,
+    rememberAccount: (email, password) => call('logitech', 'rememberAccount', email, password) as
+      ReturnType<FreeHarmonyApi['logitech']['rememberAccount']>,
+    forgetAccount: () => call('logitech', 'forgetAccount') as
+      ReturnType<FreeHarmonyApi['logitech']['forgetAccount']>,
+    checkAccount: () => call('logitech', 'checkAccount') as
+      ReturnType<FreeHarmonyApi['logitech']['checkAccount']>,
+    search: (manufacturer, model) => call('logitech', 'search', manufacturer, model) as
+      ReturnType<FreeHarmonyApi['logitech']['search']>,
+    fetchDevice: (device) => call('logitech', 'fetchDevice', device) as
+      ReturnType<FreeHarmonyApi['logitech']['fetchDevice']>,
+    matchNames: (id, device) => call('logitech', 'matchNames', id, device) as
+      ReturnType<FreeHarmonyApi['logitech']['matchNames']>,
+  },
 };
 
 contextBridge.exposeInMainWorld(API_NAMESPACE, api);

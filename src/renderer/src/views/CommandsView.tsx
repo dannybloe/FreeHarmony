@@ -12,8 +12,10 @@
  * already calls the command, which the configuration mostly knows: a screen key carries the word printed
  * beside it on the display, in their language, and a keypad key has a name printed on the plastic.
  *
- * So most of an imported appliance can be named without typing anything, which is what the button at the
- * top does. It fills the fields rather than hiding the decision: every name it wrote is sitting in a field
+ * So most of an imported appliance can be named without typing anything, which is what the first button at
+ * the top does. The second goes to Logitech's own database and compares the **codes**, which is the only
+ * route here that cannot be wrong about which command it names: it reaches the obscure codes a remote never
+ * had a button for, and those are exactly the ones no word on the remote can reach. It fills the fields rather than hiding the decision: every name it wrote is sitting in a field
  * that can be corrected or emptied, which is the difference between a suggestion and a claim.
  */
 import { Button, Loader, Text, TextInput, Tooltip } from '@mantine/core';
@@ -28,6 +30,7 @@ import { drawingFor } from '../catalogue.ts';
 import { spelledOut } from '../viewmodels/keypad.model.ts';
 import { commandRows, matching, namedCount, waiting, type CommandRow }
   from '../viewmodels/commands.model.ts';
+import { FromLogitech } from './FromLogitech.tsx';
 import classes from './CommandsView.module.scss';
 
 interface CommandsViewProps {
@@ -44,6 +47,7 @@ interface CommandsViewProps {
 
 export function CommandsView({ definition, title, uses, remotes, busy, onName }: CommandsViewProps) {
   const [typed, setTyped] = useState('');
+  const [asking, setAsking] = useState(false);
 
   if (definition === undefined) {
     return (
@@ -121,10 +125,27 @@ export function CommandsView({ definition, title, uses, remotes, busy, onName }:
                   </Button>
                 </Tooltip>
               )}
+              {/* The route that compares the codes rather than the words. Offered whatever the state of
+                  the page, because it is the one that can name what nothing else can: the obscure codes
+                  a remote never had a button for. */}
+              <Button variant="default" disabled={busy} onClick={() => setAsking((was) => !was)}>
+                From Logitech...
+              </Button>
               {typed.trim() !== '' && (
                 <Text className={classes.counted}>{shown.length} of {counted.total}</Text>
               )}
             </div>
+
+            {asking && (
+              <FromLogitech
+                id={definition.id}
+                manufacturer={definition.manufacturer}
+                model={definition.model}
+                busy={busy}
+                onApply={onName}
+                onClose={() => setAsking(false)}
+              />
+            )}
 
             <ol className={classes.list}>
               {shown.map((row) => (

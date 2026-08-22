@@ -80,3 +80,9 @@
     box-shadow: 0 0 0 m.rem(3) var(--mantine-color-indigo-1);
   }
 }
+
+// The icon only action, which is Preferences. Square rather than a pill with nothing in it: a button whose
+// width comes from padding alone reads as a button that lost its label.
+.iconOnly {
+  padding-inline: var(--mantine-spacing-xs);
+}

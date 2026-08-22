@@ -1,0 +1,78 @@
+// Looking an appliance up in Logitech's catalogue, inside the commands page.
+
+@use '../mantine' as m;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--mantine-color-indigo-2);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-indigo-0);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-sm);
+}
+
+.title {
+  margin: 0;
+  font-size: m.rem(16);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.explain,
+.count {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-7);
+}
+
+// The two fields and the button on one line: three things, and a column of three would make a short form
+// look like a page.
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: var(--mantine-spacing-sm);
+}
+
+.found {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: m.rem(2);
+}
+
+.pick {
+  inline-size: 100%;
+  text-align: start;
+  padding: m.rem(6) var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-white);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--mantine-color-indigo-3);
+  }
+}
+
+.pickName {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-9);
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  flex-wrap: wrap;
+}

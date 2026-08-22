@@ -19,10 +19,15 @@ import {
 } from './content.ts';
 import { attachedRemotes, readHardware } from './devices.ts';
 import { DeviceLibrary } from './store/library.ts';
+import { Settings } from './preferences.ts';
+import { accountState, checkAccount, fetchDevice, forgetAccount, namesFromCatalogue,
+         rememberAccount, searchCatalogue } from './logitech.ts';
 import { cloneDefinition, createDefinition, framesOfDefinition, nameCommands } from './library.ts';
 import { RemoteStore } from './store/remotes.ts';
 
-export function registerHandlers(store: RemoteStore, library: DeviceLibrary): void {
+export function registerHandlers(
+  store: RemoteStore, library: DeviceLibrary, settings: Settings,
+): void {
   // One clock, the main process's. A timestamp on somebody's document should be the machine's own and
   // never something a page could be wrong about.
   const now = () => new Date().toISOString();
@@ -74,6 +79,19 @@ export function registerHandlers(store: RemoteStore, library: DeviceLibrary): vo
     nameCommands: (id, names) => nameCommands(library, id, names),
     framesOf: (id) => framesOfDefinition(library, id),
     inUseOn: (id) => commandsInUse(store, id),
+  });
+
+  // Logitech's service. Every one of these is a read of their catalogue: nothing signs a remote up, queues
+  // a compilation or writes to an account, and `logitech/client.ts` enforces that with a closed list of
+  // three operations rather than with a rule anybody has to remember.
+  register('logitech', {
+    account: () => accountState(settings),
+    rememberAccount: (email, password) => rememberAccount(settings, email, password),
+    forgetAccount: () => forgetAccount(settings),
+    checkAccount: () => checkAccount(settings),
+    search: (manufacturer, model) => searchCatalogue(settings, manufacturer, model),
+    fetchDevice: (device) => fetchDevice(settings, library, device, now()),
+    matchNames: (id, device) => namesFromCatalogue(settings, library, id, device),
   });
 }
 

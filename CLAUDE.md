@@ -545,18 +545,39 @@ that arrived late.
 operations and must never acquire a runtime dependency on anything remote. No account is ever required.
 A build with the network unplugged is a working application, and that is testable: it should be tested.
 
-**Logitech's service is an optional import, by the user's own hand.** It is still running, and while it
-is, it can still say which infrared codes a given television uses. So FreeHarmony offers fetching a
-device the user owns, converting it into this project's own device definition format, and storing it
-locally so it outlives the service. The user decides, supplies their own credentials if it needs them,
-and can see what was fetched. Two routes exist and the cheap one needs no new protocol work: base slot
-5 is fully read, so a config Logitech compiled can be read off the remote and converted with the codec
-as it stands. A direct client against `svcs.myharmony.com` is the other route, and it **has** been looked
-at since this paragraph was written: the service advertises hundreds of operations, its device database
-opens for a plain login with no registered remote, and what it serves is **symbolic** rather than pulses,
-a protocol name and a frame value. So that route needs an infrared encoder per protocol family, which is a
-work item the cheap route does not have. The measurement and every client sourced fact live in the other
-repository's `docs/host-client.md`.
+**Logitech's service is an optional import, by the user's own hand, and it is built now.**
+`src/main/logitech/` is a client against `svcs.myharmony.com`: sign in, search the catalogue, fetch a
+device's commands. `src/main/preferences.ts` holds the account, with the password encrypted by
+`safeStorage` and **no route in the application that reads it back**, which is a property of the bridge
+rather than a promise in a comment. Everything else works with the network unplugged.
+
+**What it is for is names, and that is a narrower thing than it sounds.** Logitech serves a protocol
+family and a frame value per command and never the pulses, so a device fetched from their catalogue
+**cannot send anything**. What it can do is name codes a remote already holds, and that turns out to be
+the whole job: their stated frame is in **transmission order**, the same order `@harmony/codec`'s decoder
+produces, so a code decoded out of a configuration and a code stated by Logitech are directly comparable
+numbers. Measured on 22 August 2026: 52 of the 58 commands Logitech lists for a Panasonic television are
+byte for byte codes on the television attached to the bench Harmony 600, a **different model** of the same
+family. That corrected a claim in the other repository, which had read the values as bit reversed.
+
+**Why the codes and not the words**, which is Danny's ruling of 22 August 2026 and the reason this route
+is the leidraad: a word a remote draws on its screen, and the name of the key a code sits on, both say
+**where** a code is. Somebody may have put channel up on the key marked 1, and Logitech's default is only
+a default, and their own labels are editable. His own configuration proves it, since its screen labels
+include "Rechts", "Aan", "Kodi" and "MyNew Command". So the drawn words stay as a **suggestion** on the
+commands page, and comparing the code is what may be relied on.
+
+Three things about the client that are rails rather than style. `logitech/client.ts` names **three**
+operations in a closed list and there is no route past it, because the call that queues a compilation of
+somebody's remote sits one name away and Logitech's own naming cannot be trusted to tell them apart: their
+`CompileManager/CommandList` reads like a list of commands and **is** a compile. The search asks for an
+**exact** match and never their fuzzy ladder, since a near match returns different equipment with no way
+to tell. And the search field is `manufacturer` and not `manufacturerName`, because WCF ignores a field it
+does not know and answers `200` with no matches, which is indistinguishable from a device that is not in
+the database. Every client sourced fact lives in the other repository's `docs/host-client.md`.
+
+The other route still exists and still needs no protocol work: base slot 5 is fully read, so a config
+Logitech compiled can be read off the remote and converted with the codec as it stands.
 
 **A device definition carries its provenance, from the first version of the format.** Learned from
 hardware, derived from Logitech's data, or from a shared database. Only the first may ever be shared:

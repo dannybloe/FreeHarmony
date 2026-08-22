@@ -107,10 +107,27 @@ Nothing about the signal is on that page, and the first version of it had three 
 lamp flickers, how many flashes and pauses the transmission is made of, and the code as a hexadecimal
 number. All three are true and none of them is any use to somebody filling in names.
 
-The forty odd codes with no word are the obscure ones your remote never had a button for, and two later
-steps go after them: matching a code against a catalogue we already have, and fetching the names from
-Logitech's own service while it is still answering. Neither makes this page redundant. They both need
-somewhere to land, and a name a machine guessed is a name somebody should be able to look at.
+**And the second button on that page is the one that is not a guess.** A word your remote draws, or the
+name of the key a code sits on, says where a code is and not what it is: you may well have put channel up
+on the key marked 1, and Logitech's own default is only a default. So "From Logitech" asks their database,
+which is where those codes came from in the first place, and compares **the codes themselves**. A name
+lands where the code is the same code, or it does not land.
+
+It works, and better than expected. Type the make and model, pick your appliance from what comes back, and
+it tells you how many of your codes it recognised before it writes anything. Measured on the television
+attached to the bench Harmony 600: **52 of the 58** commands Logitech lists for a Panasonic set are exactly
+codes that television answers to, and that was a *different model* of the same family. So it reaches the
+obscure codes your remote never had a button for, which is precisely what no word on the remote can reach.
+
+The account goes in Preferences: an email address and a password, encrypted by your own computer, with a
+Check button because a password that stopped working looks exactly like one that works. Nothing else in
+the application needs it, and a machine that never goes online is missing this one feature and nothing
+else.
+
+**What Logitech does not hand over is the signals.** They store a protocol family and a number per
+command, never the flashes and pauses, so a device fetched from their catalogue is a list of names that
+cannot be sent. It names what your remote already holds, which is the job; teaching your remote a code it
+has never had needs the learning step, later.
 
 **Every screen says where you are, and that trail is the whole of the navigation.** It runs along the top
 of the window, starting at FreeHarmony and adding a step for every level down, and every step is a way

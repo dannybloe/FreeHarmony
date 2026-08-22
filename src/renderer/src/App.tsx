@@ -33,6 +33,7 @@ import { ActivitiesView } from './views/ActivitiesView.tsx';
 import { AddRemoteView } from './views/AddRemoteView.tsx';
 import { AppBar } from './views/AppBar.tsx';
 import { ConnectView } from './views/ConnectView.tsx';
+import { PreferencesView } from './views/PreferencesView.tsx';
 import { DeviceView } from './views/DeviceView.tsx';
 import { DevicesView } from './views/DevicesView.tsx';
 import { ExistingRemotesView } from './views/ExistingRemotesView.tsx';
@@ -147,6 +148,7 @@ export function App() {
         crumbs={crumbs}
         // The panel remembers which remote you came from, so a device inside it can offer to join that one.
         onLibrary={() => panel.openFrom(remoteOn(screen))}
+        onPreferences={() => nav.go({ at: 'preferences' })}
       />
 
       <main className={classes.page}>
@@ -214,6 +216,8 @@ export function App() {
             />
           );
         })()}
+
+        {screen.at === 'preferences' && <PreferencesView />}
 
         {screen.at === 'connect' && (
           <ConnectView

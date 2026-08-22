@@ -298,10 +298,98 @@ export interface CommandFrame {
   readonly frame: string;
 }
 
+/**
+ * Logitech's own service, as far as this application uses it.
+ *
+ * **Optional and never a dependency.** Everything else in this application works on a machine that has
+ * never seen a network, and this exists because a configuration read off a remote states no command names
+ * at all while Logitech's database does: their software is what compiled that configuration. The service
+ * is still answering and will not be one day, which is the whole argument for taking what it has now and
+ * for nothing depending on it.
+ *
+ * **The password crosses this boundary once, inwards.** `rememberAccount` takes one and no method here
+ * returns one, so a window can set a password, ask whether there is one, and never read it back.
+ */
+export interface LogitechApi {
+  /** The address, and whether a password is stored. Never the password and never a masked form of it. */
+  account(): Promise<AccountState>;
+  /**
+   * Remember an address, and a password encrypted by the operating system's own keystore.
+   *
+   * **An empty password keeps the one already stored**, which is what the field means when somebody fixes
+   * a typo in their address. With nothing stored it is refused, since an address nobody can sign in with
+   * would be a screen saying a password is held when none is.
+   *
+   * Refused where the system offers no way to encrypt, rather than falling back to plain text: a quiet
+   * downgrade is what makes a promise about a password worthless.
+   */
+  rememberAccount(email: string, password: string): Promise<AccountState>;
+  forgetAccount(): Promise<AccountState>;
+  /**
+   * Sign in and throw the session away, which is the only way to know a stored password still works.
+   *
+   * A password changed on Logitech's own site looks exactly like one that works, until something needs
+   * it. So there is a button, and it resolves or it throws with a reason somebody can act on.
+   */
+  checkAccount(): Promise<void>;
+  /** Look a device up in Logitech's catalogue. Reads only; asking writes nothing anywhere. */
+  search(manufacturer: string, model: string): Promise<CatalogueDevice[]>;
+  /**
+   * Fetch one device's commands and file it in the library.
+   *
+   * **What arrives is names, not signals.** Logitech stores a protocol family and a frame value per
+   * command and never the pulses, so a definition from here cannot send anything: it is a list of their
+   * own words attached to their own codes, which is exactly what names the nameless codes on a remote.
+   */
+  fetchDevice(device: CatalogueDevice): Promise<DeviceDefinition>;
+  /**
+   * Which of an appliance's codes Logitech has a word for, found by comparing the codes themselves.
+   *
+   * **The one route here that is not a guess.** A word drawn on a remote's screen and the name of the key
+   * a code sits on both say **where** a code is: somebody may have put channel up on the key marked 1, and
+   * Logitech's default is only a default. This compares the code, so it matches or it does not.
+   *
+   * Measured on 22 August 2026: 52 of the 58 commands Logitech states for one Panasonic television are
+   * byte for byte equal to a code on the television attached to the bench Harmony 600, which is a
+   * different model of the same family.
+   *
+   * **It reports and writes nothing.** Applying the result is `library.nameCommands`, after somebody has
+   * seen how many there are, which is the same shape `likelyDuplicates` uses for the same reason.
+   */
+  matchNames(id: string, device: CatalogueDevice): Promise<NameMatches>;
+}
+
+/** What comparing an appliance's codes against a catalogue device turned up. */
+export interface NameMatches {
+  /** What to name which position, ready for `library.nameCommands`. Only positions with no name. */
+  readonly names: readonly CommandNaming[];
+  /** How many of the appliance's codes could be compared at all, which bounds what a match could be. */
+  readonly comparable: number;
+  /** How many words the catalogue offered, so a result can be read with both its counts. */
+  readonly offered: number;
+}
+
+/** One row of a catalogue search: enough to show somebody a list, and the handle to fetch one. */
+export interface CatalogueDevice {
+  readonly manufacturer: string;
+  readonly model: string;
+  /** Our own category, translated from Logitech's sixty. `other` where none of ours fits. */
+  readonly kind: string;
+  /** Logitech's handle for this device's command set, passed back unchanged. Opaque here. */
+  readonly commandsId: number;
+}
+
+/** What a screen may know about the stored account. */
+export interface AccountState {
+  readonly email?: string;
+  readonly hasPassword: boolean;
+}
+
 export interface FreeHarmonyApi {
   readonly remotes: RemotesApi;
   readonly devices: DevicesApi;
   readonly library: LibraryApi;
+  readonly logitech: LogitechApi;
 }
 
 /** Which half of the API a channel belongs to. Derived, so it cannot name a namespace that is gone. */
@@ -319,9 +407,13 @@ export const LIBRARY_METHODS =
   ['list', 'get', 'put', 'create', 'clone', 'remove',
    'missingFor', 'likelyDuplicates', 'usage', 'nameCommands', 'framesOf', 'inUseOn'] as const;
 
+export const LOGITECH_METHODS =
+  ['account', 'rememberAccount', 'forgetAccount', 'checkAccount', 'search', 'fetchDevice', 'matchNames'] as const;
+
 export type RemoteMethod = (typeof REMOTE_METHODS)[number];
 export type DeviceMethod = (typeof DEVICE_METHODS)[number];
 export type LibraryMethod = (typeof LIBRARY_METHODS)[number];
+export type LogitechMethod = (typeof LOGITECH_METHODS)[number];
 
 /**
  * Every namespace and its methods, so that anything walking the whole surface walks this.
@@ -334,6 +426,7 @@ export const METHODS: { readonly [N in Namespace]: readonly (keyof FreeHarmonyAp
   remotes: REMOTE_METHODS,
   devices: DEVICE_METHODS,
   library: LIBRARY_METHODS,
+  logitech: LOGITECH_METHODS,
 };
 
 /**

@@ -23,7 +23,7 @@
  * has to be learned; the absence of a number is his too, and it is right for what the button is: a way in,
  * not a report. A number on it would make the bar say something that changes while you are not looking.
  */
-import { PulseTrain } from './Glyphs.tsx';
+import { CogGlyph, PulseTrain } from './Glyphs.tsx';
 import { Header } from './Header.tsx';
 import { KindGlyph } from './KindGlyph.tsx';
 import classes from './AppBar.module.scss';
@@ -31,9 +31,10 @@ import classes from './AppBar.module.scss';
 interface AppBarProps {
   readonly crumbs: readonly { readonly label: string; readonly onClick?: (() => void) | undefined }[];
   readonly onLibrary: () => void;
+  readonly onPreferences: () => void;
 }
 
-export function AppBar({ crumbs, onLibrary }: AppBarProps) {
+export function AppBar({ crumbs, onLibrary, onPreferences }: AppBarProps) {
   return (
     <Header
       className={classes.bar}
@@ -47,17 +48,29 @@ export function AppBar({ crumbs, onLibrary }: AppBarProps) {
         </span>
       )}
       right={(
-        <button
-          type="button"
-          className={classes.action}
-          onClick={onLibrary}
-          aria-label="Device library"
-        >
-          {/* The television, because it is the one category everybody has and the drawing reads at this
-              size. A stack of shapes standing for "a collection" was tried and read as a menu. */}
-          <KindGlyph kind="television" size={18} />
-          <span>Device library</span>
-        </button>
+        <>
+          <button
+            type="button"
+            className={classes.action}
+            onClick={onLibrary}
+            aria-label="Device library"
+          >
+            {/* The television, because it is the one category everybody has and the drawing reads at this
+                size. A stack of shapes standing for "a collection" was tried and read as a menu. */}
+            <KindGlyph kind="television" size={18} />
+            <span>Device library</span>
+          </button>
+          {/* Preferences, and it is icon only on purpose: it is the one thing in the bar somebody visits
+              twice and then never again, so it should not compete with the library for width. */}
+          <button
+            type="button"
+            className={`${classes.action} ${classes.iconOnly}`}
+            onClick={onPreferences}
+            aria-label="Preferences"
+          >
+            <CogGlyph size={18} />
+          </button>
+        </>
       )}
     />
   );

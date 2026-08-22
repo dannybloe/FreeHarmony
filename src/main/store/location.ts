@@ -59,3 +59,21 @@ function elsewhere(): string | undefined {
   const named = process.env['FREEHARMONY_STORE'];
   return named === undefined || named === '' ? undefined : named;
 }
+
+/**
+ * Where preferences and the encrypted credential go, which is **not** beside the documents.
+ *
+ * The application data directory, deliberately, and the reasoning is the mirror image of the paragraph
+ * above. A remote's entry is somebody's own irreplaceable equipment and belongs somewhere they can find
+ * and back up, which on this machine means a folder that is synced to iCloud. An encrypted password is
+ * the opposite: it is worth nothing on another machine, because the key it was encrypted with belongs to
+ * this login on this computer, and putting it somewhere that syncs would copy a useless secret to a
+ * cloud for no benefit at all.
+ *
+ * So the two live apart, and the override above deliberately does not move this one: a test that points
+ * the store at a temporary folder is testing documents, and a test that wants a throwaway credential
+ * store says so separately.
+ */
+export function settingsRoot(): string {
+  return app.getPath('userData');
+}

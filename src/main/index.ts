@@ -19,10 +19,11 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, safeStorage, shell } from 'electron';
 
 import { registerHandlers } from './ipc.ts';
-import { libraryRoot, storeRoot } from './store/location.ts';
+import { libraryRoot, settingsRoot, storeRoot } from './store/location.ts';
+import { Settings } from './preferences.ts';
 import { DeviceLibrary } from './store/library.ts';
 import { RemoteStore } from './store/remotes.ts';
 
@@ -122,7 +123,11 @@ void app.whenReady().then(() => {
   // a location. That is what keeps `store/remotes.ts` free of Electron and therefore testable.
   if (STAY_HIDDEN) app.dock?.hide();
   registerHandlers(new RemoteStore({ root: storeRoot() }),
-                   new DeviceLibrary({ root: libraryRoot() }));
+                   new DeviceLibrary({ root: libraryRoot() }),
+                   // `safeStorage` is handed in rather than imported where it is used, which is what makes
+                   // the settings store testable: it needs a running Electron application, so this is the
+                   // only place in the process that can supply it.
+                   new Settings({ root: settingsRoot(), cipher: safeStorage }));
   refuseNavigationAwayFromTheApplication(createWindow());
 });
 
