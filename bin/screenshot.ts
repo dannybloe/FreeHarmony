@@ -17,7 +17,7 @@
  *   pnpm screenshot --remotes "Woonkamer:one,Zolder"         seeded through the application's own API
  *   pnpm screenshot --configuration h600_config              give the first remote a real configuration
  *   pnpm screenshot --click "Add..." --click "Harmony 600"    to reach a screen that is not the first
- *   pnpm screenshot --appliances "TV:television,Amp:receiver" --click Appliances     the device manager
+ *   pnpm screenshot --appliances "TV:television,Amp:receiver" --click "Device library"   the panel
  *   pnpm screenshot --pretend-attached h600 --configuration h600_config    the import dialogue
  *   pnpm screenshot --width 1280 --height 900
  *
@@ -176,8 +176,16 @@ async function main(): Promise<number> {
     for (const text of wanted.clicks) {
       const found = await app.evaluate<boolean>(`(() => {
         const wanted = ${JSON.stringify(text)};
-        for (const it of document.querySelectorAll('button')) {
-          if ((it.textContent ?? '').trim().includes(wanted) && !it.disabled) { it.click(); return true; }
+        // Inside the panel where one is open, for the reason test/app/library.test.ts records at length:
+        // a scripted click reaches straight through a sheet lying over the application, so a search across
+        // the page can press something a person could not. And by label as well as by text, because the
+        // way into the library is a drawing with no words in it. No backticks in here: this comment is
+        // inside a template literal, and one would end the string.
+        const within = document.querySelector('.mantine-Modal-content') ?? document;
+        for (const it of within.querySelectorAll('button')) {
+          const says = (it.textContent ?? '').trim().includes(wanted)
+            || it.getAttribute('aria-label') === wanted;
+          if (says && !it.disabled) { it.click(); return true; }
         }
         return false;
       })()`);

@@ -2,7 +2,7 @@
  * One remote: its picture, its name, and the three ways in.
  *
  * **It is a landing page now rather than a page with everything on it**, which is Danny's own layout of
- * 22 August 2026: Devices, Activities and Settings as tiles, each carrying the number a press was going
+ * 22 August 2026: Devices, Activities and Settings as tiles, each badged with the number a press was going
  * to ask for. The inventory list it used to show is gone from here, because a list of four devices and
  * a list of three activities on the way in to pages about devices and activities was the same content
  * twice.
@@ -23,6 +23,7 @@ import { whyNameIsRefused, type RemoteDocument } from '../../../shared/remote.ts
 import { drawingFor, isSameModel } from '../catalogue.ts';
 import type { Contents } from '../viewmodels/useContents.ts';
 import type { Importing } from '../viewmodels/useImport.ts';
+import { CogGlyph, StackGlyph } from './Glyphs.tsx';
 import { ImportView } from './ImportView.tsx';
 import { SectionTile } from './SectionTile.tsx';
 import { Silhouette } from './Silhouette.tsx';
@@ -42,23 +43,13 @@ interface RemoteViewProps {
   readonly onOpen: (section: 'devices' | 'activities' | 'settings') => void;
 }
 
-/**
- * The devices, by the names their owner gave them, as one line.
- *
- * Truncated by CSS rather than here, so the tile decides how much fits: a name is somebody's own word
- * and cutting it in the middle is worse than letting the box do it.
- */
-function names(devices: readonly { readonly label?: string }[]): string {
-  return devices.map((one) => one.label).filter((one) => one !== undefined).join(', ');
-}
-
 export function RemoteView({
   remote, busy, contents, importing, attached, onRename, onOpen,
 }: RemoteViewProps) {
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const drawing = drawingFor(remote.model);
-  // What the document holds, or undefined because nothing has been imported into it. The tiles say `?`
-  // rather than `0` for that, since zero devices is a statement about somebody's remote.
+  // What the document holds, or undefined because nothing has been imported into it. The tiles then carry
+  // no badge at all, since zero devices is a statement about somebody's remote and this makes none.
   const held = contents.contents.status === 'ready' ? contents.contents.contents.content : undefined;
   // Which attached remote this document is about, if any. Matched on the **model**, because that is all
   // a document knows: nothing here identifies a unit, and two Harmony Ones are indistinguishable over
@@ -110,27 +101,32 @@ export function RemoteView({
           {remote.model === undefined ? 'Model unknown' : `Logitech ${remote.model.name}`}
         </Text>
 
-        {/* The three ways in, each with the number the press was going to ask for. `?` and not `0`
-            where nothing has been imported: zero devices is a claim about somebody's remote and an
-            unimported document makes none. */}
+        {/* The three ways in: a generic drawing, the word, and the count as a badge in the corner.
+            Danny's, on 22 August 2026, and it replaced a big figure with a line of names under it. Two
+            things were wrong with that. The line was the contents of the page you were about to open,
+            written small enough to be unreadable and cut off mid name, and Settings had no number so it
+            had to invent a line to keep the row the same shape.
+
+            **No badge rather than a zero where nothing has been imported**, which is the same rule the
+            library's tiles follow: a badge is a positive signal. It used to say `?` there, on the ground
+            that zero devices is a claim about somebody's remote and an unimported document makes none.
+            That is still true and the honest way to say it is to say nothing. */}
         <div className={classes.sections}>
           <SectionTile
-            value={held === undefined ? '?' : held.devices.length}
+            glyph={<StackGlyph />}
             title="Devices"
-            caption={held === undefined ? 'nothing imported yet' : names(held.devices)}
+            {...(held === undefined ? {} : { badge: held.devices.length })}
             onClick={() => onOpen('devices')}
           />
           <SectionTile
-            value={held === undefined ? '?' : held.activities.length}
+            glyph={<StackGlyph />}
             title="Activities"
-            caption={held === undefined
-              ? 'nothing imported yet'
-              : held.activities.map((one) => one.name).filter((one) => one !== undefined).join(', ')}
+            {...(held === undefined ? {} : { badge: held.activities.length })}
             onClick={() => onOpen('activities')}
           />
           <SectionTile
+            glyph={<CogGlyph />}
             title="Settings"
-            caption="Rename, copy, remove"
             onClick={() => onOpen('settings')}
           />
         </div>

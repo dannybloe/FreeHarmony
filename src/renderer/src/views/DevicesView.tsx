@@ -62,7 +62,10 @@ export function DevicesView({ remote, contents, library, onOpen, onAdd }: Device
               value={definition?.commands.length ?? '?'}
               // The owner's own word, and the position where there is none. A configuration usually has
               // one, and it is usually something like `TV`.
-              title={use.label ?? `Position ${use.slot + 1}`}
+              // Your own name for it, or the device's own where you did not type one, which is now the
+              // ordinary case: a name is no longer demanded when a device is put on a remote. "Position 3"
+              // is the last resort and means the description itself is not on this machine.
+              title={use.label ?? described ?? `Position ${use.slot + 1}`}
               caption={described ?? (definition === undefined ? 'not on this machine' : 'not identified')}
               onClick={() => onOpen(use.slot)}
             />

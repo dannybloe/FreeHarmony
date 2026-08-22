@@ -239,7 +239,12 @@ export async function importReading(
   if (ready.model !== undefined) await store.setModel(name, ready.model);
 
   const digest = createHash('sha256').update(ready.bytes).digest('hex');
-  const imported = importConfiguration(ready.bytes, { idPrefix: prefixFor(digest), now: at });
+  const imported = importConfiguration(
+    ready.bytes,
+    { idPrefix: prefixFor(digest), now: at,
+      // Where the reading says which model it came off, every definition it produces records that. It is
+      // the one fact about the appliance's provenance that the configuration itself cannot state.
+      ...(ready.model === undefined ? {} : { readFrom: ready.model.name }) });
   const held = new Map((await library.list()).map((one) => [one.id, one]));
 
   const linked: string[] = [];
@@ -348,7 +353,12 @@ export async function fileDefinitionsOf(
   if (base === undefined) return { added: [], kept: [] };
 
   const bytes = await readFile(join(store.folderOf(name), base.fileName));
-  const imported = importConfiguration(bytes, { idPrefix: prefixFor(base.sha256), now: now() });
+  const imported = importConfiguration(
+    bytes,
+    { idPrefix: prefixFor(base.sha256), now: now(),
+      // The document's own model, which is where these bytes came off. It is the document's and not a
+      // reading's here, and that is the honest source: this path files what a document already holds.
+      ...(document.model === undefined ? {} : { readFrom: document.model.name }) });
   const held = new Set((await library.list()).map((one) => one.id));
 
   const added: string[] = [];

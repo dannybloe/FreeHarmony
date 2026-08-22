@@ -121,6 +121,9 @@ export const DEFINITION: Verdicts<DeviceDefinition> = {
   timing: { writeback: 'unknown', structure: 'base slot 15' },
   origin: { writeback: 'ours' },
   addedAt: { writeback: 'ours' },
+  // Ours, and the one field here that is **about** a configuration without coming out of one: it records
+  // which model was read, which the reading knew and the configuration never states.
+  addedFrom: { writeback: 'ours', note: 'the model that was read, not anything the file says' },
 };
 
 export const DEVICE_USE: Verdicts<DeviceUse> = {

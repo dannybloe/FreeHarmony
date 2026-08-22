@@ -3,6 +3,8 @@
 @use '../mantine' as m;
 
 .tile {
+  // A positioning context, so the badge can sit in the corner without shifting anything in the flow.
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -119,11 +121,36 @@
   border: 1px solid var(--mantine-color-gray-2);
 }
 
-// The drawing that stands where a number would. The same height as `.value`'s line box, so a row of tiles
-// with pictures and a row with numbers are the same height and can sit next to each other.
+// The drawing that stands where a number would. At least as tall as `.value`'s line box, so a row of tiles
+// with small pictures and a row with numbers are the same height and can sit next to each other.
+//
+// **A floor and not a fixed height**, which was a real bug rather than a preference: a caller drawing a
+// remote in here asks for 72 pixels, and at a fixed 36 the drawing simply overflowed its cell and was
+// printed straight through the name underneath. The tile grows instead, which is what its own `min-height`
+// was always for.
 .glyph {
   display: grid;
   place-items: center;
-  height: m.rem(36);
+  min-height: m.rem(36);
   color: var(--mantine-color-indigo-5);
+}
+
+// The count in the corner. Positioned against the tile, which is why the tile is a positioning context;
+// inline it would push the drawing off centre by its own width.
+.badge {
+  position: absolute;
+  inset-block-start: m.rem(6);
+  inset-inline-end: m.rem(6);
+  min-width: m.rem(18);
+  height: m.rem(18);
+  padding-inline: m.rem(5);
+  display: grid;
+  place-items: center;
+  border-radius: var(--mantine-radius-xl);
+  background: var(--mantine-color-indigo-0);
+  color: var(--mantine-color-indigo-7);
+  font-size: m.rem(11);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }

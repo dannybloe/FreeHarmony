@@ -24,19 +24,3 @@
   font-size: var(--mantine-font-size-sm);
   color: var(--mantine-color-gray-6);
 }
-
-// The way in to the library, under the remotes: one tile and a sentence beside it. Not a second carousel,
-// because this screen is about remotes and the library is a destination rather than a choice made here.
-.also {
-  display: flex;
-  align-items: center;
-  gap: var(--mantine-spacing-md);
-  padding-block-start: var(--mantine-spacing-md);
-  border-block-start: 1px solid var(--mantine-color-gray-2);
-
-  // The sentence beside the tile, which is wider here than the one under the heading: it has a column to
-  // itself rather than a whole page, so it wants a smaller maximum and not the same one.
-  .lead {
-    max-width: m.rem(460);
-  }
-}

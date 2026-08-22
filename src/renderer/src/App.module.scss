@@ -42,11 +42,15 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  // Centred in whatever is left after the bar, because every screen here is one composition rather
-  // than a document that scrolls. With one tile on it, a page pinned to the top reads as unfinished.
-  justify-content: center;
+  // **Top left**, which is Danny's on 22 August 2026 and a reversal. This was centred in whatever the bar
+  // left over, on the argument that every screen here is one composition rather than a document that
+  // scrolls, so a page with one tile on it pinned to the top reads as unfinished. What that argument
+  // missed is that the pages are not all the same height: a heading sat in a different place on every
+  // screen, so moving between two of them slid the whole page up or down under the pointer. A fixed
+  // origin is worth more than a balanced one, and it is the same reason the library panel has one height.
+  justify-content: flex-start;
+  align-items: stretch;
   width: 100%;
   max-width: m.rem(1080);
-  margin-inline: auto;
   padding: var(--mantine-spacing-xl) var(--mantine-spacing-xl) var(--mantine-spacing-lg);
 }

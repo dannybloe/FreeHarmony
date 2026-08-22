@@ -32,10 +32,10 @@ back, when it exists, will be built from the entry rather than merged into it. E
 its own file, so nothing you have imported is ever thrown away, and if an entry already holds something
 you are told what it is before anything is replaced. Copy it first if you want to keep both.
 
-Appliances it recognises are matched on what they send rather than on a name, which is the only thing a
+Devices it recognises are matched on what they send rather than on a name, which is the only thing a
 configuration states about them: it names no manufacturer, no model and not one command. So a
 television already in your library keeps the words you gave it, and the buttons that used it keep
-sending exactly what they sent, which is not free. Of the appliances that turn up in more than one
+sending exactly what they sent, which is not free. Of the devices that turn up in more than one
 configuration next door, a quarter are described with their commands in a different order, by
 Logitech's own software.
 
@@ -43,20 +43,60 @@ What step 1 still owes you is the rest of the picture: what every individual but
 screens drawn the way the remote draws them. Both can be read today, next door, and neither is on
 screen yet.
 
-Appliances are kept in their own place, beside the remotes rather than inside one, because the same
+Your devices are kept in their own place, beside the remotes rather than inside one, because the same
 television belongs to every remote that drives it. Reading the same remote twice does not describe
-its television twice: an appliance is named after what it sends.
+its television twice: a device is recognised by what it sends.
 
-**That place has a screen now, reached from the front page**, and it is where you say what your
-equipment actually is. Every appliance is a tile with a picture of what it is, a television or an
-amplifier or a games console, and the name it goes by. Open one and you can correct all of it, see which
-of your remotes use it and what each of them calls it, copy it, or throw it away. You can also write one
-down from scratch: a picture, a name, a make and a model, with no codes behind it, which is worth having
-on the day you discover the application cannot read your amplifier yet.
+**That place is the device library, and it opens over whatever you are doing.** There is a button at the
+top right of the window, on every screen, and pressing it slides a panel over the application without
+taking you away from it. That is deliberate: looking up which remotes drive your amplifier is a glance,
+not a trip, and when you close the panel you are exactly where you were.
+
+Inside it, a grid with one tile per device: a picture of what it is, a television or an amplifier or a
+games console, the kind underneath, and a small number in the corner saying how many of your remotes use
+it. A remote's own page carries the same kind of tiles, for its devices, its activities and its settings,
+each badged with how many there are.
+
+The first tile in the library writes a new device down, on its own page, and needs four words at most: a
+category, a make, a model, and a name only if you want one. No codes behind it, which is worth having on the day you
+discover the application cannot read your amplifier yet.
+
+Open a device and you get its own page: the picture and the name at the top, the remotes using it as a
+row of pictures underneath, drawn the same way they are drawn on the front page, and what can be done to
+it along the bottom. If you opened the panel from inside a remote, that remote is marked in the row, and pressing it just closes the panel rather than sending you to its
+front page. If it is **not** in the row, the row offers to add the device to it there and then, which is
+the second way round: from a remote you pick a device out of the library, and from the library you push a
+device onto the remote you came from.
+
+**Three buttons on that page are drawn and switched off**, which is on purpose rather than unfinished
+work left showing. Commands is where you will name and learn codes and build sequences of them, Inputs is
+where you say which input on the amplifier belongs to which thing plugged into it, and Settings is where
+the waiting times live: how long your television takes after being switched on before it will listen to
+anything. That last one is not waiting on the interface. Logitech's own software asked you for those
+numbers, so the file holds them somewhere, and where has not been read yet. See "Deliberately not decided
+yet" below.
+
+**Every screen says where you are, and that trail is the whole of the navigation.** It runs along the top
+of the window, starting at FreeHarmony and adding a step for every level down, and every step is a way
+back to it. There is no back arrow: a trail says where you are, where an arrow only says where you were,
+and having both meant two controls for one job that could disagree with each other. The panel keeps its
+own trail, starting at Device library, separate from the application's, so opening the library and closing
+it again cannot move the application underneath.
+
+**The panel is always the same size**, and so is a device's page inside it, which is worth a sentence
+because it was tried the other way first. A sheet that grew and shrank with its contents moved its own
+close button under your pointer every time you went one level in, and empty space at the bottom is a much
+smaller price than that.
 
 **Copying is there for a reason that only turns up once you have two of something.** Two televisions of
 one model send the same codes, so importing both describes them once, and the only way to tell them apart
-is to say so. That is why a description carries a name of its own alongside the name each remote gives it.
+is to say so. That is why a device carries a name of its own alongside the name each remote gives it, and
+why the name each remote gives it is optional: leave it and the remote shows the library's name.
+
+**A device also records where it came from**, and says so on its own page: learned from your own hardware,
+downloaded from Logitech, read off a particular remote, or typed in by hand. That is the one field that
+cannot be worked out afterwards, and it is what decides whether a device could ever be shared with anybody
+else.
 
 One thing to expect and it is not a fault: **a configuration never says what a device is.** It states
 codes and positions and no words at all. So everything that arrives by importing a remote is filed as
@@ -200,6 +240,17 @@ application.
   the definitions live in their **own place beside the documents** rather than inside them, decided
   on 21 August 2026: the same television belongs to three remotes and should be described once.
   `docs/data-model.md` carries what follows from that.
+* **What a device's settings page can actually offer.** The Settings button on a device is drawn and
+  switched off, and it will stay that way until one thing is read next door. Logitech's own software
+  asked you how long a device takes to wake up before it will listen, how long to leave between two
+  commands, and how it prefers to be switched on and off; that is in their own setup questions, so the
+  numbers exist in the file. The place they almost certainly live is a block of numbered parameter
+  groups whose lengths the remote checks, and a group of the wrong length is thrown away and replaced
+  with the remote's own defaults, without complaint. So guessing is worse than waiting: it produces a
+  configuration that looks accepted and quietly does nothing. Inputs is in the same position for a
+  different reason, that the choice of input is stored as a value with no word attached to it anywhere.
+  Written down on 22 August 2026 so that a button greyed out today is not a button forgotten about
+  next month.
 * **Editing the pictures on the screen.** The icons and images a remote shows can be read and drawn
   today. Changing them is a separate problem and nobody has asked for it yet, but it is **not** the
   hard problem it looked like: the format stores most pictures uncompressed, so drawing our own

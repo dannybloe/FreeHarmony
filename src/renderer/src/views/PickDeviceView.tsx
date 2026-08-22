@@ -36,7 +36,7 @@ interface PickDeviceViewProps {
   /** The appliances already on this remote, so a tile can say so. */
   readonly alreadyHere: readonly (string | undefined)[];
   readonly onClose: () => void;
-  readonly onPick: (definition: string, label: string) => void;
+  readonly onPick: (definition: string, label?: string) => void;
 }
 
 /**
@@ -81,7 +81,7 @@ export function PickDeviceView({
           <>
             <Text size="sm" className={classes.lead}>
               One description is shared by every remote that uses it, so the name you give it here belongs
-              to this remote only.
+              to this remote only. Leave it empty and it keeps the name it has here.
             </Text>
 
             <Carousel label="Appliances this machine describes">
@@ -100,8 +100,12 @@ export function PickDeviceView({
 
             <TextInput
               className={classes.label}
-              label="What it is called on this remote"
-              placeholder="TV, Amplifier, Bedroom telly"
+              label="What it is called on this remote (optional)"
+              // The name of whichever device is chosen, because that is what it will actually be called
+              // if this is left empty. A placeholder here is the answer and not a hint.
+              placeholder={chosen === undefined
+                ? 'TV, Amplifier, Bedroom telly'
+                : nameOf(definitions.find((one) => one.id === chosen)!, usage)}
               value={label}
               onChange={(event) => setLabel(event.currentTarget.value)}
             />
@@ -113,12 +117,15 @@ export function PickDeviceView({
         {definitions.length > 0 && (
           <Button
             size="sm"
-            disabled={chosen === undefined || label.trim() === ''}
+            // Only the device is required. **A name is not**, decided on 22 August 2026: a position with
+            // no name of its own inherits the device's, which is right far more often than not, and
+            // demanding one made the shortest path through this screen a form field.
+            disabled={chosen === undefined}
             onClick={() => {
               const which = chosen;
               const called = label.trim();
               close();
-              if (which !== undefined) onPick(which, called);
+              if (which !== undefined) onPick(which, called === '' ? undefined : called);
             }}
           >
             Add it

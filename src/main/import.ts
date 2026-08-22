@@ -182,7 +182,7 @@ function identifierFor(commands: readonly DeviceCommand[], fallback: string): st
   return `appliance-${createHash('sha256').update(fingerprint).digest('hex').slice(0, 16)}`;
 }
 
-function devicesOf(c: Container, now: string, idPrefix: string): {
+function devicesOf(c: Container, now: string, idPrefix: string, readFrom?: string): {
   uses: DeviceUse[];
   definitions: DeviceDefinition[];
 } {
@@ -206,6 +206,7 @@ function devicesOf(c: Container, now: string, idPrefix: string): {
       properties: properties.get(slot) ?? [],
       timing: {},
       origin: 'from-a-configuration',
+      ...(readFrom === undefined ? {} : { addedFrom: readFrom }),
       addedAt: now,
     });
     const label = labelled.get(slot)?.name;
@@ -279,13 +280,24 @@ function buttonsOf(c: Container): ButtonBinding[] {
  */
 export function importConfiguration(
   bytes: Uint8Array,
-  options: { readonly now: string; readonly idPrefix: string },
+  options: {
+    readonly now: string;
+    readonly idPrefix: string;
+    /**
+     * The model this was read off, where the caller knows it, so a definition can say where it came from.
+     *
+     * Optional because two of the callers genuinely do not know and must not guess: a projection made to
+     * draw a screen is not a reading, and the definitions it produces are thrown away. Only the paths that
+     * **keep** a definition pass it.
+     */
+    readonly readFrom?: string;
+  },
 ): Imported {
   // A file may be a bare container or have Logitech's own wrapper around it, and the library decides
   // which, since knowing that is knowing the format. The name is only used in its error message.
   const payload = payloadOf(bytes, options.idPrefix);
   const c = parse(payload);
-  const { uses, definitions } = devicesOf(c, options.now, options.idPrefix);
+  const { uses, definitions } = devicesOf(c, options.now, options.idPrefix, options.readFrom);
   // The language, where the evidence carries it. `configLanguage` returns the tag with what it matched
   // and what the runner up scored; only the tag crosses into the model, because a screen has nothing to
   // do with the margin and a document should not carry a confidence somebody will later read as a fact.

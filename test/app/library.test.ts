@@ -13,6 +13,13 @@
  *
  * The words asserted here are our own invention, not anybody's equipment, so unlike `inventory.test.ts`
  * this one may read them off the page.
+ *
+ * **One thing to know before writing another test that drives a modal.** The window these tests run in is
+ * never shown, so it never composites, so `requestAnimationFrame` never fires and a CSS entry transition
+ * never completes. A modal left in its entering state renders, and a press on something inside it goes
+ * nowhere. This cost an afternoon and produced a real answer rather than a workaround: the library panel
+ * does not animate, because it is a place you go to glance at something rather than an event. If a modal
+ * that does animate ever has to be driven from here, the window has to be shown.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,16 +30,27 @@ import { launch } from './electron.ts';
 
 const NAME = 'The study amplifier';
 
-test('an appliance can be written down from Home and comes back as a tile', async (t) => {
+test('a device can be written down from the bar and comes back as a tile', async (t) => {
   const app = await launch();
   t.after(() => app.close());
 
-  /** Presses whatever says this, waiting for it to appear. The same helper as `inventory.test.ts`. */
+  /**
+   * Presses whatever says this, waiting for it to appear, **inside the open panel where there is one**.
+   *
+   * That scoping is not tidiness. A click issued from a script ignores the sheet lying over the
+   * application, so a search across the whole page reaches buttons a person could not possibly press. It
+   * cost an afternoon here: the library panel has an "Add..." tile and so does Home, and with the panel
+   * open this pressed Home's, underneath, which sent the application to the add-a-remote screen while the
+   * panel sat on its list. Then it waited for a form that was never going to appear.
+   *
+   * So the rule is the one a person is bound by: while a modal is up, only what is in it can be pressed.
+   */
   const press = async (what: string): Promise<boolean> => {
     const wanted = JSON.stringify(what);
     return app.evaluate<boolean>(`(async () => {
       for (let tries = 0; tries < 40; tries += 1) {
-        for (const it of document.querySelectorAll('button')) {
+        const within = document.querySelector('.mantine-Modal-content') ?? document;
+        for (const it of within.querySelectorAll('button')) {
           const says = (it.textContent ?? '').includes(${wanted});
           if (says || it.getAttribute('aria-label') === ${wanted}) { it.click(); return true; }
         }
@@ -41,6 +59,22 @@ test('an appliance can be written down from Home and comes back as a tile', asyn
       return false;
     })()`);
   };
+
+  /**
+   * Opens the panel from the application's bar.
+   *
+   * Its own helper because it is the one press that must look outside the panel: the way in is on the
+   * application's bar and there is no panel yet to look inside.
+   */
+  const openLibrary = async (): Promise<boolean> => app.evaluate<boolean>(`(async () => {
+    for (let tries = 0; tries < 40; tries += 1) {
+      for (const it of document.querySelectorAll('button')) {
+        if (it.getAttribute('aria-label') === 'Device library') { it.click(); return true; }
+      }
+      await new Promise((wake) => setTimeout(wake, 100));
+    }
+    return false;
+  })()`);
 
   /**
    * Types into the field with this label.
@@ -70,13 +104,15 @@ test('an appliance can be written down from Home and comes back as a tile', asyn
     })()`);
   };
 
-  /** How many appliance tiles the library is showing, once it has drawn one. */
+  /** How many device tiles the library is showing, once it has drawn one. */
   const tiles = async (): Promise<number> => app.evaluate<number>(`(async () => {
     for (let tries = 0; tries < 40; tries += 1) {
-      const section = [...document.querySelectorAll('section')]
-        .find((one) => (one.querySelector('h2')?.textContent ?? '').includes('appliance'));
-      if (section) {
-        const drawn = section.querySelectorAll('[data-tile=""]');
+      // Inside the panel, and found by the attribute rather than by shape: the add tile carries a
+      // different value, so this counts devices and not the way to make one. There is no heading to
+      // anchor on, on purpose, since the panel's own bar already says where you are.
+      const panel = document.querySelector('.mantine-Modal-content');
+      if (panel) {
+        const drawn = panel.querySelectorAll('[data-tile=""]');
         if (drawn.length > 0) return drawn.length;
       }
       await new Promise((wake) => setTimeout(wake, 100));
@@ -84,37 +120,50 @@ test('an appliance can be written down from Home and comes back as a tile', asyn
     return -1;
   })()`);
 
-  // Home offers the library, which is the placement decision on a screen: an appliance belongs to no
-  // remote, so the way to it is not through one.
-  assert.equal(await press('Appliances'), true, 'Home offers the library');
+  // The bar offers the library, from every screen, which is the placement decision on a screen: a device
+  // belongs to no remote, so the way to it is not through one. It is found by its label rather than its
+  // text, since it is a drawing.
+  assert.equal(await openLibrary(), true, 'the bar offers the library');
 
   assert.equal(await press('Add...'), true, 'and the library offers to write one down');
-  // A kind is chosen from the drawings, which is what the nine pictures are for. Amplifier rather than
-  // the default, so the assertion below cannot pass on the form having done nothing.
-  // Waits, like `press` does, and for the same reason: the modal is drawn when React is ready and a
-  // query issued straight after the click that opened it runs against the page that was there before.
+  // The category, through the field's own list. Amplifier rather than the default, so the assertion below
+  // cannot pass on the form having done nothing at all. It waits before looking, like `press` does: the
+  // page is drawn when React is ready and a query issued straight after a click runs against the old one.
   assert.equal(await app.evaluate<boolean>(`(async () => {
+    const find = (what) => [...document.querySelectorAll(what)];
+    // Wait for the field, then open it **once**. Clicking it on every turn of a retry loop toggles the
+    // list open and shut, so it was found open on one pass and closed on the next: the test failed about
+    // half the time and looked like a race in the application rather than in the test.
+    let field;
+    for (let tries = 0; tries < 40 && field === undefined; tries += 1) {
+      field = find('input').find((one) => (one.labels?.[0]?.textContent ?? '') === 'Category');
+      if (field === undefined) await new Promise((wake) => setTimeout(wake, 100));
+    }
+    if (field === undefined) return false;
+    field.click();
+
     for (let tries = 0; tries < 40; tries += 1) {
-      const it = document.querySelector('[data-kind="receiver"]');
-      if (it) { it.click(); return true; }
+      const option = find('[role="option"]').find((one) => (one.textContent ?? '').includes('Amplifier'));
+      if (option) { option.click(); return true; }
       await new Promise((wake) => setTimeout(wake, 100));
     }
     return false;
-  })()`), true, 'a kind can be picked');
-  assert.equal(await type('Name', NAME), true, 'and a name typed');
-  assert.equal(await press('Write it down'), true);
+  })()`), true, 'a category can be picked');
+  assert.equal(await type('Name (optional)', NAME), true, 'and a name typed');
+  assert.equal(await press('Add'), true);
 
-  // Straight onto its own page, because writing something down and then having to find it in a row of
-  // tiles is the wrong end of the interaction.
+  // Straight onto its own page, because writing something down and then having to find it in a grid is the
+  // wrong end of the interaction. Read inside the panel, for the third time in this file and for the same
+  // reason: the application underneath still has its own heading, and it is the first one in the document.
   const heading = await app.evaluate<string>(`(async () => {
+    const said = () => document.querySelector('.mantine-Modal-content h2')?.textContent ?? '';
     for (let tries = 0; tries < 40; tries += 1) {
-      const said = document.querySelector('h2')?.textContent ?? '';
-      if (said.includes(${JSON.stringify(NAME)})) return said;
+      if (said().includes(${JSON.stringify(NAME)})) return said();
       await new Promise((wake) => setTimeout(wake, 100));
     }
-    return document.querySelector('h2')?.textContent ?? '';
+    return said();
   })()`);
-  assert.match(heading, new RegExp(NAME), 'the new appliance has its own page');
+  assert.match(heading, new RegExp(NAME), 'the new device has its own page');
 
   // On disk, over the bridge, with the provenance the route implies. This is the assertion the whole test
   // exists for: nothing was learned from any hardware, so this may never be shared, and no other route
@@ -126,14 +175,18 @@ test('an appliance can be written down from Home and comes back as a tile', asyn
   assert.equal(held[0]?.origin, 'typed-here');
   assert.deepEqual(held[0]?.commands, [], 'and it has no codes, which is allowed and is the point');
 
-  // Back to the list, where it is now a tile. The count is what says the page reloaded rather than
-  // showing what it had before the write. One and not two: the add tile carries `data-tile="add"`, which
-  // is what that attribute's second value is for.
-  assert.equal(await press('Back'), true);
-  assert.equal(await tiles(), 1, 'the appliance, the add tile aside');
+  // Back to the list, where it is now a tile. The count is what says the page reloaded rather than showing
+  // what it had before the write. One and not two: the add tile carries `data-tile="add"`, which is what
+  // that attribute's second value is for.
+  //
+  // Pressed on the panel's own root crumb, since the arrow went on 22 August 2026 and the trail is the
+  // navigation. It is inside the panel, so the scoping the helper does is what keeps it off the
+  // application's bar, where the very same words sit on the button that opens this panel.
+  assert.equal(await press('Device library'), true);
+  assert.equal(await tiles(), 1, 'the device, the add tile aside');
 });
 
-test('a copy is a second appliance with the same words and a different identity', async (t) => {
+test('a copy is a second device with the same words and a different identity', async (t) => {
   const app = await launch();
   t.after(() => app.close());
 
@@ -143,11 +196,14 @@ test('a copy is a second appliance with the same words and a different identity'
     `window['${API_NAMESPACE}'].library.create({ kind: 'television', name: 'The big one' })`);
   await app.reload();
 
+  // Scoped to the panel where there is one, per the note on the helper in the test above: a scripted click
+  // reaches straight through a modal, and Home has a button saying the same word.
   const press = async (what: string): Promise<boolean> => {
     const wanted = JSON.stringify(what);
     return app.evaluate<boolean>(`(async () => {
       for (let tries = 0; tries < 40; tries += 1) {
-        for (const it of document.querySelectorAll('button')) {
+        const within = document.querySelector('.mantine-Modal-content') ?? document;
+        for (const it of within.querySelectorAll('button')) {
           if ((it.textContent ?? '').includes(${wanted})
               || it.getAttribute('aria-label') === ${wanted}) { it.click(); return true; }
         }
@@ -157,9 +213,42 @@ test('a copy is a second appliance with the same words and a different identity'
     })()`);
   };
 
-  assert.equal(await press('Appliances'), true);
-  assert.equal(await press('The big one'), true, 'the appliance is on the list');
-  assert.equal(await press('Make a copy'), true);
+  const openLibrary = async (): Promise<boolean> => app.evaluate<boolean>(`(async () => {
+    for (let tries = 0; tries < 40; tries += 1) {
+      for (const it of document.querySelectorAll('button')) {
+        if (it.getAttribute('aria-label') === 'Device library') { it.click(); return true; }
+      }
+      await new Promise((wake) => setTimeout(wake, 100));
+    }
+    return false;
+  })()`);
+
+  /**
+   * The same, but on the whole label rather than on a substring.
+   *
+   * Needed exactly once and for a reason worth writing down: the button that opens the copy dialogue says
+   * "Duplicate..." and the one inside it says "Duplicate", so a substring match presses the opener again
+   * and the test waits for something that already happened.
+   */
+  const pressExactly = async (what: string): Promise<boolean> => {
+    const wanted = JSON.stringify(what);
+    return app.evaluate<boolean>(`(async () => {
+      for (let tries = 0; tries < 40; tries += 1) {
+        for (const it of document.querySelectorAll('button')) {
+          if ((it.textContent ?? '').trim() === ${wanted}) { it.click(); return true; }
+        }
+        await new Promise((wake) => setTimeout(wake, 100));
+      }
+      return false;
+    })()`);
+  };
+
+  assert.equal(await openLibrary(), true);
+  assert.equal(await press('The big one'), true, 'the device is on the list');
+  // Two presses, because the ellipsis on the button is a promise that something appears: it asks for a
+  // name, prefilled with the old one plus "copy", which is what makes the two tellable apart.
+  assert.equal(await press('Duplicate...'), true);
+  assert.equal(await pressExactly('Duplicate'), true, 'and the dialogue confirms it');
 
   const held = await app.evaluate<DeviceDefinition[]>(`(async () => {
     for (let tries = 0; tries < 40; tries += 1) {
@@ -170,9 +259,11 @@ test('a copy is a second appliance with the same words and a different identity'
     return window['${API_NAMESPACE}'].library.list();
   })()`);
 
-  assert.equal(held.length, 2, 'two appliances, which is what somebody with two televisions has');
-  // Same words, different identity. That asymmetry is the whole reason a description has a name of its
-  // own: without it the two would be one row twice over in every list.
-  assert.deepEqual(held.map((one) => one.name), ['The big one', 'The big one']);
+  assert.equal(held.length, 2, 'two devices, which is what somebody with two televisions has');
+  // The same codes and a name of its own, which is the whole reason a device carries a name: without one
+  // the two would be a single row twice over in every list. The suggestion is the old name plus "copy",
+  // so nobody has to think of something before they can make the copy at all.
+  assert.deepEqual(held.map((one) => one.name).sort(), ['The big one', 'The big one copy']);
   assert.notEqual(held[0]?.id, held[1]?.id);
+  assert.deepEqual(held[0]?.commands, held[1]?.commands);
 });

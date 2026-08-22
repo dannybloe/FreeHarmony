@@ -1,4 +1,5 @@
-// The top bar: glass over whatever scrolls beneath it, and a hairline instead of a rule.
+// The application's own bar: glass over whatever scrolls beneath it, and a hairline instead of a rule.
+// The layout is `Header.module.scss`; what is here is the skin and the two things only this bar has.
 
 @use '../mantine' as m;
 
@@ -7,22 +8,21 @@
   top: 0;
   z-index: 10;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--mantine-spacing-md);
-  padding: var(--mantine-spacing-sm) var(--mantine-spacing-xl);
   border-block-end: 1px solid rgb(16 24 40 / 6%);
   background: rgb(255 255 255 / 68%);
   backdrop-filter: blur(m.rem(14)) saturate(140%);
 }
 
-// The pulse train behind the bar's contents, bleeding off the right edge. Decoration, faint enough to
-// read as texture, and never the thing anybody looks at.
+// The pulse train behind the bar's contents. Decoration, faint enough to read as texture, and never the
+// thing anybody looks at.
+//
+// It used to bleed off the right edge, which was right while the only thing over there was a round icon
+// button. The library button has words in it now, and a square wave running behind lettering reads as a
+// printing fault rather than as texture, so the train stops short of it and fades out.
 .pulse {
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-end: m.rem(-40);
+  inset-inline-end: m.rem(190);
   translate: 0 -50%;
   width: m.rem(380);
   height: m.rem(30);
@@ -34,22 +34,34 @@
   mask-image: linear-gradient(90deg, transparent, black 22%, black 72%, transparent);
 }
 
-.left {
-  display: flex;
-  align-items: center;
-  gap: var(--mantine-spacing-sm);
+// The wordmark, which is the trail's first crumb. Its two colours are stated here rather than inherited
+// from the crumb, so it looks the same on Home, where that crumb is where you are, as everywhere else,
+// where it is a link.
+.wordmark {
+  color: var(--mantine-color-indigo-7);
 }
 
-.back {
-  display: grid;
-  place-items: center;
-  width: m.rem(32);
-  height: m.rem(32);
-  margin-inline-end: m.rem(2);
+.wordmarkTail {
+  color: var(--mantine-color-gray-9);
+}
+
+// The way in to the device library, and the only action on this bar. A pill with words in it rather than a
+// round icon button: Danny's, and the reason is that a drawing on its own has to be learned, where the two
+// words say what happens.
+.action {
+  display: flex;
+  align-items: center;
+  gap: m.rem(7);
+  height: m.rem(34);
+  padding-inline: m.rem(12);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
   border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 50%;
+  border-radius: m.rem(17);
   color: var(--mantine-color-gray-7);
-  background: rgb(255 255 255 / 70%);
+  // Nearly opaque rather than the 70% the round icon button had, because the pulse train ends underneath
+  // it: at 70% the decoration read through the words and the button looked like a printing fault.
+  background: rgb(255 255 255 / 94%);
   cursor: pointer;
   transition: color 120ms ease, border-color 120ms ease, scale 120ms ease;
 
@@ -59,24 +71,12 @@
   }
 
   &:active {
-    scale: 0.94;
+    scale: 0.97;
   }
-}
 
-.mark {
-  color: var(--mantine-color-indigo-6);
-}
-
-.wordmark {
-  font-size: m.rem(20);
-  font-weight: 650;
-  letter-spacing: m.rem(-0.3);
-  line-height: 1.2;
-  color: var(--mantine-color-indigo-8);
-}
-
-// The second half in the text colour, so the name reads as one word with an accent rather than as two
-// words in two colours.
-.wordmarkTail {
-  color: var(--mantine-color-gray-9);
+  &:focus-visible {
+    outline: none;
+    border-color: var(--mantine-color-indigo-4);
+    box-shadow: 0 0 0 m.rem(3) var(--mantine-color-indigo-1);
+  }
 }

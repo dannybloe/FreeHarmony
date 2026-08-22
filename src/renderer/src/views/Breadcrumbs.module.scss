@@ -1,0 +1,76 @@
+// The trail: one line, the root at the size of a title and the rest a step quieter.
+//
+// It used to be a small second line under a title. Now it is the only way around, so it is sized to be
+// pressed rather than to be read past, and the fixed height that kept the bar still on Home is gone with
+// the empty case: every trail has at least its root in it.
+
+@use '../mantine' as m;
+
+.trail {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  font-size: m.rem(14);
+  line-height: 1.2;
+}
+
+.step {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.divider {
+  display: inline-flex;
+  align-self: center;
+  margin-inline: m.rem(4);
+  color: var(--mantine-color-gray-4);
+  flex: none;
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--mantine-color-indigo-6);
+  cursor: pointer;
+  white-space: nowrap;
+
+  @include m.hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: m.rem(2) solid var(--mantine-color-indigo-3);
+    outline-offset: m.rem(3);
+    border-radius: m.rem(3);
+  }
+}
+
+// Where you are. Not a link, and darker than one, so the end of the trail reads as an end.
+.here {
+  color: var(--mantine-color-gray-9);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// The first crumb, which is the name of the place you are in: the application or the panel. Larger than
+// the rest of the trail, so the bar still has something that reads as a title without carrying one.
+.root {
+  font-size: m.rem(18);
+  font-weight: 700;
+  letter-spacing: m.rem(-0.2);
+  flex: none;
+
+  &.here {
+    color: var(--mantine-color-gray-9);
+  }
+
+  &.link {
+    color: var(--mantine-color-indigo-7);
+  }
+}

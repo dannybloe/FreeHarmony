@@ -48,13 +48,22 @@ interface SectionTileProps {
   readonly onClick?: () => void;
   /** Drawn with a ring, for a tile that is one of a set being chosen from. */
   readonly selected?: boolean;
+  /**
+   * A small number in the corner: how many other things use this one.
+   *
+   * Absent rather than zero, and that is the caller's job rather than this file's, because a badge is a
+   * positive signal: a "0" in a coloured circle draws the eye to the absence of news, which is the one
+   * thing a badge should never do.
+   */
+  readonly badge?: number | undefined;
 }
 
 export function SectionTile({
-  value, glyph, title, caption, onClick, selected = false,
+  value, glyph, title, caption, onClick, selected = false, badge,
 }: SectionTileProps) {
   const inside = (
     <>
+      {badge !== undefined && <span className={classes.badge}>{badge}</span>}
       {value !== undefined && <span className={classes.value}>{value}</span>}
       {value === undefined && glyph !== undefined && <span className={classes.glyph}>{glyph}</span>}
       <span className={classes.title}>{title}</span>

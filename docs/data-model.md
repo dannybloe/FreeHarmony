@@ -319,6 +319,22 @@ Three things follow, and they are work rather than objections.
   hardware may ever be shared. That was already decided; putting the definitions in one place is
   what makes it enforceable rather than a convention.
 
+### Decided: the word on the screen is "device"
+
+Settled by Danny on 22 August 2026, against the argument that the interface had been using: a
+configuration means two different things by one word, the thing in your living room and the position on
+the remote that drives it, so the screens called the first an **appliance** to keep them apart.
+
+The objection is stronger than the distinction. Every remote, every manual and every page anybody has
+ever read about these remotes says **device**, so a screen that says appliance is asking its reader to
+learn a word in order to use it. The distinction is real and it stays, in the model and in the code, where
+`DeviceDefinition` is the thing and `DeviceUse` is the position; what it does not get to do is show up on
+a screen. So the entry is the **Device library**, a tile in it is a device, and a tile on a remote's own
+page is a position on that remote.
+
+The prose below still says appliance in the places where it means the physical thing rather than a
+position, because that is the sentence's whole point. Nothing a user reads does.
+
 ### What an appliance is called, decided by building it
 
 **A definition is named after what it sends**, hashed, so the identifier is a property of the appliance
@@ -361,6 +377,23 @@ identity the moment somebody fixed a spelling. So it is random, never reused, an
 price is stated rather than hidden: teach codes to a hand written appliance and it keeps that
 identifier, so an import of the same codes elsewhere writes a second description of one appliance. That
 is what the duplicate report below is for.
+
+**Where it came from is recorded twice over, once as a class and once as a model.** `origin` was already
+one of four values and it is what decides whether a definition may ever be shared. `addedFrom` was added
+on 22 August 2026 and holds the **model** of the remote a definition was read off, so a page can say
+"imported from a Harmony 600" instead of "imported from a remote". Two things about it are deliberate and
+neither is obvious. It records the **model** and not the document's name, because a document gets renamed
+and deleted and the sentence would then name something that no longer exists. And it records the
+**first** import and never a later one: a definition is shared by every document that refers to it, so
+overwriting it on a second import would make the field say whichever remote was read most recently, which
+is a fact about the reading rather than about the device.
+
+**A label is optional, and that is a change.** A position on a remote used to be expected to carry the
+name that remote's owner typed, because a configuration always has one. A position created from the
+library has no such name, and demanding one before the device can be added would make the shortest route
+into the library the one with a form in it. So a position with no label shows the library's name for the
+device, and typing one is how you say "this one is the bedroom television" when two positions would
+otherwise read the same. Renaming it afterwards is the same edit it always was.
 
 **A kind is a picture and nothing else.** Nine of them, the categories Logitech had, each with a
 drawing. Worth knowing before reading a screen: **a configuration does not say what a device is**, so

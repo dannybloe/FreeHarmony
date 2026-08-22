@@ -241,6 +241,22 @@ export interface DeviceDefinition {
   readonly origin: DefinitionOrigin;
   /** ISO 8601, so ordering never depends on a file system timestamp. */
   readonly addedAt: string;
+  /**
+   * The model of the remote this description was first read off, where that is how it came about.
+   *
+   * **The model and not the document's name.** A document gets renamed and thrown away, and a definition
+   * that named one would carry a reference to a folder nobody has any more. "Harmony 600" stays true
+   * wherever it ends up, which is what a provenance field has to do.
+   *
+   * **The first import and never a later one.** A definition is shared, so the same television can be
+   * read off two remotes, and this says how the description came into being rather than where it is now.
+   * Where it is now is what a document's own list answers. Stamping it again on a second import would
+   * make the field mean two different things depending on which remote was read last.
+   *
+   * Absent on everything that did not come off a remote, and absent on the descriptions imported before
+   * 22 August 2026, which is why the sentence that reads it has an arm for not knowing.
+   */
+  readonly addedFrom?: string;
 }
 
 /**
@@ -320,11 +336,51 @@ export interface DeviceDraft {
  * the day one of them was reworded, and nothing would fail.
  */
 export const ORIGIN_NAMES: Readonly<Record<DefinitionOrigin, string>> = {
-  'learned-here': 'taught to this application from a real remote',
-  'from-logitech': "fetched from Logitech's own catalogue",
-  'from-a-configuration': 'read out of a configuration that was already on a remote',
-  'typed-here': 'written down here by hand',
+  'learned-here': 'Learned here',
+  'from-logitech': 'Downloaded from Logitech',
+  'from-a-configuration': 'Imported from a remote',
+  'typed-here': 'Added by hand',
 };
+
+/**
+ * Where a description came from, in one short line for a screen to put under a name.
+ *
+ * Short rather than the sentence these used to be. They read "read out of a configuration that was
+ * already on a remote", which is accurate, was written for a definition list, and is four times too long
+ * for the place it is actually wanted: under the name of a device that has not got one.
+ *
+ * The model is folded in where it is known, which is the whole reason `addedFrom` exists: "Imported from
+ * a Harmony 600" tells somebody which of their remotes to go and look at, where "imported from a remote"
+ * tells them nothing they could act on.
+ */
+export function provenanceOf(definition: DeviceDefinition): string {
+  if (definition.origin === 'from-a-configuration' && definition.addedFrom !== undefined) {
+    return `Imported from a ${definition.addedFrom}`;
+  }
+  return ORIGIN_NAMES[definition.origin];
+}
+
+/**
+ * What to put at the top of a device's own page, as a title and an optional line under it.
+ *
+ * Three arms, and the order is how much anybody knows. A typed name goes on top with the make and model
+ * underneath, because the name is what its owner recognises and the make and model are what identifies
+ * the thing. With no name the make and model take the title, since together they are a name. With
+ * neither, which is every device an import produces, the title says what it is **and** that it wants a
+ * name, and the line underneath says where it came from so somebody can go and look.
+ *
+ * "Unnamed television" rather than "Television": a bare category reads as a name, and then four
+ * televisions all have the same one.
+ */
+export function headingFor(definition: DeviceDefinition): { title: string; under?: string } {
+  const named = definition.name !== undefined && definition.name !== '';
+  const made = [definition.manufacturer, definition.model]
+    .filter((one) => one !== undefined && one !== '').join(' ');
+  if (named) return made === '' ? { title: definition.name! } : { title: definition.name!, under: made };
+  if (made !== '') return { title: made, under: provenanceOf(definition) };
+  return { title: `Unnamed ${KIND_NAMES[definition.kind].toLowerCase()}`,
+           under: provenanceOf(definition) };
+}
 
 /**
  * Every kind, in the order a chooser should offer them: the common ones first, `other` last.

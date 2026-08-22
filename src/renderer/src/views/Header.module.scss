@@ -1,0 +1,28 @@
+// The shape of a header: the layout only. What it looks like is the caller's, because the application's
+// bar is glass over a scrolling page and the panel's sits inside an opaque sheet.
+//
+// One line again since the trail became the whole navigation: there is no title above it to make room for
+// and no arrow beside it. What was `.stack`, `.back` and their focus ring went with them.
+
+@use '../mantine' as m;
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-xl);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: m.rem(6);
+  flex: none;
+}

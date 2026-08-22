@@ -6,17 +6,24 @@
  * walk every path with no browser at all. `useNavigation.ts` next door connects it to React.
  *
  * There is no router. There are no URLs in a desktop window and nothing links into it, so a router
- * would be a dependency plus a second place that says which screens exist. What a router does buy is
- * the history stack, and that is nine lines below.
+ * would be a dependency plus a second place that says which screens exist. What a router does buy is a
+ * history stack, and **there is no history here either**, which is the change of 22 August 2026.
+ *
+ * **The trail replaced the stack, and that is a simplification rather than a loss.** Danny took the back
+ * arrow off both bars on the ground that navigation should be the breadcrumb trail and nothing else. A
+ * trail is the parent chain of a tree, so every screen already states where above it goes, and once
+ * pressing that is the only way up, remembering the route serves nobody. What went with the stack: `back`,
+ * `canGoBack`, and `replace`, which existed only because `go` pushed and one caller did not want it to.
+ * `trail.model.ts` is where "where does this go" lives now.
  *
  * **A remote is held by name and never as an object.** The truth is on disk, so a screen that kept a
  * copy would be showing a remote that had since been renamed or deleted. Renaming follows the new
- * name; deleting drops the screen and anything behind it that pointed at the same remote.
+ * name; deleting sends you home, since the folder the screen was about is not there any more.
  *
  * **Which screens those are is one list, and the compiler checks it against the type.** Renaming and
  * removing used to test `at === 'remote'` outright, which was correct while that was the only screen
  * about a remote and became a bug the moment there were five: renaming from the devices page would have
- * left every screen behind it naming a folder that no longer exists. So `REMOTE_SCREENS` is the list,
+ * left a screen naming a folder that no longer exists. So `REMOTE_SCREENS` is the list,
  * `RemoteScreen` is the type, and `REMOTE_SCREENS_ARE_EXHAUSTIVE` fails the typecheck if they disagree
  * in either direction. Adding a screen about a remote and forgetting this is not possible.
  */
@@ -69,23 +76,6 @@ export type Screen =
   | { readonly at: 'connect' }
   /** The application's own settings, which are about no remote in particular. */
   | { readonly at: 'preferences' }
-  /**
-   * The shared library: every appliance this machine has a description of.
-   *
-   * Reached from Home rather than from a remote, and that placement is the decision of 21 August 2026
-   * made visible. An appliance belongs to no remote in particular, so a page about it that could only be
-   * reached through one would be telling a person the opposite of how their own data is arranged.
-   */
-  | { readonly at: 'library' }
-  /**
-   * One appliance in the library, by identifier and never by name.
-   *
-   * The mirror of the rule for a remote, and it comes out the other way for a reason worth stating. A
-   * remote is held by name because its name **is** its identity, its folder. An appliance's name is not:
-   * it is a correctable field, so holding one here would put a screen on the wrong appliance the moment
-   * somebody fixed a spelling. The identifier never changes, which is exactly what a screen needs.
-   */
-  | { readonly at: 'appliance'; readonly id: string }
   | RemoteScreen;
 
 /**
@@ -150,8 +140,6 @@ export function afterChoosingModel(
 
 export class NavigationModel {
   #screen: Screen = START;
-  /** Where `back` goes, oldest first. Home is never on it: it is where an empty stack lands. */
-  #behind: Screen[] = [];
   readonly #changed: (screen: Screen) => void;
 
   constructor(changed: (screen: Screen) => void) {
@@ -162,62 +150,43 @@ export class NavigationModel {
     return this.#screen;
   }
 
-  /** Whether there is anywhere to go back to, which is what draws the arrow in the bar. */
-  get canGoBack(): boolean {
-    return this.#screen.at !== 'home';
-  }
-
   go(to: Screen): void {
-    if (this.#screen.at !== 'home') this.#behind.push(this.#screen);
     this.#emit(to);
   }
 
-  back(): void {
-    this.#emit(this.#behind.pop() ?? START);
-  }
-
+  /**
+   * Home, by name, though it is exactly `go(START)`.
+   *
+   * Kept as its own method because two callers mean "the flow is finished" rather than "go to this
+   * screen", and reading `nav.home()` at the end of adding a remote says which of the two it is.
+   */
   home(): void {
-    this.#behind = [];
     this.#emit(START);
   }
 
   /**
-   * A remote was renamed, so every screen naming it names the new one.
-   *
-   * Both the current screen and the ones behind it, because going back to a page that names a folder
-   * that no longer exists is the same bug arriving a moment later.
+   * A remote was renamed, so the screen naming it names the new one.
    *
    * The name is replaced and **nothing else about the screen is**, which is why this spreads rather than
    * rebuilding: the device page carries a slot as well, and rebuilding it as `{ at, name }` would drop
    * that and land somebody on a page about device zero.
+   *
+   * It used to rewrite the screens behind this one too, and that half went with the stack rather than
+   * being dropped: with no history there is nowhere else a stale name could be hiding.
    */
   renamed(from: string, to: string): void {
-    this.#behind = this.#behind.map((screen) => withName(screen, from, to));
     const here = withName(this.#screen, from, to);
     if (here !== this.#screen) this.#emit(here);
   }
 
-  /** A remote was removed, so nothing may still be pointing at it. */
-  removed(name: string): void {
-    this.#behind = this.#behind.filter((screen) => remoteOn(screen) !== name);
-    if (remoteOn(this.#screen) === name) this.back();
-  }
-
   /**
-   * An appliance was removed from the library, so nothing may still be pointing at it.
+   * A remote was removed, so nothing may still be pointing at it.
    *
-   * The same shape as `removed` and deliberately a second method rather than one taking a kind: a remote
-   * is addressed by name and an appliance by identifier, so a single method would have to be told which,
-   * and the day somebody passes a name where an identifier is expected it silently matches nothing and
-   * leaves the window on a page about something that is gone.
-   *
-   * **`back` and not `home`**, which matters here more than it does for a remote: deleting an appliance is
-   * done from its own page and the page behind it is the library, which is where a person expects to
-   * land. If several screens behind also named it, the filter above has already taken them out.
+   * **Home and not "back"**, which the trail makes the honest answer rather than a fallback: the folder
+   * is gone, so its own page is gone, and the nearest place that still exists is the one above it.
    */
-  definitionRemoved(id: string): void {
-    this.#behind = this.#behind.filter((screen) => applianceOn(screen) !== id);
-    if (applianceOn(this.#screen) === id) this.back();
+  removed(name: string): void {
+    if (remoteOn(this.#screen) === name) this.#emit(START);
   }
 
   /**
@@ -236,11 +205,6 @@ export class NavigationModel {
     this.#screen = screen;
     this.#changed(screen);
   }
-}
-
-/** Whether a screen is about one appliance, and if so which. The mirror of `remoteOn`. */
-export function applianceOn(screen: Screen): string | undefined {
-  return screen.at === 'appliance' ? screen.id : undefined;
 }
 
 /** The same screen under a new name, or the very same object when it was not about that remote. */

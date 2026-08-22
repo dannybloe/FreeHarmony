@@ -1,0 +1,153 @@
+// One device in the library: the drawing and the name, the correctable fields, the remotes using it, and
+// the actions along the bottom.
+
+@use '../mantine' as m;
+
+.device {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+}
+
+.gone {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mantine-spacing-md);
+}
+
+// The drawing at portrait size. Round, so it reads as the subject of the page rather than as another
+// button in a row of them.
+.portrait {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: m.rem(64);
+  height: m.rem(64);
+  border-radius: 50%;
+  border: 1px solid var(--mantine-color-gray-2);
+  background: rgb(255 255 255 / 70%);
+  color: var(--mantine-color-indigo-5);
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  gap: m.rem(2);
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-size: m.rem(22);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+  line-height: 1.2;
+}
+
+.under {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+// Why it cannot be shared. Quieter than the name, and a fact rather than a warning: nothing is wrong.
+.private {
+  margin-block-start: m.rem(2);
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-5);
+  max-width: m.rem(520);
+}
+
+// The correctable fields, in a row so they take one line rather than a column of four. Deliberately
+// compact: this is not what the page is about.
+.details {
+  display: grid;
+  // The category gets its own wider column rather than an equal share, because it is the one field whose
+  // content is ours and therefore known: "Amplifier or receiver" plus a drawing and a chevron does not fit
+  // in a quarter of the row, and it was clipped mid-word to "Amplifier or receive". A make and a model are
+  // short in practice and a name that is too long to see all of is still a name somebody typed.
+  grid-template-columns: minmax(m.rem(210), 1.3fr) repeat(3, minmax(m.rem(110), 1fr)) auto;
+  gap: var(--mantine-spacing-xs);
+  align-items: end;
+  padding: var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-md);
+  background: rgb(255 255 255 / 55%);
+}
+
+.save {
+  align-self: end;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: m.rem(8);
+}
+
+// A remote drawn inside a carousel tile. The drawing has no size of its own, so it takes the height the
+// tile's picture slot offers and the width follows: every model is drawn to one case height, which is what
+// makes a Harmony 525 and a Harmony One line up beside each other.
+.small {
+  height: m.rem(72);
+}
+
+// What a tile shows for a model nobody has drawn, which is most of the forty. The initial, as the chooser
+// does it, rather than a generic outline that would claim to be a picture of something.
+.initial {
+  display: grid;
+  place-items: center;
+  width: m.rem(44);
+  height: m.rem(44);
+  border-radius: 50%;
+  border: 1px solid var(--mantine-color-gray-2);
+  font-size: m.rem(18);
+  font-weight: 600;
+  color: var(--mantine-color-gray-6);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+}
+
+.blockTitle {
+  margin: 0;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  color: var(--mantine-color-gray-7);
+}
+
+// The bottom row: what can be destroyed on the left, where you can go on the right. Apart on purpose,
+// so a press aimed at one end cannot land on the other.
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--mantine-spacing-md);
+  padding-block-start: var(--mantine-spacing-sm);
+  border-block-start: 1px solid var(--mantine-color-gray-2);
+}
+
+.destructive,
+.places {
+  display: flex;
+  gap: var(--mantine-spacing-xs);
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--mantine-spacing-xs);
+}

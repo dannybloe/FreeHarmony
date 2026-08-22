@@ -11,7 +11,7 @@
  */
 import type { LibraryApi } from '../../../shared/api.ts';
 import type { DeviceDefinition, DeviceDraft, DeviceUsage } from '../../../shared/library.ts';
-import { KIND_NAMES, describeDefinition, namesUsedFor } from '../../../shared/library.ts';
+import { KIND_NAMES, describeDefinition, headingFor, namesUsedFor } from '../../../shared/library.ts';
 
 export type LibraryState =
   | { readonly status: 'idle' }
@@ -155,17 +155,49 @@ export function nameFor(definition: DeviceDefinition, state: LibraryState): stri
 }
 
 /**
- * The kind, and how many remotes use it, which is the fact that decides whether deleting it is safe.
+ * The name and the line under it for a device's own page, agreeing with what its tile said.
  *
- * Counted over **distinct** documents rather than over uses: one remote can hold the same appliance in two
- * positions, which is a real arrangement and not a mistake, and saying "on 2 remotes" for it would be
- * false in the one sentence somebody reads before pressing delete.
+ * It exists because the two disagreed and it was visible in a screenshot: the tile in the grid said "KPN",
+ * because `nameFor` falls back to what the documents call a device, and the page said "Unnamed something
+ * else", because `headingFor` in the shared model only knows the definition. Two names for one thing on two
+ * screens one press apart is the sort of thing that makes somebody wonder whether they opened the right one.
+ *
+ * So the title comes from `nameFor`, which is the tile's own rule, and the second line is whatever
+ * `headingFor` would have put under it: the make and model where a name of somebody's own is in front of
+ * them, and where it came from otherwise.
  */
-export function captionFor(definition: DeviceDefinition, state: LibraryState): string {
-  const kind = KIND_NAMES[definition.kind];
-  const on = new Set(usedBy(state, definition.id)).size;
-  if (on === 0) return `${kind}, on no remote`;
-  return `${kind}, on ${on === 1 ? '1 remote' : `${on} remotes`}`;
+export function headingIn(definition: DeviceDefinition, state: LibraryState): {
+  title: string; under?: string;
+} {
+  const stated = headingFor(definition);
+  const title = nameFor(definition, state);
+  // Equal titles means `headingFor` had a name of its own to work with, so its own second line is right.
+  // Different means the title came from the documents, and then the stated title is not worth repeating:
+  // "Unnamed something else" under "KPN" says nothing anybody needs.
+  if (title === stated.title) return stated;
+  return { title, ...(stated.under === undefined ? {} : { under: stated.under }) };
+}
+
+/**
+ * What a tile says under the name: the category, and nothing else.
+ *
+ * It used to say the usage as well, "Amplifier or receiver, on no remote", and that was cut off mid word on
+ * a tile of any reasonable width. The count moved to a badge in the corner, where a number belongs, and
+ * this kept the half a tile has room for.
+ *
+ * **No remote is now said by the badge's absence**, which is a real change in what the screen states rather
+ * than a tidy up: a device nothing uses has no badge. It is said in words on the device's own page, where
+ * there is room for a sentence and where somebody is about to decide whether deleting it is safe.
+ */
+export function captionFor(definition: DeviceDefinition, _state: LibraryState): string {
+  return KIND_NAMES[definition.kind];
+}
+
+/** How many remotes use one, counted over **distinct** documents, for the badge. */
+export function usedByCount(state: LibraryState, id: string): number {
+  // Distinct, because one remote can hold the same device in two positions, which is a real arrangement:
+  // a television driven directly and through an amplifier is two positions and one description.
+  return new Set(usedBy(state, id)).size;
 }
 
 /**

@@ -1,0 +1,76 @@
+// The sheet the library is drawn on: opaque, tall enough to hold a grid, and its own bar at the top.
+
+@use '../mantine' as m;
+
+.sheet {
+  // **One height, whatever page is showing**, which is Danny's decision of 22 August 2026 and a reversal
+  // of the paragraph that stood here. This grew with its contents for a day, because a panel holding six
+  // devices was three quarters empty white and that reads as a page that failed to load. His answer is the
+  // other trade and it is the one a person feels: a sheet that resizes as you move between its own pages
+  // moves the close button and the trail under the pointer, every time, where empty space is merely empty.
+  // The floor and the ceiling became the same number.
+  height: min(m.rem(620), 86vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-lg);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+// The panel's bar. The same layout as the application's and a different skin: no glass and not sticky,
+// because it sits inside an opaque sheet rather than over a page that scrolls under it.
+.bar {
+  flex: none;
+  border-block-end: 1px solid var(--mantine-color-gray-2);
+  background: var(--mantine-color-gray-0);
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: m.rem(34);
+  height: m.rem(34);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 50%;
+  color: var(--mantine-color-gray-7);
+  background: rgb(255 255 255 / 70%);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, scale 120ms ease;
+
+  @include m.hover {
+    color: var(--mantine-color-red-7);
+    border-color: var(--mantine-color-red-2);
+  }
+
+  &:active {
+    scale: 0.94;
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--mantine-color-red-3);
+    box-shadow: 0 0 0 m.rem(3) var(--mantine-color-red-1);
+  }
+}
+
+// Where a page goes. It scrolls, which the application's own pages do not: those are compositions that
+// fit, and a library with forty devices in it is a list.
+.page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--mantine-spacing-lg) var(--mantine-spacing-xl) var(--mantine-spacing-xl);
+
+  // It carries the focus when the panel opens, so that no button does. Suppressing the ring is safe here
+  // and only here: `tabindex="-1"` means nobody can reach this by keyboard, so the only way it is ever
+  // focused is the one that must not draw anything.
+  &:focus {
+    outline: none;
+  }
+}

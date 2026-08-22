@@ -41,6 +41,11 @@ export const stroke = {
  * about the name and not the thing, and a picture of a remote would have to be a **particular** model,
  * which is wrong for a mark that stands for the whole application.
  *
+ * **It is not in the bar any more**, taken out on 22 August 2026: beside the wordmark at 26 pixels it
+ * read as a wireless status indicator rather than as a mark, which is a thing an application has and not
+ * a thing it is. Kept because it is still the right drawing for a window icon or an About box, and
+ * because `KindGlyph`'s "something else" is the same beam leaving a box.
+ *
  * Where a particular model does have to be drawn, `@harmony/silhouettes` draws it. Nothing here
  * duplicates that: it is a library next door with a key addressable by name and every fill reading a
  * custom property, so the interface colours a drawing rather than keeping a second one.
@@ -52,6 +57,52 @@ export function BeamMark({ size = 28, className }: GlyphProps) {
       <path {...stroke} d="M11 8.4a5 5 0 0 1 0 7.2" opacity="0.9" />
       <path {...stroke} d="M14.6 5.6a9 9 0 0 1 0 12.8" opacity="0.6" />
       <path {...stroke} d="M18.2 2.8a13 13 0 0 1 0 18.4" opacity="0.3" />
+    </svg>
+  );
+}
+
+/**
+ * A collection of things, for a tile standing for a list rather than for one item.
+ *
+ * Three stacked rounded bars, which is the shape everything from a settings list to a table of contents
+ * uses, so it needs no learning. It is deliberately **generic**: the tiles on a remote's page are Devices,
+ * Activities and Settings, and a drawing per tile would be three pictures competing with the badge that
+ * carries the actual number.
+ */
+export function StackGlyph({ size = 26, className }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden="true">
+      <rect {...stroke} x="3.5" y="4.5" width="17" height="4" rx="2" />
+      <rect {...stroke} x="3.5" y="10" width="17" height="4" rx="2" />
+      <rect {...stroke} x="3.5" y="15.5" width="17" height="4" rx="2" />
+    </svg>
+  );
+}
+
+/**
+ * A cog, for the tile that is about the thing itself rather than about what is in it.
+ *
+ * The one place a drawing here is a convention rather than a picture of anything: nothing about a cog says
+ * "rename, copy or remove a document", and everybody knows it anyway.
+ *
+ * **The teeth are one closed outline and not eight spokes.** Eight short strokes radiating from a ring was
+ * the first attempt and it drew a sun at tile size, which is exactly the wrong word. The outline is
+ * generated from eight teeth at radius 9.4 and eight roots at 6.3, written out here as numbers because a
+ * drawing is data and this file states drawings rather than computing them.
+ */
+export function CogGlyph({ size = 26, className }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden="true">
+      <path
+        {...stroke}
+        strokeLinejoin="round"
+        d="M 9.90 6.06 L 10.21 2.77 L 13.79 2.77 L 14.10 6.06 L 14.71 6.31 L 17.26 4.21 L 19.79 6.74
+           L 17.69 9.29 L 17.94 9.90 L 21.23 10.21 L 21.23 13.79 L 17.94 14.10 L 17.69 14.71
+           L 19.79 17.26 L 17.26 19.79 L 14.71 17.69 L 14.10 17.94 L 13.79 21.23 L 10.21 21.23
+           L 9.90 17.94 L 9.29 17.69 L 6.74 19.79 L 4.21 17.26 L 6.31 14.71 L 6.06 14.10
+           L 2.77 13.79 L 2.77 10.21 L 6.06 9.90 L 6.31 9.29 L 4.21 6.74 L 6.74 4.21 L 9.29 6.31 Z"
+      />
+      <circle {...stroke} cx="12" cy="12" r="3.1" />
     </svg>
   );
 }

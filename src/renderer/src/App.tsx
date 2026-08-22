@@ -20,23 +20,24 @@ import { asRemoteModel, isSameModel } from './catalogue.ts';
 import { advanceOn } from './viewmodels/devices.model.ts';
 import { definitionIn } from './viewmodels/library.model.ts';
 import { afterChoosingModel, remoteOn } from './viewmodels/navigation.model.ts';
+import { trailFor } from './viewmodels/trail.model.ts';
 import { useContents } from './viewmodels/useContents.ts';
 import { useDevices } from './viewmodels/useDevices.ts';
 import { useHardware } from './viewmodels/useHardware.ts';
 import { useImport } from './viewmodels/useImport.ts';
 import { useLibrary } from './viewmodels/useLibrary.ts';
+import { useLibraryNavigation } from './viewmodels/useLibraryNavigation.ts';
 import { useNavigation } from './viewmodels/useNavigation.ts';
 import { useRemotes } from './viewmodels/useRemotes.ts';
 import { ActivitiesView } from './views/ActivitiesView.tsx';
 import { AddRemoteView } from './views/AddRemoteView.tsx';
 import { AppBar } from './views/AppBar.tsx';
-import { ApplianceView } from './views/ApplianceView.tsx';
 import { ConnectView } from './views/ConnectView.tsx';
 import { DeviceView } from './views/DeviceView.tsx';
 import { DevicesView } from './views/DevicesView.tsx';
 import { ExistingRemotesView } from './views/ExistingRemotesView.tsx';
 import { HomeView } from './views/HomeView.tsx';
-import { LibraryView } from './views/LibraryView.tsx';
+import { LibraryPanel } from './views/LibraryPanel.tsx';
 import { NameRemoteView } from './views/NameRemoteView.tsx';
 import { PickDeviceView } from './views/PickDeviceView.tsx';
 import { RemoteView } from './views/RemoteView.tsx';
@@ -65,7 +66,10 @@ export function App() {
   // The appliances this machine describes, wanted by the two screens that name one.
   // Which screens want the library. Home is on the list for one number, the count on its tile, which is
   // cheap: this reads files this application wrote and opens no hardware.
-  const library = useLibrary(['home', 'library', 'appliance', 'devices', 'device'].includes(screen.at));
+  const panel = useLibraryNavigation();
+  // Wanted while the panel is open, and by the two screens inside a remote that name a device. Cheap: this
+  // reads files this application wrote and opens no hardware.
+  const library = useLibrary(panel.open || screen.at === 'devices' || screen.at === 'device');
   const [picking, setPicking] = useState(false);
   // The one thing here that opens a remote. It is a model of its own rather than part of `useDevices`,
   // because that one polls and this one must never be on a timer.
@@ -89,7 +93,7 @@ export function App() {
 
   // Putting an appliance on a remote, which changes the document's contents rather than the folder, so
   // it reloads the contents and not the list. The picker closes itself; this is only the writing.
-  const addDevice = async (name: string, definition: string, label: string) => {
+  const addDevice = async (name: string, definition: string, label?: string) => {
     await api().remotes.addDevice(name, definition, label);
     await contents.reload();
   };
@@ -108,9 +112,24 @@ export function App() {
     }
   }, [screen.at, devices, nav, remotes.remotes]);
 
+  // Where you are, as a trail, derived from the screen. It is also the whole of the navigation since the
+  // back arrow went, so its first crumb is the root and pressing that is how anybody gets Home. `trailFor`
+  // is a plain function, so every screen's trail is walked by a test with no window at all.
+  const held = contents.contents.status === 'ready' ? contents.contents.contents : undefined;
+  const crumbs = trailFor(screen, {
+    deviceOn: (_remote, slot) => held?.content.devices.find((one) => one.slot === slot)?.label,
+  }).map((crumb) => ({
+    label: crumb.label,
+    ...(crumb.to === undefined ? {} : { onClick: () => nav.go(crumb.to!) }),
+  }));
+
   return (
     <div className={classes.shell}>
-      <AppBar canGoBack={nav.canGoBack} onBack={() => nav.back()} />
+      <AppBar
+        crumbs={crumbs}
+        // The panel remembers which remote you came from, so a device inside it can offer to join that one.
+        onLibrary={() => panel.openFrom(remoteOn(screen))}
+      />
 
       <main className={classes.page}>
         {remotes.error !== undefined && <Text c="red" size="sm">{remotes.error}</Text>}
@@ -121,8 +140,6 @@ export function App() {
             loading={remotes.status === 'loading'}
             onOpen={(name) => nav.go({ at: 'remote', name })}
             onAdd={() => nav.go({ at: 'add' })}
-            appliances={library.state.status === 'ready' ? library.state.definitions.length : undefined}
-            onLibrary={() => nav.go({ at: 'library' })}
           />
         )}
 
@@ -183,42 +200,14 @@ export function App() {
         {screen.at === 'connect' && (
           <ConnectView
             devices={devices}
-            onBack={() => nav.back()}
+            // The chooser, by name rather than by history: connecting is reached from it and nothing else,
+            // so "the way back" and "the chooser" are the same screen and only one of them needs a stack.
+            onBack={() => nav.go({ at: 'add' })}
             onPickByHand={() => nav.go({ at: 'add' })}
             onContinue={(model, productId) =>
               nav.go(afterChoosingModel(remotes.remotes, model, 'device', productId))}
           />
         )}
-
-        {screen.at === 'library' && (
-          <LibraryView
-            state={library.state}
-            onOpen={(id) => nav.go({ at: 'appliance', id })}
-            onCreate={(draft) => library.create(draft)}
-          />
-        )}
-
-        {/* One appliance, and the identifier is resolved against the loaded list rather than fetched.
-            `definitionIn` answers `undefined` for both "not loaded yet" and "not on this machine", and the
-            page says the second, which is the honest reading while the first is a flicker. */}
-        {screen.at === 'appliance' && (() => {
-          const id = screen.id;
-          const definition = definitionIn(library.state, id);
-          return (
-            <ApplianceView
-              definition={definition}
-              usedBy={library.state.status === 'ready'
-                ? library.state.usage.filter((one) => one.definition === id)
-                : []}
-              busy={library.state.status === 'loading'}
-              onSave={(next) => void library.put(next)}
-              // A copy lands on its own page, because a copy you cannot see is indistinguishable from
-              // nothing having happened: the two descriptions are identical bar the identifier.
-              onClone={() => void library.clone(id).then((made) => nav.go({ at: 'appliance', id: made.id }))}
-              onRemove={() => void library.remove(id).then(() => nav.definitionRemoved(id))}
-            />
-          );
-        })()}
 
         {/* Every screen about one remote, resolved once.
             One block rather than five, because all five need the same two things: the document out of the
@@ -231,8 +220,6 @@ export function App() {
           if (remote === undefined) {
             return <Text size="sm">That remote is no longer in your documents.</Text>;
           }
-          const held = contents.contents.status === 'ready' ? contents.contents.contents : undefined;
-
           if (screen.at === 'remote') {
             return (
               <RemoteView
@@ -292,6 +279,33 @@ export function App() {
           );
         })()}
       </main>
+
+      {/* The library, over everything, reachable from every screen. It is outside `main` on purpose: it is
+          not a page of the application, it is a sheet laid over whichever page is showing. */}
+      <LibraryPanel
+        nav={panel}
+        state={library.state}
+        remotes={remotes.remotes}
+        onCreate={(draft) => library.create(draft)}
+        onSave={(next) => void library.put(next)}
+        onClone={(id, name) => library.clone(id, name)}
+        onRemove={(id) => void library.remove(id).then(() => panel.removed(id))}
+        onOpenRemote={(name) => {
+          // The remote you came from closes the panel and leaves you where you were; any other one takes
+          // you there. Danny's, and it is the difference between a shortcut and a detour.
+          if (name !== panel.from) nav.go({ at: 'remote', name });
+          panel.close();
+        }}
+        onAddToCurrent={(id) => {
+          const to = panel.from;
+          if (to === undefined) return;
+          // No label. It inherits the device's own name until somebody types one on the remote, which is
+          // what makes this one press instead of a form.
+          void api().remotes.addDevice(to, id)
+            .then(() => contents.reload())
+            .then(() => panel.close());
+        }}
+      />
     </div>
   );
 }

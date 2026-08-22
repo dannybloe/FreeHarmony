@@ -8,13 +8,20 @@
  * The two cases worth having are the last two: renaming a remote while looking at it, and removing it.
  * Both are the reason a screen holds a **name** rather than a document, and both would pass unnoticed
  * in a reader test while leaving somebody staring at a page about a folder that no longer exists.
+ *
+ * **Half of this file was about a history stack and there is none any more.** The back arrows came off both
+ * bars on 22 August 2026 and the trail became the only way up, so `back`, `canGoBack` and the rewriting of
+ * screens behind this one went with them. Those claims are not gone, they moved: "you can always get out of
+ * here" is now a property of the trail and is asserted in `trail.test.ts`, where it is stronger, because a
+ * trail can be checked on every screen at once and a stack could only be checked on the route somebody
+ * thought to walk.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { RemoteDocument } from '../src/shared/remote.ts';
 import {
-  NavigationModel, REMOTE_SCREENS, START, afterChoosingModel, applianceOn, remoteOn,
+  NavigationModel, REMOTE_SCREENS, START, afterChoosingModel, remoteOn,
   type RemoteScreen, type Screen,
 } from '../src/renderer/src/viewmodels/navigation.model.ts';
 
@@ -34,93 +41,86 @@ function remote(name: string): RemoteDocument {
 /** The model the naming screen carries. A name and a skin, which is all a document ever stores. */
 const A_HARMONY_ONE = { name: 'Harmony One', skin: 54 } as const;
 
-test('it starts on Home, where there is nowhere to go back to', () => {
+test('it starts on Home', () => {
   const { nav } = record();
   assert.deepEqual(nav.screen, START);
-  assert.equal(nav.canGoBack, false);
 });
 
-test('the whole flow Danny sketched, forwards and then all the way back', () => {
+test('the whole flow Danny sketched, forwards', () => {
+  // Forwards only, and the way out is `trail.test.ts`: every screen's trail begins at a root that is a
+  // press away from Home, which is the claim that replaced this test's second half.
   const { nav } = record();
   nav.go({ at: 'add' });
   nav.go({ at: 'name', model: A_HARMONY_ONE, origin: 'chooser' });
   assert.deepEqual(nav.screen, { at: 'name', model: A_HARMONY_ONE, origin: 'chooser' });
-  assert.equal(nav.canGoBack, true);
-
-  nav.back();
-  assert.deepEqual(nav.screen, { at: 'add' }, 'naming came from the chooser');
-  nav.back();
-  assert.deepEqual(nav.screen, START, 'and the chooser came from Home');
-  assert.equal(nav.canGoBack, false);
 });
 
-test('the other route in: connect, and back from it lands where you came from', () => {
-  // The case a rule of "every screen has one parent" gets wrong. Naming is reached from the chooser and
-  // from the connect page, so back has to remember which, and that is why there is a stack.
-  const { nav } = record();
-  nav.go({ at: 'add' });
-  nav.go({ at: 'connect' });
-  nav.go({ at: 'name', model: { name: 'Harmony 600', skin: 71 }, origin: 'device' });
+test('both routes into naming end on the same screen, which nothing afterwards can tell apart', () => {
+  // This test used to be the argument for keeping a history: naming is reached from the chooser and from
+  // the connect page, so "back" had to remember which. With the trail as the only way up that difference
+  // is deliberately invisible, and the honest way to test it is to assert the two screens are equal
+  // except for the one field that says where the model came from, since one page words itself differently.
+  const model = { name: 'Harmony 600', skin: 71 } as const;
+  const viaChooser = record();
+  viaChooser.nav.go({ at: 'add' });
+  viaChooser.nav.go({ at: 'name', model, origin: 'chooser' });
 
-  nav.back();
-  assert.deepEqual(nav.screen, { at: 'connect' }, 'not the chooser, which is where a rule would go');
-  nav.back();
-  assert.deepEqual(nav.screen, { at: 'add' });
+  const viaConnect = record();
+  viaConnect.nav.go({ at: 'add' });
+  viaConnect.nav.go({ at: 'connect' });
+  viaConnect.nav.go({ at: 'name', model, origin: 'device' });
+
+  assert.deepEqual({ ...viaChooser.nav.screen, origin: 'x' }, { ...viaConnect.nav.screen, origin: 'x' },
+                   'the route is not part of where you are');
+  assert.notDeepEqual(viaChooser.nav.screen, viaConnect.nav.screen, 'and the origin is the one exception');
 });
 
-test('going home clears the way back, so a fresh start is a fresh start', () => {
+test('going home is going home, from however deep in a flow', () => {
   const { nav } = record();
   nav.go({ at: 'add' });
   nav.go({ at: 'name', model: A_HARMONY_ONE, origin: 'chooser' });
   nav.home();
 
   assert.deepEqual(nav.screen, START);
-  assert.equal(nav.canGoBack, false);
-  nav.back();
-  assert.deepEqual(nav.screen, START, 'and back from Home stays on Home rather than reopening a page');
 });
 
 test('every step is announced, because a screen redraws from what it is told', () => {
   const { nav, seen } = record();
   nav.go({ at: 'add' });
   nav.go({ at: 'remote', name: 'Woonkamer' });
-  nav.back();
+  nav.home();
 
-  assert.deepEqual(seen, [{ at: 'add' }, { at: 'remote', name: 'Woonkamer' }, { at: 'add' }]);
+  assert.deepEqual(seen, [{ at: 'add' }, { at: 'remote', name: 'Woonkamer' }, START]);
 });
 
-test('renaming a remote you are looking at follows the new name, here and behind', () => {
-  // Held by name and not as a document, so this is the moment that arrangement earns itself. The stack
-  // is rewritten too: going back to a page naming the old folder is the same bug arriving later.
+test('renaming a remote you are looking at follows the new name', () => {
+  // Held by name and not as a document, so this is the moment that arrangement earns itself.
   const { nav } = record();
   nav.go({ at: 'remote', name: 'Woonkamer' });
-  nav.go({ at: 'add' });
   nav.renamed('Woonkamer', 'Zolder');
 
-  assert.deepEqual(nav.screen, { at: 'add' }, 'the current screen was not about it');
-  nav.back();
-  assert.deepEqual(nav.screen, { at: 'remote', name: 'Zolder' }, 'but the one behind was');
+  assert.deepEqual(nav.screen, { at: 'remote', name: 'Zolder' });
 });
 
-test('removing the remote you are looking at leaves the page', () => {
+test('removing the remote you are looking at goes Home', () => {
+  // Home and not "wherever you were before", which is what this asserted while there was a history. It is
+  // the better answer as well as the only one left: the folder is gone, so the nearest place that is
+  // certainly still there is the one the trail puts above it.
   const { nav } = record();
-  nav.go({ at: 'add' });
   nav.go({ at: 'remote', name: 'Woonkamer' });
   nav.removed('Woonkamer');
 
-  assert.deepEqual(nav.screen, { at: 'add' }, 'back to where it was opened from');
-  nav.back();
-  assert.deepEqual(nav.screen, START, 'and nothing on the stack still names it');
+  assert.deepEqual(nav.screen, START);
 });
 
-test('a removed remote is dropped from the way back as well', () => {
+test('removing a remote you are not looking at leaves you where you are', () => {
+  // The control for the test above, and it is doing the same job the old "dropped from the way back"
+  // test did: without it, a `removed` that simply went Home whatever was on screen would pass.
   const { nav } = record();
-  nav.go({ at: 'remote', name: 'Woonkamer' });
-  nav.go({ at: 'add' });
+  nav.go({ at: 'remote', name: 'Zolder' });
   nav.removed('Woonkamer');
 
-  nav.back();
-  assert.deepEqual(nav.screen, START, 'the page about it is gone from the stack, not shown again');
+  assert.deepEqual(nav.screen, { at: 'remote', name: 'Zolder' });
 });
 
 test('a screen resolves its remote out of the list, and says nothing when it cannot', () => {
@@ -179,8 +179,8 @@ test('a document with no model recorded matches nothing, so it never blocks addi
 test('every screen about a remote follows a rename, not just the remote page itself', () => {
   // The bug this arrangement was restructured to make impossible. `renamed` used to test `at === 'remote'`
   // outright, which was right while that was the only screen about a remote and would have gone wrong the
-  // moment there were five: renaming from the devices page would leave every page behind it naming a
-  // folder that is no longer there.
+  // moment there were five: renaming from the devices page would leave that page naming a folder that is
+  // no longer there.
   //
   // The list is walked rather than three cases being picked, so a screen added later is covered here on
   // the day it is added, and `REMOTE_SCREENS_ARE_EXHAUSTIVE` is what stops the list itself drifting.
@@ -200,11 +200,10 @@ test('every screen about a remote follows a rename, not just the remote page its
 test('every screen about a remote is dropped when it is removed', () => {
   for (const at of REMOTE_SCREENS) {
     const { nav } = record();
-    nav.go({ at: 'add' });
     nav.go({ at, name: 'Woonkamer', ...(at === 'device' ? { slot: 3 } : {}) } as RemoteScreen);
     nav.removed('Woonkamer');
 
-    assert.deepEqual(nav.screen, { at: 'add' }, `${at} stayed on a remote that is gone`);
+    assert.deepEqual(nav.screen, START, `${at} stayed on a remote that is gone`);
   }
 });
 
@@ -219,68 +218,4 @@ test('a screen about no remote is left alone by both of them', () => {
     nav.renamed('Woonkamer', 'Zolder');
     assert.deepEqual(nav.screen, screen);
   }
-});
-
-// The library's two screens, which are about no remote at all. That is the property worth pinning: they
-// arrived after `remoteOn` became the one place that says which screens name a remote, so the risk is not
-// that they break something, it is that a later change quietly counts them as remote screens.
-
-test('the library screens are about no remote, so renaming one cannot touch them', () => {
-  const nav = new NavigationModel(() => {});
-
-  nav.go({ at: 'library' });
-  nav.go({ at: 'appliance', id: 'appliance-a' });
-  assert.equal(remoteOn({ at: 'library' }), undefined);
-  assert.equal(remoteOn({ at: 'appliance', id: 'appliance-a' }), undefined);
-
-  // A rename while standing on an appliance page changes nothing, because nothing here names a remote.
-  nav.renamed('Living room', 'Lounge');
-  assert.deepEqual(nav.screen, { at: 'appliance', id: 'appliance-a' });
-  // And removing a remote leaves it alone too, which is the arm a shared `removed` would have got wrong.
-  nav.removed('Living room');
-  assert.deepEqual(nav.screen, { at: 'appliance', id: 'appliance-a' });
-});
-
-test('an appliance is held by identifier, which is the opposite rule from a remote', () => {
-  // A remote is held by name because its name **is** its folder, so a rename has to follow. An appliance's
-  // name is a correctable field, so holding one would put the screen on the wrong appliance the moment
-  // somebody fixed a spelling. Both rules live in `applianceOn` and `remoteOn`, one line each.
-  assert.equal(applianceOn({ at: 'appliance', id: 'appliance-a' }), 'appliance-a');
-  assert.equal(applianceOn({ at: 'library' }), undefined);
-  assert.equal(applianceOn({ at: 'devices', name: 'Living room' }), undefined);
-});
-
-test('throwing an appliance away leaves its page, and lands on the library behind it', () => {
-  const nav = new NavigationModel(() => {});
-  nav.go({ at: 'library' });
-  nav.go({ at: 'appliance', id: 'appliance-a' });
-
-  nav.definitionRemoved('appliance-a');
-
-  // Back rather than home, because deleting is done from the appliance's own page and the page behind it is
-  // the list, which is where a person expects to be put down.
-  assert.deepEqual(nav.screen, { at: 'library' });
-});
-
-test('a deleted appliance is taken out of the history too, not just off the screen', () => {
-  const nav = new NavigationModel(() => {});
-  nav.go({ at: 'library' });
-  nav.go({ at: 'appliance', id: 'appliance-a' });
-  nav.go({ at: 'appliance', id: 'appliance-b' });
-  // Copying lands on the copy's page, so two appliance pages in a row is the ordinary case rather than a
-  // contrived one, and going back onto a deleted one is the bug arriving a moment later.
-  nav.go({ at: 'appliance', id: 'appliance-a' });
-
-  nav.definitionRemoved('appliance-a');
-  assert.deepEqual(nav.screen, { at: 'appliance', id: 'appliance-b' });
-  nav.back();
-  assert.deepEqual(nav.screen, { at: 'library' });
-});
-
-test('another appliance being deleted leaves this page where it is', () => {
-  const nav = new NavigationModel(() => {});
-  nav.go({ at: 'appliance', id: 'appliance-a' });
-  // The control. Without it the two tests above pass for a model that leaves on any delete at all.
-  nav.definitionRemoved('appliance-b');
-  assert.deepEqual(nav.screen, { at: 'appliance', id: 'appliance-a' });
 });

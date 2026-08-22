@@ -17,7 +17,8 @@ import assert from 'node:assert/strict';
 import type { LibraryApi } from '../src/shared/api.ts';
 import type { DeviceDefinition, DeviceDraft, DeviceUsage } from '../src/shared/library.ts';
 import {
-  LibraryModel, captionFor, definitionIn, listed, nameFor, usedBy, type LibraryState,
+  LibraryModel, captionFor, definitionIn, listed, nameFor, usedBy, usedByCount,
+  type LibraryState,
 } from '../src/renderer/src/viewmodels/library.model.ts';
 
 function appliance(id: string, over: Partial<DeviceDefinition> = {}): DeviceDefinition {
@@ -162,7 +163,7 @@ test('a tile is named by the best thing anybody knows about the appliance', () =
   assert.equal(nameFor(appliance('appliance-e'), ready([])), 'Nothing known yet');
 });
 
-test('a caption counts remotes and not uses, which is what a delete confirmation reads', () => {
+test('the count is over distinct remotes and not over uses', () => {
   const twice: DeviceUsage[] = [
     { definition: 'appliance-a', remote: 'Living room', label: 'Telly' },
     // The same remote using one appliance in two positions, which is a real arrangement: a television
@@ -170,17 +171,17 @@ test('a caption counts remotes and not uses, which is what a delete confirmation
     { definition: 'appliance-a', remote: 'Living room', label: 'Telly again' },
   ];
 
-  assert.equal(captionFor(appliance('appliance-a', { kind: 'television' }), ready([], twice)),
-               'Television, on 1 remote');
-  assert.equal(
-    captionFor(appliance('appliance-a', { kind: 'television' }), ready([], [
-      ...twice, { definition: 'appliance-a', remote: 'Bedroom' },
-    ])),
-    'Television, on 2 remotes');
-  assert.equal(captionFor(appliance('appliance-a', { kind: 'receiver' }), ready([])),
-               'Amplifier or receiver, on no remote');
-  // The control that says the count is not just the length of the usage list: two uses on one remote.
+  // One remote, two positions on it. The control that says this is not the length of the usage list.
+  assert.equal(usedByCount(ready([], twice), 'appliance-a'), 1);
   assert.equal(usedBy(ready([], twice), 'appliance-a').length, 2);
+  assert.equal(
+    usedByCount(ready([], [...twice, { definition: 'appliance-a', remote: 'Bedroom' }]), 'appliance-a'), 2);
+  assert.equal(usedByCount(ready([]), 'appliance-a'), 0);
+
+  // And a tile's words are the category alone, because the count is a badge now. A caption saying both ran
+  // past the tile and was cut off mid word.
+  assert.equal(captionFor(appliance('appliance-a', { kind: 'receiver' }), ready([])),
+               'Amplifier or receiver');
 });
 
 test('the list is in the order a person reads it, not the order the library hands it over', () => {

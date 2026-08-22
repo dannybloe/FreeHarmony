@@ -1,0 +1,41 @@
+// The add form: a title, four fields in one column, one button.
+
+@use '../mantine' as m;
+
+.add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+  // Narrow on purpose. A form whose fields run the width of the panel is a form nobody can scan, and
+  // these four are short.
+  max-width: m.rem(440);
+}
+
+.title {
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mantine-spacing-sm);
+}
+
+// A row in the category list: the drawing, then the words.
+.option {
+  display: flex;
+  align-items: center;
+  gap: m.rem(8);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-start;
+}

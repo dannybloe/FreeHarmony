@@ -157,8 +157,10 @@ test('the devices page shows a tile per device, and the activities page one per 
   assert.equal(await press('Devices'), true, 'and its page offers a way in to the devices');
   assert.equal(await tiles('Devices'), DEVICES, 'one tile per device, the add tile aside');
 
-  // Back to the remote, the way a person goes back: the arrow in the bar.
-  assert.equal(await press('Back'), true);
+  // Back to the remote, the way a person goes back since 22 August 2026: the remote's own crumb in the
+  // trail. There is no arrow any more, and this is the one test that exercises the trail as a control
+  // rather than as a computation, which is why it presses the name rather than calling `go`.
+  assert.equal(await press('living room'), true);
   assert.equal(await press('Activities'), true);
   assert.equal(await tiles('Activities'), ACTIVITIES, 'one tile per activity');
 });
