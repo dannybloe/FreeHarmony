@@ -176,6 +176,17 @@ export const CONTENT: Verdicts<RemoteContent> = {
   devices: { writeback: 'rebuilt', structure: 'base slot 5 and base slot 0' },
   activities: { writeback: 'rebuilt', structure: 'base slot 9 and base slot 10' },
   buttons: { writeback: 'rebuilt', structure: 'base slot 6, 9 and 10' },
+  language: {
+    writeback: 'carried',
+    structure: "base slot 11's screen programs, as hundreds of drawn strings",
+    // The only field in this table that is not one place in the file. There is no language field: the
+    // language **is** every word the remote shows, so changing it means regenerating all of them, and
+    // the Help walkthrough alone is a third to a half of the pages. `carried` is right in the sense
+    // that the words come through a save untouched, and misleading if read as "a same length edit
+    // would do it", so this note is the correction: nothing here can change a configuration's
+    // language, and the flag exists so that whatever generates a page later knows which one to use.
+    note: 'no field states it; it is inferred from Logitech\'s own wording and never written back',
+  },
   filledFrom: { writeback: 'ours' },
 };
 

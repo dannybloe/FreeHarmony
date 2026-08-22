@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto';
 
 import {
   activities as readActivities,
+  configLanguage,
   deviceVariables,
   devices as readDevices,
   infraredCodesPerList,
@@ -285,11 +286,17 @@ export function importConfiguration(
   const payload = payloadOf(bytes, options.idPrefix);
   const c = parse(payload);
   const { uses, definitions } = devicesOf(c, options.now, options.idPrefix);
+  // The language, where the evidence carries it. `configLanguage` returns the tag with what it matched
+  // and what the runner up scored; only the tag crosses into the model, because a screen has nothing to
+  // do with the margin and a document should not carry a confidence somebody will later read as a fact.
+  // An absent value means the reader refused, which it does on anything that is not somebody's config.
+  const language = configLanguage(c)?.tag;
   return {
     content: {
       devices: uses,
       activities: activitiesOf(c),
       buttons: buttonsOf(c),
+      ...(language === undefined ? {} : { language }),
       filledFrom: 'a-configuration',
     },
     definitions,

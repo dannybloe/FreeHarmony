@@ -50,7 +50,7 @@ test('every table covers a field and the count is exact', () => {
   );
   assert.deepEqual(counted, {
     SIGNAL: 7, COMMAND: 5, TRANSITION: 3, PROPERTY: 3, DESIRED: 3, TIMING: 3, DEFINITION: 9,
-    DEVICE_USE: 3, STEP: 2, ROLE: 6, ACTIVITY: 8, BUTTON: 6, CONTENT: 4,
+    DEVICE_USE: 3, STEP: 2, ROLE: 6, ACTIVITY: 8, BUTTON: 6, CONTENT: 5,
   });
 });
 

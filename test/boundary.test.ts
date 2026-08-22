@@ -84,12 +84,12 @@ const LIBRARIES: readonly {
   functions: readonly string[];
 }[] = [
   {
-    // 361 until 21 August 2026, when the sibling gained a reader for what a length change would move.
-    // The number moving is this row doing its job: nothing here asked for those thirteen exports, and a
+    // 361 until 21 August 2026, then 374 for a reader of what a length change would move, then 377 for
+    // the language reader this product asked for. The number moving is this row doing its job: a
     // boundary whose surface drifts unwatched is the one that surprises somebody later.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 374,
+    exports: 377,
     entry: ['packages', 'codec', 'src', 'index.ts'],
     functions: ['parse', 'inventory', 'devices', 'activities', 'trailerChecksum'],
   },

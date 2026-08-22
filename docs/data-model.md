@@ -204,6 +204,31 @@ The one thing to carry per field is whether it can be written back. That belongs
 not in the emitter, because otherwise we build interface for something that can never reach a
 remote.
 
+## The language is a flag, and that is all it is for now
+
+Danny's, on 22 August 2026, and the reason to add it before anything uses it: it cannot be recovered
+later from a document somebody has already edited.
+
+A remote's whole interface is in its configuration, in the language of whoever generated it, and
+nothing in the file says which. Twelve of the thirteen configurations in the corpus are English and one
+is Dutch, which nobody had noticed. So the model carries `language` on the content, as an IETF tag,
+filled by the sibling's own inference and absent where the evidence is too thin.
+
+Why it will matter: a third to a half of every configuration's screen pages are the **Help
+walkthrough**, a chain asking one question per appliance with two keys branching to the next. The
+wording is Logitech's template with the person's own appliance names dropped into it. So anything that
+**builds** a page has to build it in the right language, and the service that held Logitech's
+translations is the discontinued one.
+
+Why it does not matter yet: an editor makes minimal changes against a configuration that already
+exists, and those pages are already in it. As long as no appliance is added or removed they stay
+correct and are carried through untouched. It becomes real work at step 6, adding and removing
+appliances and activities.
+
+**It is the one field in the writeback table that is not one place in the file**, and the table says
+so. There is no language field to change: the language is every word the remote shows, so changing it
+means regenerating all of them.
+
 ## Decided: the device library sits outside the document
 
 Settled on 21 August 2026. A device definition lives in a library beside the documents, and a

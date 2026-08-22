@@ -229,6 +229,21 @@ export interface RemoteContent {
   readonly devices: readonly DeviceUse[];
   readonly activities: readonly Activity[];
   readonly buttons: readonly ButtonBinding[];
+  /**
+   * Which language the remote speaks, as an IETF tag: `en`, `nl`.
+   *
+   * **Every word a remote shows is in its configuration**, in the language of whoever generated it, and
+   * nothing in the file says which. It is inferred from Logitech's own menu and Help wording next door,
+   * which answers on every configuration in the corpus and refuses on anything that is not one, so an
+   * absent value here means genuinely unknown rather than not looked for.
+   *
+   * It matters for **writing** rather than for showing. A third to a half of a configuration's screen
+   * pages are the Help walkthrough, whose wording is Logitech's template with the user's own device
+   * names dropped in, so anything that has to build a page has to build it in the right language.
+   * Nothing does yet, and the flag is here now because it cannot be recovered later from a document
+   * somebody has already edited.
+   */
+  readonly language?: string;
   /** Where this came from, so that "absent" can be read as "the compiler dropped it" or as "not set". */
   readonly filledFrom: 'a-configuration' | 'here';
 }

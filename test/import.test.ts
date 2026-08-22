@@ -7,9 +7,10 @@
  * skip raised inside a loop lets the loop finish and a corpus wide total afterwards is asserted against
  * nothing.
  *
- * Four configurations, three architectures, on purpose. Two of one remote prove much less than two
- * architectures, and the arch 9 one is where the corpus stops agreeing with itself: it packs into four
- * action list runs where every other packs into five.
+ * Five configurations, three architectures, on purpose. Two of one remote prove much less than two
+ * architectures, and the arch 9 ones are where the corpus stops agreeing with itself: one packs into
+ * four action list runs where every other packs into five, and the other is the only configuration
+ * here that is not in English.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,13 +31,18 @@ import { mayBeShared } from '../src/shared/library.ts';
  */
 const SAMPLES = [
   { name: 'one_config', devices: 5, activities: 8, buttons: 461, steps: 461,
-    properties: 9, transitions: 41 },
+    properties: 9, transitions: 41, language: 'en' },
   { name: 'h600_config', devices: 4, activities: 3, buttons: 229, steps: 241,
-    properties: 7, transitions: 17 },
+    properties: 7, transitions: 17, language: 'en' },
   { name: 'h525_config', devices: 4, activities: 3, buttons: 220, steps: 220,
-    properties: 6, transitions: 16 },
+    properties: 6, transitions: 16, language: 'en' },
   { name: 'arch8_config_a', devices: 3, activities: 1, buttons: 210, steps: 210,
-    properties: 5, transitions: 15 },
+    properties: 5, transitions: 15, language: 'en' },
+  // **The fifth row exists for one field.** Twelve of the thirteen configurations in the corpus are in
+  // English, so a language assertion over the four above would pass on a reader that answered `en`
+  // unconditionally. This one is Dutch, and it is the only sample here that can fail that claim.
+  { name: 'h525_config_2', devices: 1, activities: 1, buttons: 102, steps: 102,
+    properties: 2, transitions: 22, language: 'nl' },
 ] as const;
 
 const NAMES = SAMPLES.map((one) => one.name);
@@ -45,7 +51,7 @@ const NOW = '2026-08-21T12:00:00.000Z';
 
 test('every configuration fills the model, and what it cannot say it leaves absent',
      skipUnless(...NAMES), () => {
-  for (const { name, devices, activities, buttons, steps } of SAMPLES) {
+  for (const { name, devices, activities, buttons, steps, language } of SAMPLES) {
     const imported = importConfiguration(require_(name), { now: NOW, idPrefix: name });
     const { content, definitions } = imported;
 
@@ -58,6 +64,11 @@ test('every configuration fills the model, and what it cannot say it leaves abse
     // only its codes.
     assert.equal(definitions.length, devices, `${name}: a definition per device`);
     assert.equal(content.filledFrom, 'a-configuration');
+    // **The language, which no field in the file states.** It is inferred from Logitech's own menu and
+    // Help wording, so the claim that carries weight is the Dutch sample: twelve of the thirteen
+    // configurations in the corpus are English, and a reader that answered `en` unconditionally would
+    // pass every other row here.
+    assert.equal(content.language, language, `${name}: language`);
 
     for (const definition of definitions) {
       // The three claims that make an imported definition honest. It says where it came from, it may
