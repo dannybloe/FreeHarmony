@@ -15,7 +15,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parse, payloadOf } from '@harmony/codec';
+import { activities as readActivities, handlerSets, parse, payloadOf, taggedList }
+  from '@harmony/codec';
 import { require_, skipUnless } from '@harmony/lab';
 
 import { importConfiguration, propertiesOf } from '../src/main/import.ts';
@@ -182,6 +183,81 @@ test('no transition sends another appliance\'s code, which is what pins the pair
     crossings += foreign;
   }
   assert.equal(crossings, 0);
+});
+
+/** Whether an action list sends an infrared code within four hops. `0x7D` is the send. */
+function sends(lists: readonly (readonly { opcode: number; operand: number }[] | undefined)[],
+               index: number, depth = 0, seen = new Set<number>()): boolean {
+  if (depth > 4 || seen.has(index)) return false;
+  seen.add(index);
+  for (const one of lists[index] ?? []) {
+    if (one.opcode === 0x7d) return true;
+    // `0x7F` calls another list, and the send is often one hop down: on arch 14 a key emits
+    // `{0x7F, 0x7D, 0x7C}` with the code below, which is why this follows rather than looking once.
+    if (one.opcode === 0x7f && sends(lists, one.operand, depth + 1, seen)) return true;
+  }
+  return false;
+}
+
+test('a keypad map that sends a code is an activity\'s, and the ones that are not send nothing',
+     skipUnless(...NAMES), () => {
+  // **The scoping test, and it exists because a claim was written too widely.** The page that assigns
+  // buttons reads a keypad map per activity, and the note beside it said every keypad binding belongs to
+  // an activity, full stop. Danny pointed out that a Harmony also has a **device mode**, where the keypad
+  // drives one device with no activity running, which is a real thing the hardware does and would make
+  // that claim false about the format.
+  //
+  // So this measures the sets rather than restating the conclusion. There are 48 keypad binding maps in
+  // the five configurations; 21 are installed by something in the configuration itself and 16 of those by
+  // an activity. **Exactly those 16 send an infrared code**, and the identity is the finding: the maps no
+  // activity installs send nothing at any depth, so there is no device mode keypad map in any of these
+  // files. Ten of them bind fifty or more keys to lists made of comparisons and mode entries, which is a
+  // menu rather than a device.
+  //
+  // What it deliberately does **not** claim is that the format has no such thing. These configurations
+  // carry none, which is a fact about them; whether a Harmony in device mode remaps its keypad at all is
+  // a question for the remote on the bench.
+  let maps = 0;
+  let installed = 0;
+  let byAnActivity = 0;
+  let sending = 0;
+  let wholeKeypad = 0;
+  let sendingAndNotAnActivity = 0;
+  for (const { name } of SAMPLES) {
+    const c = parse(payloadOf(require_(name), name));
+    const sets = handlerSets(c);
+    assert.ok(sets !== undefined, `${name}: no keypad maps at all`);
+    const lists = c.actionLists() ?? [];
+    const claimed = new Set(readActivities(c).map((one) => one.set).filter((one) => one >= 0));
+    // Which maps the configuration installs: `0x1F` with a high byte of `0xFF` selects one, section 120.
+    const chosen = new Set<number>();
+    for (const list of lists) {
+      for (const one of list ?? []) {
+        if (one.opcode === 0x1f && (one.operand >> 8) === 0xff) chosen.add(one.operand & 0xff);
+      }
+    }
+
+    maps += sets.addresses.length;
+    installed += chosen.size;
+    byAnActivity += claimed.size;
+    sets.addresses.forEach((address, index) => {
+      const entries = taggedList(c, address)?.entries ?? [];
+      const emits = entries.filter((one) => one.opcode === 0x7f)
+        .some((one) => sends(lists, one.operand));
+      if (emits) sending += 1;
+      if (emits && !claimed.has(index)) sendingAndNotAnActivity += 1;
+      if (entries.length >= 50) wholeKeypad += 1;
+    });
+  }
+
+  assert.equal(maps, 48);
+  assert.equal(installed, 21, 'installed by something in the configuration');
+  assert.equal(byAnActivity, 16, 'and by an activity');
+  assert.equal(sending, 16, 'exactly as many send a code');
+  // The identity, which is the whole claim and the one assertion that can fail on a new sample: a keypad
+  // map that sends a code and is not an activity's would be a device mode map, and there is none.
+  assert.equal(sendingAndNotAnActivity, 0);
+  assert.equal(wholeKeypad, 10, 'maps binding fifty or more keys, none of which sends anything');
 });
 
 test('a keypad key names the activity it belongs to, and never the configuration\'s own set number',

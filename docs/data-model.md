@@ -318,16 +318,28 @@ It has to be stable, because three things in the model refer to a device by numb
 step in an activity, a wanted state, and a button binding. So a new position takes the next free number
 and never the count, which would collide the first time one in the middle was removed.
 
-### A physical button belongs to an activity, and that is measured
+### A physical button belongs to an activity, in every file we have
 
 **Every keypad binding in the corpus names an activity**, 1122 of them across five configurations and three
-architectures, and not one is context free. Which follows from what a Harmony is for: the volume key sends
-to the amplifier while you are listening to music and to the television while you are watching it, so a key
-with no activity is a key with no answer.
+architectures. Which follows from what a Harmony is for: the volume key sends to the amplifier while you are
+listening to music and to the television while you are watching it, so a key with no activity has no single
+answer.
 
 Two consequences the interface cannot avoid. A device's page shows the keypad **one activity at a time**,
 because there is no single answer to "what does this button do". And a device no activity drives has no
 button to show at all, which the page says, since creating an activity is what comes first.
+
+**The claim is about these files and not about the format**, and the difference was Danny's on 22 August
+2026: a Harmony also has a **device mode**, where the keypad drives one device with nothing running, and a
+map for that would be a keypad binding with no activity. So the sets were counted rather than the conclusion
+restated. Of 48 keypad maps in the five configurations, 21 are installed by something in the configuration
+and 16 of those by an activity, and **exactly those 16 send an infrared code**. The other 32 send nothing at
+any depth, and ten of them bind fifty or more keys to lists made of comparisons and mode entries, which is a
+menu rather than a device.
+
+So these files carry no keypad map for a device mode, and whether the hardware remaps its keypad in device
+mode at all is a question for the remote on the bench rather than for the bytes. The field stays optional
+and the test states the population, so a sample that does carry one fails rather than being absorbed.
 
 `ButtonBinding.inActivity` held the configuration's own **binding set** number until 22 August 2026, which
 is a different numbering space: on one Harmony One the activities are 0 to 6 and 8 while the sets holding

@@ -119,8 +119,9 @@ export interface RemotesApi {
   /**
    * Point a physical key at one command of one device, inside one activity, or clear it.
    *
-   * The activity is not optional. Every keypad binding on every remote in the corpus names one, because a
-   * key means different things in different activities, which is what an activity is for.
+   * The activity is not optional, because every keypad binding in the corpus has one: a key means different
+   * things in different activities, which is what an activity is for. A device mode, where the keypad drives
+   * one device with nothing running, would be the exception, and no configuration here carries a map for it.
    *
    * `command` absent clears it. It refuses where another position already owns that key in that activity,
    * since the remote would have to choose.

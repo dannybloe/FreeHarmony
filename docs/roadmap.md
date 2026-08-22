@@ -49,6 +49,12 @@ means something different in each activity, which is the whole point of an activ
 to the amplifier while you are listening to music and to the television while you are watching it. So
 there is nothing to show for a device no activity uses yet, and the page says so.
 
+**What it does not offer yet is device mode**, where you pick a device and the keypad drives it with no
+activity running. Every button setting in the four real configurations here belongs to an activity, and
+none of them holds a keypad setting for a device mode at all, so there is nothing to show and nothing to
+check a change against. Whether the remote itself changes what its buttons do in device mode is a question
+for a remote on the desk, not for the file.
+
 Two limits it tells you about rather than hiding. Some buttons cannot be pointed at anything, because what
 they send has never been measured on that model: 36 of a Harmony 600's 54, 34 of a Harmony One's 44, and
 none at all of a Harmony 525's 50. Those are drawn faded and say why when you press one. And the buttons

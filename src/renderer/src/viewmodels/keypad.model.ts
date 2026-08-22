@@ -49,16 +49,22 @@ export interface KeyOnScreen {
 /**
  * The keypad bindings of one activity.
  *
- * **A physical key only means something inside an activity, and that is measured rather than assumed.**
- * Across five configurations on three architectures, every one of 1122 keypad bindings names an activity
- * and not one is context free. Which follows from what the remote is for: the volume key sends to the
- * amplifier while you are listening to music and to the television while you are watching it, so a key
- * with no activity would be a key with no answer.
+ * **Every keypad binding in the corpus that sends a code belongs to an activity**, all 1122 of them across
+ * five configurations and three architectures. Which is what a Harmony is for: the volume key sends to the
+ * amplifier while you are listening to music and to the television while you are watching it, so the same
+ * key has as many answers as there are activities and a page has to pick one.
  *
- * So the activity is a required argument. An earlier version of this page read the context free bindings,
- * which is a real place in the format and is empty on every remote anybody owns, so the page showed no
- * assignments at all on a configuration that holds 220 of them. `test/import.test.ts` is where that is
- * pinned now.
+ * **That is a claim about these files and not about the format**, and the difference was Danny's point on
+ * 22 August 2026. A Harmony also has a **device mode**, where the keypad drives one device with no activity
+ * running, and a map for that would be a keypad binding with no activity. The measurement says these
+ * configurations carry none: of 48 keypad maps in them, exactly the 16 an activity installs send an
+ * infrared code, and the other 32 send nothing at any depth, 10 of them binding fifty or more keys to
+ * comparisons and mode entries, which is a menu. Whether a remote in device mode remaps its keypad at all
+ * is a question for the bench, and `test/import.test.ts` states the population so a sample that carries one
+ * fails rather than being absorbed.
+ *
+ * An earlier version of this page read the bindings with no context, which is a real place in the format
+ * and is empty in every file here, so it showed no assignments at all on a configuration holding 220.
  *
  * A screen key is a separate population that shares no code with the keypad, and it is a later round.
  */

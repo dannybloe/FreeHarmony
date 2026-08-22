@@ -183,11 +183,14 @@ export async function labelDeviceUse(
 /**
  * Point a physical key at one command of one device, inside one activity, or clear it.
  *
- * **The activity is required and that is measured rather than a design preference.** Across five
- * configurations on three architectures, every one of 1122 keypad bindings names an activity and not one is
- * context free, which follows from what the remote is for: the volume key sends to the amplifier while you
- * are listening to music and to the television while you are watching it. So a key with no activity is a
- * key with no answer, and writing one would put a binding in a document that no remote here has ever had.
+ * **The activity is required, because every keypad binding in the corpus has one**: 1122 of them across
+ * five configurations and three architectures. Which follows from what the remote is for, the volume key
+ * sending to the amplifier while you are listening to music and to the television while you are watching
+ * it, so writing a binding with no activity would put something in a document that none of these files has.
+ *
+ * It is a requirement of this function and **not** a claim that the format forbids one. A Harmony has a
+ * device mode, where the keypad drives one device with no activity running; nothing here can write that
+ * map, and if one turns out to exist this takes an optional activity rather than a required one.
  *
  * A screen key is a separate population, sharing no scan code with the keypad on three of the four
  * architectures, and it is not written by this at all.

@@ -212,8 +212,12 @@ export interface ButtonBinding {
    *
    * A button means different things in different activities, which is the whole point of an activity, so a
    * binding without a context would be a binding nobody can place. **Every keypad binding in the corpus
-   * carries one**, 1122 of them across five configurations and three architectures, and none is context
-   * free, so absent here is the exception rather than the default.
+   * carries one**, 1122 of them across five configurations and three architectures.
+   *
+   * Absent is not impossible, though, and that is deliberate: a Harmony has a **device mode** where the
+   * keypad drives one device with no activity running, and a map for that would land here with no activity.
+   * None of these files carries one, measured in `test/import.test.ts`, and whether the hardware remaps its
+   * keypad in device mode at all is unsettled.
    *
    * It held the configuration's own binding **set** number until 22 August 2026, which is a different
    * numbering space: on one Harmony One the activities are 0 to 6 and 8 while the sets holding their keys

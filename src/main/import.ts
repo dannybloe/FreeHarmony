@@ -254,11 +254,18 @@ function activitiesOf(c: Container): Activity[] {
  *
  * **`inActivity` is the activity, and it used to be the configuration's own set number.** Corrected on 22
  * August 2026, and it was found by building the screen that reads it: a keypad key belongs to a base slot 9
- * binding set, and this wrote that set's index into a field whose own docstring says "which activity, by
+ * binding map, and this wrote that map's index into a field whose own docstring says "which activity, by
  * position". The two are different spaces and they do not even overlap. On one Harmony One the activities
- * are 0 to 6 and 8 and the sets holding their keys are 7 to 15, so every single one of 220 bindings named
+ * are 0 to 6 and 8 and the maps holding their keys are 7 to 15, so every single one of 220 bindings named
  * an activity that either does not exist or is the wrong one, and nothing failed: the numbers were
  * plausible, and no test asked what any of them meant.
+ *
+ * A map no activity installs leaves the field absent, which is the honest answer and is also where a
+ * **device mode** would land: the keypad driving one device with nothing running. No configuration here has
+ * one, and the measurement is worth knowing rather than assuming, since it is what makes the field's
+ * absence rare rather than impossible. Of 48 maps in the five files, exactly the 16 an activity installs
+ * send an infrared code; the other 32 send nothing at any depth and ten of them bind fifty or more keys to
+ * comparisons and mode entries, which is a menu.
  *
  * The mapping is already read next door, since an activity's own record carries the set its keys live in,
  * so this is a lookup rather than a derivation. A set no activity claims keeps no context at all rather

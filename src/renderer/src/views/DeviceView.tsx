@@ -11,12 +11,16 @@
  * remote is drawn down the left with its keys coloured by what they are doing, and pressing one offers the
  * commands this device has.
  *
- * **The keypad is shown one activity at a time, and that is measured rather than chosen.** Every keypad
- * binding on every remote in the corpus names an activity, all 1122 of them, and none is context free, which
- * follows from what a remote is for: the volume key sends to the amplifier while you are listening to music
- * and to the television while you are watching it. The first version of this page read the context free
- * bindings instead and showed nothing at all on a configuration holding 220, which is how the measurement
- * came to be made.
+ * **The keypad is shown one activity at a time**, because every keypad binding in the corpus has an
+ * activity, all 1122 of them, which follows from what a remote is for: the volume key sends to the amplifier
+ * while you are listening to music and to the television while you are watching it. The first version of
+ * this page read the bindings with no context instead and showed nothing at all on a configuration holding
+ * 220, which is how the measurement came to be made.
+ *
+ * **A device mode would be the exception and this page does not offer one**, which is a gap rather than a
+ * decision. A Harmony can be put into device mode, where the keypad drives one device with nothing running;
+ * none of these configurations carries a keypad map for that, so there is nothing to show and nothing to
+ * check the writing against. `test/import.test.ts` states the population it was measured over.
  *
  * Two things it deliberately does not do.
  *
