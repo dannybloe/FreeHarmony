@@ -26,7 +26,7 @@ import assert from 'node:assert/strict';
 
 import type { DeviceDefinition } from '../../src/shared/library.ts';
 import { API_NAMESPACE } from '../../src/shared/api.ts';
-import { launch } from './electron.ts';
+import { TRIES, launch } from './electron.ts';
 
 const NAME = 'The study amplifier';
 
@@ -48,7 +48,7 @@ test('a device can be written down from the bar and comes back as a tile', async
   const press = async (what: string): Promise<boolean> => {
     const wanted = JSON.stringify(what);
     return app.evaluate<boolean>(`(async () => {
-      for (let tries = 0; tries < 40; tries += 1) {
+      for (let tries = 0; tries < ${TRIES}; tries += 1) {
         const within = document.querySelector('.mantine-Modal-content') ?? document;
         for (const it of within.querySelectorAll('button')) {
           const says = (it.textContent ?? '').includes(${wanted});
@@ -67,7 +67,7 @@ test('a device can be written down from the bar and comes back as a tile', async
    * application's bar and there is no panel yet to look inside.
    */
   const openLibrary = async (): Promise<boolean> => app.evaluate<boolean>(`(async () => {
-    for (let tries = 0; tries < 40; tries += 1) {
+    for (let tries = 0; tries < ${TRIES}; tries += 1) {
       for (const it of document.querySelectorAll('button')) {
         if (it.getAttribute('aria-label') === 'Device library') { it.click(); return true; }
       }
@@ -87,7 +87,7 @@ test('a device can be written down from the bar and comes back as a tile', async
   const type = async (label: string, text: string): Promise<boolean> => {
     const wanted = JSON.stringify(label);
     return app.evaluate<boolean>(`(async () => {
-      for (let tries = 0; tries < 40; tries += 1) {
+      for (let tries = 0; tries < ${TRIES}; tries += 1) {
         for (const it of document.querySelectorAll('input')) {
           const says = it.labels?.[0]?.textContent ?? '';
           if (says === ${wanted}) {
@@ -106,7 +106,7 @@ test('a device can be written down from the bar and comes back as a tile', async
 
   /** How many device tiles the library is showing, once it has drawn one. */
   const tiles = async (): Promise<number> => app.evaluate<number>(`(async () => {
-    for (let tries = 0; tries < 40; tries += 1) {
+    for (let tries = 0; tries < ${TRIES}; tries += 1) {
       // Inside the panel, and found by the attribute rather than by shape: the add tile carries a
       // different value, so this counts devices and not the way to make one. There is no heading to
       // anchor on, on purpose, since the panel's own bar already says where you are.
@@ -135,14 +135,14 @@ test('a device can be written down from the bar and comes back as a tile', async
     // list open and shut, so it was found open on one pass and closed on the next: the test failed about
     // half the time and looked like a race in the application rather than in the test.
     let field;
-    for (let tries = 0; tries < 40 && field === undefined; tries += 1) {
+    for (let tries = 0; tries < ${TRIES} && field === undefined; tries += 1) {
       field = find('input').find((one) => (one.labels?.[0]?.textContent ?? '') === 'Category');
       if (field === undefined) await new Promise((wake) => setTimeout(wake, 100));
     }
     if (field === undefined) return false;
     field.click();
 
-    for (let tries = 0; tries < 40; tries += 1) {
+    for (let tries = 0; tries < ${TRIES}; tries += 1) {
       const option = find('[role="option"]').find((one) => (one.textContent ?? '').includes('Amplifier'));
       if (option) { option.click(); return true; }
       await new Promise((wake) => setTimeout(wake, 100));
@@ -157,7 +157,7 @@ test('a device can be written down from the bar and comes back as a tile', async
   // reason: the application underneath still has its own heading, and it is the first one in the document.
   const heading = await app.evaluate<string>(`(async () => {
     const said = () => document.querySelector('.mantine-Modal-content h2')?.textContent ?? '';
-    for (let tries = 0; tries < 40; tries += 1) {
+    for (let tries = 0; tries < ${TRIES}; tries += 1) {
       if (said().includes(${JSON.stringify(NAME)})) return said();
       await new Promise((wake) => setTimeout(wake, 100));
     }
@@ -201,7 +201,7 @@ test('a copy is a second device with the same words and a different identity', a
   const press = async (what: string): Promise<boolean> => {
     const wanted = JSON.stringify(what);
     return app.evaluate<boolean>(`(async () => {
-      for (let tries = 0; tries < 40; tries += 1) {
+      for (let tries = 0; tries < ${TRIES}; tries += 1) {
         const within = document.querySelector('.mantine-Modal-content') ?? document;
         for (const it of within.querySelectorAll('button')) {
           if ((it.textContent ?? '').includes(${wanted})
@@ -214,7 +214,7 @@ test('a copy is a second device with the same words and a different identity', a
   };
 
   const openLibrary = async (): Promise<boolean> => app.evaluate<boolean>(`(async () => {
-    for (let tries = 0; tries < 40; tries += 1) {
+    for (let tries = 0; tries < ${TRIES}; tries += 1) {
       for (const it of document.querySelectorAll('button')) {
         if (it.getAttribute('aria-label') === 'Device library') { it.click(); return true; }
       }
@@ -233,7 +233,7 @@ test('a copy is a second device with the same words and a different identity', a
   const pressExactly = async (what: string): Promise<boolean> => {
     const wanted = JSON.stringify(what);
     return app.evaluate<boolean>(`(async () => {
-      for (let tries = 0; tries < 40; tries += 1) {
+      for (let tries = 0; tries < ${TRIES}; tries += 1) {
         for (const it of document.querySelectorAll('button')) {
           if ((it.textContent ?? '').trim() === ${wanted}) { it.click(); return true; }
         }
@@ -251,7 +251,7 @@ test('a copy is a second device with the same words and a different identity', a
   assert.equal(await pressExactly('Duplicate'), true, 'and the dialogue confirms it');
 
   const held = await app.evaluate<DeviceDefinition[]>(`(async () => {
-    for (let tries = 0; tries < 40; tries += 1) {
+    for (let tries = 0; tries < ${TRIES}; tries += 1) {
       const all = await window['${API_NAMESPACE}'].library.list();
       if (all.length > 1) return all;
       await new Promise((wake) => setTimeout(wake, 100));

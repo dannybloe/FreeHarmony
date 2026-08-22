@@ -49,6 +49,22 @@ async function electronBinary(): Promise<string> {
   return join(REPO, 'node_modules', 'electron', 'dist', named.trim());
 }
 
+/**
+ * How many times a wait inside the page tries before giving up, at 100 milliseconds each.
+ *
+ * One number for every such loop in this folder, exported so a test can bake it into the little script
+ * it hands the page. It was written out as `tries < 40` in thirteen places, which is four seconds each,
+ * and that is generous when the machine is idle and not generous at all when it is not: Node runs these
+ * six files concurrently, so six Electron instances start, build nothing and race for the same cores.
+ * One of these tests failed exactly once that way, in a full `pnpm check` and never on its own, which is
+ * the signature.
+ *
+ * **Raising it costs nothing on a fast run**, because every one of those loops returns the moment it
+ * finds what it is waiting for. What it buys is that a slow machine reports a slow machine rather than a
+ * bug, which is the difference between a suite people trust and one people re-run.
+ */
+export const TRIES = 150;
+
 export interface RunningApplication {
   /**
    * The folder the application was pointed at, so a test can look at what its requests did on disk.

@@ -22,7 +22,7 @@ import { require_, skipUnless } from '@harmony/lab';
 import { RemoteStore } from '../../src/main/store/remotes.ts';
 import { API_NAMESPACE } from '../../src/shared/api.ts';
 import type { DocumentContents } from '../../src/shared/content.ts';
-import { launch } from './electron.ts';
+import { TRIES, launch } from './electron.ts';
 
 const SAMPLE = 'h600_config';
 
@@ -116,7 +116,7 @@ test('the devices page shows a tile per device, and the activities page one per 
   const press = async (what: string): Promise<boolean> => {
     const wanted = JSON.stringify(what);
     return app.evaluate<boolean>(`(async () => {
-      for (let tries = 0; tries < 40; tries += 1) {
+      for (let tries = 0; tries < ${TRIES}; tries += 1) {
         for (const it of document.querySelectorAll('button')) {
           const says = (it.textContent ?? '').includes(${wanted});
           if (says || it.getAttribute('aria-label') === ${wanted}) { it.click(); return true; }
@@ -140,7 +140,7 @@ test('the devices page shows a tile per device, and the activities page one per 
   const tiles = async (heading: string): Promise<number> => {
     const wanted = JSON.stringify(heading);
     return app.evaluate<number>(`(async () => {
-      for (let tries = 0; tries < 40; tries += 1) {
+      for (let tries = 0; tries < ${TRIES}; tries += 1) {
         const section = [...document.querySelectorAll('section')]
           .find((one) => (one.querySelector('h2')?.textContent ?? '') === ${wanted});
         if (section) {

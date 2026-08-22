@@ -16,6 +16,7 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "inventory": "node bin/inventory.ts",
+    "model-map": "node bin/model-map.ts",
     "screenshot": "pnpm build && node bin/screenshot.ts",
     "typecheck:node": "tsc -p tsconfig.node.json",
     "typecheck:web": "tsc -p tsconfig.web.json",
