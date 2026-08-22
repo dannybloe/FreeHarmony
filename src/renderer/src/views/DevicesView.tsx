@@ -7,15 +7,21 @@
  * what sits here is the **use** of one, with the name its owner gave it on this particular remote. Four
  * copies of one LG is one description and four uses.
  *
- * So a tile shows three things in that order: what you call it here, how many commands it has, and what
- * the library says it is. The third is usually nothing, because a configuration states no manufacturer
- * and no model, and saying nothing is the honest version of that.
+ * So a tile shows the category's own drawing, what you call it here, and the make and model **only where
+ * those are not already the title**. Danny's, on 22 August 2026, and the third clause is the point: a
+ * tile that said `Sony KD-43` with `Sony KD-43` under it was the same words twice, and the command count
+ * that used to sit where the drawing is now was a number about the description rather than about this
+ * remote.
+ *
+ * The drawing is the same one the library uses for the same appliance, which is what makes a device
+ * recognisable in two places rather than readable in two places.
  */
 import { Text, Title } from '@mantine/core';
 
 import type { DocumentContents } from '../../../shared/content.ts';
-import { describeDefinition } from '../../../shared/library.ts';
+import { headingOnRemote } from '../../../shared/library.ts';
 import { definitionIn, type LibraryState } from '../viewmodels/library.model.ts';
+import { KindGlyph } from './KindGlyph.tsx';
 import { AddSectionTile, SectionTile } from './SectionTile.tsx';
 import classes from './DevicesView.module.scss';
 
@@ -55,18 +61,19 @@ export function DevicesView({ remote, contents, library, onOpen, onAdd }: Device
       <div className={classes.grid}>
         {devices.map((use) => {
           const definition = definitionIn(library, use.definition);
-          const described = definition === undefined ? undefined : describeDefinition(definition);
+          const heading = headingOnRemote(use.label, definition, use.slot);
           return (
             <SectionTile
               key={use.slot}
-              value={definition?.commands.length ?? '?'}
-              // The owner's own word, and the position where there is none. A configuration usually has
-              // one, and it is usually something like `TV`.
-              // Your own name for it, or the device's own where you did not type one, which is now the
-              // ordinary case: a name is no longer demanded when a device is put on a remote. "Position 3"
-              // is the last resort and means the description itself is not on this machine.
-              title={use.label ?? described ?? `Position ${use.slot + 1}`}
-              caption={described ?? (definition === undefined ? 'not on this machine' : 'not identified')}
+              // The category's drawing, in place of the command count this used to lead with. A number of
+              // commands is a fact about the description, and it is on the description's own page; what a
+              // person scanning this grid is looking for is which of their appliances this one is.
+              //
+              // `other` where the description is on another machine, which is the one case with nothing to
+              // draw from. It is said in words at the foot of the page rather than guessed at here.
+              glyph={<KindGlyph kind={definition?.kind ?? 'other'} size={34} />}
+              title={heading.title}
+              caption={heading.under ?? (definition === undefined ? 'not on this machine' : '')}
               onClick={() => onOpen(use.slot)}
             />
           );

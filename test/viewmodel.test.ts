@@ -71,6 +71,8 @@ function fakeApi(initial: RemoteDocument[] = []) {
     contents: async () => { throw new Error('the list view model must not read a configuration'); },
     fileDefinitions: async () => { throw new Error('the list view model must not write a library'); },
     addDevice: async () => { throw new Error('the list view model must not change a document'); },
+    labelDevice: async () => { throw new Error('the list view model must not change a document'); },
+    assignButton: async () => { throw new Error('the list view model must not change a document'); },
   };
 
   return { api, calls, fail: (message: string) => { failWith = message; } };

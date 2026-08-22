@@ -18,7 +18,7 @@ import { Button, Modal, Select, Text, TextInput } from '@mantine/core';
 import { useEffect, useState } from 'react';
 
 import type { DeviceDefinition, DeviceKind } from '../../../shared/library.ts';
-import { KINDS, KIND_NAMES, mayBeShared } from '../../../shared/library.ts';
+import { KINDS, KIND_NAMES } from '../../../shared/library.ts';
 import type { RemoteModel } from '../../../shared/remote.ts';
 import { drawingFor } from '../catalogue.ts';
 import { Carousel } from './Carousel.tsx';
@@ -78,11 +78,12 @@ export function LibraryDeviceView({
         <div className={classes.names}>
           <h2 className={classes.name}>{heading.title}</h2>
           {heading.under !== undefined && <span className={classes.under}>{heading.under}</span>}
-          {!mayBeShared(definition.origin) && (
-            <span className={classes.private}>
-              Stays on this machine: only a device learned from your own hardware may be shared.
-            </span>
-          )}
+          {/* **Nothing here says it cannot be shared, and that is deliberate**, dropped on 22 August 2026.
+              It said "Stays on this machine: only a device learned from your own hardware may be shared",
+              which is true, is a rule this project intends to keep, and is a sentence about a feature that
+              does not exist: there is nowhere to share a device to. It reads as a warning on a page where
+              nothing is wrong. `mayBeShared` is enforced in the model and written down in
+              `docs/data-model.md`, which is where a rule with no screen behind it belongs. */}
         </div>
       </div>
 

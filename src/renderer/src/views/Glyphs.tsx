@@ -80,6 +80,22 @@ export function StackGlyph({ size = 26, className }: GlyphProps) {
 }
 
 /**
+ * A pencil, for the control that opens a name for typing.
+ *
+ * The body is one stroked outline and the nib is a filled triangle, which is what keeps it a pencil at
+ * fifteen pixels: an outlined nib at that size closes up into a grey blob.
+ */
+export function PencilGlyph({ size = 18, className }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} aria-hidden="true">
+      <path {...stroke} strokeLinejoin="round" d="M16.2 3.6l4.2 4.2L9.1 19.1l-5.2 1 1-5.2z" />
+      <path {...stroke} d="M14.1 5.7l4.2 4.2" />
+      <path d="M3.9 20.1l1-5.2 4.2 4.2z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/**
  * A cog, for the tile that is about the thing itself rather than about what is in it.
  *
  * The one place a drawing here is a convention rather than a picture of anything: nothing about a cog says

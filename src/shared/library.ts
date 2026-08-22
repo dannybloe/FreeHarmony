@@ -383,6 +383,35 @@ export function headingFor(definition: DeviceDefinition): { title: string; under
 }
 
 /**
+ * What to put at the top of a **position on a remote**, which is a different question from `headingFor`.
+ *
+ * The two differ by one thing and it is the thing Danny asked for on 22 August 2026: here the name is the
+ * one its owner typed on this remote, and the line underneath appears **only when it says something the
+ * title does not**. A position called `Sony KD-43` with `Sony KD-43` written under it is the same words
+ * twice, which is what the page did before this existed.
+ *
+ * So the title is the label, then the description's own name, then the make and model, then the position.
+ * That last arm is the honest one and it is not a placeholder: a configuration states codes and positions
+ * and no words at all, so a freshly imported remote is a page of numbered positions until somebody names
+ * them or the library learns what they are.
+ *
+ * `under` is the make and model whenever that is not already the title, because that is the pair that
+ * identifies the appliance where the title identifies it to its owner.
+ */
+export function headingOnRemote(
+  label: string | undefined, definition: DeviceDefinition | undefined, slot: number,
+): { title: string; under?: string } {
+  const made = definition === undefined
+    ? ''
+    : [definition.manufacturer, definition.model].filter((one) => one !== undefined && one !== '').join(' ');
+  const own = label !== undefined && label !== ''
+    ? label
+    : definition?.name !== undefined && definition.name !== '' ? definition.name : undefined;
+  const title = own ?? (made === '' ? `Position ${slot + 1}` : made);
+  return made === '' || made === title ? { title } : { title, under: made };
+}
+
+/**
  * Every kind, in the order a chooser should offer them: the common ones first, `other` last.
  *
  * A list as well as the type, because a form has to offer them in an order and a `Record`'s key order is

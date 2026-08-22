@@ -318,6 +318,41 @@ It has to be stable, because three things in the model refer to a device by numb
 step in an activity, a wanted state, and a button binding. So a new position takes the next free number
 and never the count, which would collide the first time one in the middle was removed.
 
+### A physical button belongs to an activity, and that is measured
+
+**Every keypad binding in the corpus names an activity**, 1122 of them across five configurations and three
+architectures, and not one is context free. Which follows from what a Harmony is for: the volume key sends
+to the amplifier while you are listening to music and to the television while you are watching it, so a key
+with no activity is a key with no answer.
+
+Two consequences the interface cannot avoid. A device's page shows the keypad **one activity at a time**,
+because there is no single answer to "what does this button do". And a device no activity drives has no
+button to show at all, which the page says, since creating an activity is what comes first.
+
+`ButtonBinding.inActivity` held the configuration's own **binding set** number until 22 August 2026, which
+is a different numbering space: on one Harmony One the activities are 0 to 6 and 8 while the sets holding
+their keys are 7 to 15. So every binding named an activity that either did not exist or was the wrong one,
+and nothing failed, because a plausible number is exactly what a wrong number looks like. The mapping was
+already read next door, on the activity's own record; the closure that pins it is that an activity's device
+list and the devices its keys send to come from **different fields** of the configuration and agree on 16 of
+16, where shifting the mapping by one in either direction takes that to 3.
+
+`inDeviceMode` is still the configuration's own **page** index and is now named as such. Which device a
+screen page belongs to needs a reading nobody has made, so the field says page and nothing may treat it as
+a device until that changes.
+
+### A projection has to be written down before it is edited
+
+A document can hold a configuration and no contents file of its own, which is every document written before
+that file existed, and it is served by projecting the bytes on demand. The editing path reads the file. So
+the first rename or button assignment on such a document **started from nothing**: the page showed four
+devices and the edit wrote a document with none.
+
+Nothing failed and nothing could, because starting from empty contents is the correct answer for a remote
+nobody has imported into, and from inside one writer the two cases are indistinguishable. So the projection
+is settled once, on the way in to the first edit, and after that the file is the truth. It is deliberately
+not part of reading: a read that writes is a read nobody can reason about.
+
 ### The name of an appliance is not on the appliance
 
 A description read out of a configuration has no manufacturer, no model and not one command name, because a

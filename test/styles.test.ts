@@ -42,8 +42,9 @@ test('every stylesheet of ours is found, so the sweep below cannot be empty', as
                         'src/views/AddDeviceView.module.scss', 'src/views/AppBar.module.scss',
                         'src/views/Breadcrumbs.module.scss', 'src/views/Carousel.module.scss',
                         'src/views/DeviceView.module.scss', 'src/views/DevicesView.module.scss',
+                        'src/views/EditableTitle.module.scss',
                         'src/views/Header.module.scss', 'src/views/HomeView.module.scss',
-                        'src/views/ImportView.module.scss',
+                        'src/views/ImportView.module.scss', 'src/views/Keypad.module.scss',
                         'src/views/LibraryDeviceView.module.scss',
                         'src/views/LibraryListView.module.scss', 'src/views/LibraryPanel.module.scss',
                         'src/views/PickDeviceView.module.scss', 'src/views/RemoteTile.module.scss',
@@ -81,33 +82,56 @@ test('the colours a drawing is made of are declared in one place', async () => {
   //
   // Every fill and stroke in a silhouette reads one of these, which is what makes the check exhaustive
   // rather than a sample: the list is `packages/silhouettes/src/svg.ts`'s own.
+  //
+  // **A per key state override is a different thing and is allowed**, which is a narrowing of what this
+  // test used to claim and not a hole in it. The clickable keypad colours one key to say what it is doing,
+  // by setting `--key-fill` on that key's own group, which is the mechanism the drawing library exists
+  // for. That is a **state**, not a palette: it is stated once, it applies to one key, and it cannot drift
+  // away from anything because there is nothing else like it. So the rule is that a declaration outside
+  // the mixin has to sit inside a rule selecting on a state, which is checkable rather than a matter of
+  // trust: the enclosing selector is the line above it.
   const properties = ['--case-fill', '--case-stroke', '--recess-fill',
                       '--key-fill', '--key-stroke', '--key-text', '--accent'];
-  const declaring: string[] = [];
+  const palette: string[] = [];
+  const states: string[] = [];
   for (const path of await stylesheets()) {
     const text = await readFile(path, 'utf8');
+    // The selector this declaration is under, which is the last line that opened a block. Crude and
+    // exact enough for the question: our stylesheets nest one level and every selector ends in `{`.
+    let selector = '';
     for (const [line, content] of text.split('\n').entries()) {
       if (/^\s*(\/\/|\/\*|\*)/.test(content)) continue;
-      if (properties.some((property) => new RegExp(`${property}\\s*:`).test(content))) {
-        declaring.push(`${relative(RENDERER, path)}:${line + 1}: ${content.trim()}`);
-      }
+      if (content.trimEnd().endsWith('{')) selector = content.trim();
+      if (!properties.some((property) => new RegExp(`${property}\\s*:`).test(content))) continue;
+      const where = `${relative(RENDERER, path)}:${line + 1}: ${content.trim()}`;
+      if (/\[data-state=|\[data-picked\]/.test(selector)) states.push(where);
+      else palette.push(where);
     }
   }
 
-  const files = [...new Set(declaring.map((where) => where.split(':')[0]))];
+  const files = [...new Set(palette.map((where) => where.split(':')[0]))];
   assert.deepEqual(files, ['src/_mantine.scss'],
-                   `a drawing's colours belong in the mixin, not here:\n${declaring.join('\n')}`);
+                   `a drawing's colours belong in the mixin, not here:\n${palette.join('\n')}`);
   // And the mixin has to state all of them bar the accent, which the library's own default is right
   // for: a red key is red on every screen. Six, so a palette cannot half exist.
-  assert.equal(declaring.length, 6, declaring.join('\n'));
+  assert.equal(palette.length, 6, palette.join('\n'));
+  // The state overrides, counted exactly rather than bounded, since a floor here would pass with the
+  // whole keypad uncoloured: two states with three properties each, and one stroke on the chosen key.
+  assert.equal(states.length, 7, states.join('\n'));
 });
 
 test('every view that draws a remote takes its colours from that mixin', async () => {
   // The other half, and it is the one a missing include would slip through: a stage with no palette
   // falls back to the library's defaults, which are paler than these and still render, so nothing
   // fails and one screen quietly looks like a different application.
+  //
+  // **Two of these were found by the check being wrong rather than by it failing**: the library's device
+  // page grew a carousel of remotes on 22 August 2026 and was not on this list, so its drawings fell back
+  // to the paler defaults and Danny saw it as "the grey on the home page is nicer". The list is the whole
+  // protection, so a view that draws a remote joins it in the same commit.
   for (const view of ['views/RemoteTile.module.scss', 'views/NameRemoteView.module.scss',
-                      'views/RemoteView.module.scss']) {
+                      'views/RemoteView.module.scss', 'views/LibraryDeviceView.module.scss',
+                      'views/Keypad.module.scss']) {
     const text = await readFile(join(RENDERER, 'src', view), 'utf8');
     assert.match(text, /@include m\.drawing-palette;/, `${view} draws a remote in unstated colours`);
   }

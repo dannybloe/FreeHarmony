@@ -8,21 +8,23 @@
  * twice.
  *
  * Renaming, copying and removing moved to Settings, which is what settings means for a document: the
- * thing itself rather than what is in it. Renaming by double clicking the title stays, because it is
- * the fastest way to do the commonest of the three and it costs nothing.
+ * thing itself rather than what is in it. Renaming the title in place stays, because it is the fastest way
+ * to do the commonest of the three and it costs nothing. It is `EditableTitle` since 22 August 2026 and no
+ * longer written out here: a device's page needed the same thing, and two copies of an interaction are two
+ * copies until one of them moves. The pencil on hover came free with that.
  *
  * Importing is the only thing on this page that touches hardware, and it is offered only when a remote
  * of this model is attached: a button that is always there and fails makes somebody find that out by
  * pressing it.
  */
-import { Button, Text, TextInput, Title } from '@mantine/core';
-import { useState } from 'react';
+import { Button, Text } from '@mantine/core';
 
 import type { AttachedRemote } from '../../../shared/devices.ts';
 import { whyNameIsRefused, type RemoteDocument } from '../../../shared/remote.ts';
 import { drawingFor, isSameModel } from '../catalogue.ts';
 import type { Contents } from '../viewmodels/useContents.ts';
 import type { Importing } from '../viewmodels/useImport.ts';
+import { EditableTitle } from './EditableTitle.tsx';
 import { CogGlyph, StackGlyph } from './Glyphs.tsx';
 import { ImportView } from './ImportView.tsx';
 import { SectionTile } from './SectionTile.tsx';
@@ -46,7 +48,6 @@ interface RemoteViewProps {
 export function RemoteView({
   remote, busy, contents, importing, attached, onRename, onOpen,
 }: RemoteViewProps) {
-  const [draft, setDraft] = useState<string | undefined>(undefined);
   const drawing = drawingFor(remote.model);
   // What the document holds, or undefined because nothing has been imported into it. The tiles then carry
   // no badge at all, since zero devices is a statement about somebody's remote and this makes none.
@@ -55,12 +56,6 @@ export function RemoteView({
   // a document knows: nothing here identifies a unit, and two Harmony Ones are indistinguishable over
   // USB. So this answers "a remote of this kind is plugged in" and never "your remote is plugged in".
   const thisOne = attached.find((one) => isSameModel(remote.model, one.model));
-
-  const refusal = draft === undefined || draft === '' ? undefined : whyNameIsRefused(draft);
-  const accept = () => {
-    setDraft(undefined);
-    if (draft !== undefined && refusal === undefined && draft.trim() !== remote.name) onRename(draft);
-  };
 
   return (
     <section className={classes.page}>
@@ -71,31 +66,12 @@ export function RemoteView({
       </div>
 
       <div className={classes.panel}>
-        {draft === undefined
-          ? (
-            <Title
-              order={2}
-              className={classes.name}
-              title="double click to rename"
-              onDoubleClick={() => setDraft(remote.name)}
-            >
-              {remote.name}
-            </Title>
-            )
-          : (
-            <TextInput
-              size="md"
-              autoFocus
-              value={draft}
-              error={refusal}
-              onChange={(event) => setDraft(event.currentTarget.value)}
-              onBlur={accept}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') accept();
-                if (event.key === 'Escape') setDraft(undefined);
-              }}
-            />
-            )}
+        <EditableTitle
+          value={remote.name}
+          refuse={whyNameIsRefused}
+          onCommit={onRename}
+          className={classes.name}
+        />
 
         <Text className={classes.model}>
           {remote.model === undefined ? 'Model unknown' : `Logitech ${remote.model.name}`}

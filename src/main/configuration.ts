@@ -335,6 +335,35 @@ export async function contentsOf(
 }
 
 /**
+ * Write down what a document holds, if it has never been written down, so an edit has something to change.
+ *
+ * **This exists because of a defect and the defect is worth stating in full.** A document can hold a
+ * configuration and no contents file of its own, which is the state every document written before
+ * `content.json` existed is in, and `contentsOf` above serves those by projecting the bytes on demand. The
+ * editing path reads the **file**, so on a document like that the first rename or button assignment started
+ * from nothing at all: the page showed four devices, and the edit wrote a document with none. Nothing
+ * failed, because starting from empty contents is correct for a remote nobody has imported into, and the
+ * two cases are indistinguishable from inside `editContent`.
+ *
+ * So the projection is settled once, on the way in to the first edit. After that the file is the truth,
+ * which is the arrangement the whole model rests on: reading a remote is an import and never a
+ * synchronisation, and a projection that is edited has to stop being a projection.
+ *
+ * It is deliberately **not** part of `contentsOf`. A read that writes is a read nobody can reason about,
+ * and this is called by the three methods that change a document and by nothing else.
+ */
+export async function settleContent(
+  store: RemoteStore, library: DeviceLibrary, name: string,
+): Promise<void> {
+  if (await storedContentOf(store, name) !== undefined) return;
+  const held = await contentsOf(store, library, name);
+  // Nothing to settle: a document with no configuration behind it genuinely has no contents yet, and
+  // `editContent` starting from empty is the right answer for it.
+  if (held === undefined) return;
+  await writeContent(store, name, held.content);
+}
+
+/**
  * Read a document's configuration and put a definition in the library for every appliance in it.
  *
  * Separate from `contentsOf` because it **writes**, and the two questions are genuinely different: one

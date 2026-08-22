@@ -183,3 +183,61 @@ test('no transition sends another appliance\'s code, which is what pins the pair
   }
   assert.equal(crossings, 0);
 });
+
+test('a keypad key names the activity it belongs to, and never the configuration\'s own set number',
+     skipUnless(...NAMES), () => {
+  // **The correction of 22 August 2026, with the control that would have caught it.** A keypad key belongs
+  // to a binding set, and the import wrote that set's number into `inActivity`, whose own docstring says it
+  // holds the activity by position. Those are two different numbering spaces: on one Harmony One the
+  // activities are 0 to 6 and 8 while the sets holding their keys are 7 to 15, so all 220 of that
+  // configuration's keypad bindings named an activity that either does not exist or is a different one, and
+  // nothing failed, because the numbers were plausible and no test asked what one meant.
+  //
+  // The closure is that the two facts come from **different fields of the configuration**. An activity's
+  // own device list is read from its binding set's groups, and what a key sends is a `0x7D` operand inside
+  // an action list, so agreement between them is not arithmetic on one number.
+  let agree = 0;
+  let activities = 0;
+  for (const { name } of SAMPLES) {
+    const { content } = importConfiguration(require_(name), { now: NOW, idPrefix: name });
+    const keypad = content.buttons.filter((one) => one.surface === 'keypad');
+    // Every one of them, on every architecture: a physical key on a real remote is always inside an
+    // activity. Which is also why the device page cannot show a key's command without naming one.
+    assert.deepEqual(keypad.filter((one) => one.inActivity === undefined), [],
+                     `${name}: a keypad key with no activity`);
+    for (const activity of content.activities) {
+      activities += 1;
+      const here = keypad.filter((one) => one.inActivity === activity.slot);
+      const sent = [...new Set(here.flatMap((one) => one.sends.map((step) => step.device)))];
+      if (here.length > 0 && sent.every((device) => activity.devices.includes(device))) agree += 1;
+    }
+  }
+  // Exact on both counts, and the population is the five samples above, so this moves only when a reader
+  // changes or a sample is added.
+  assert.equal(activities, 16);
+  assert.equal(agree, 16, 'every activity\'s keys send only to devices the activity itself lists');
+});
+
+test('shifting the activity a key belongs to breaks that agreement, which is what makes it a check',
+     skipUnless(...NAMES), () => {
+  // The negative, and its magnitude is the evidence: shifting the mapping by one in either direction
+  // takes the agreement from 16 of 16 to 3, and leaves 6 activities with no keys at all. Without this the
+  // test above could pass on a mapping that happened to be constant, which is roughly what the defect it
+  // corrects was.
+  for (const shift of [1, -1]) {
+    let agree = 0;
+    let empty = 0;
+    for (const { name } of SAMPLES) {
+      const { content } = importConfiguration(require_(name), { now: NOW, idPrefix: name });
+      const keypad = content.buttons.filter((one) => one.surface === 'keypad');
+      for (const activity of content.activities) {
+        const here = keypad.filter((one) => one.inActivity === activity.slot + shift);
+        if (here.length === 0) { empty += 1; continue; }
+        const sent = [...new Set(here.flatMap((one) => one.sends.map((step) => step.device)))];
+        if (sent.every((device) => activity.devices.includes(device))) agree += 1;
+      }
+    }
+    assert.equal(agree, 3, `shifted by ${shift}`);
+    assert.equal(empty, 6, `shifted by ${shift}: activities left with no keys`);
+  }
+});

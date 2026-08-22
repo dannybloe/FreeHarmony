@@ -29,8 +29,15 @@
   // tile and never moves the strip on its own.
   scroll-snap-type: x proximity;
   scroll-padding-inline: var(--mantine-spacing-xs);
-  // Room for a tile to lift on hover without its shadow being clipped by the scroll box.
-  padding: m.rem(6) m.rem(4) m.rem(14);
+  // Room for the shadow, **measured rather than estimated**: a lifted tile's shadow is offset 18 down with
+  // 38 of blur, so it reaches 37 below the tile and 19 to each side, and the 6 and 14 that were here
+  // clipped every one of them. A scroll box clips on both axes whatever `overflow-y` says, so inside a
+  // scrolling strip the room has to be bought with padding.
+  //
+  // The negative block margins hand the vertical space back to the layout, so a row of tiles does not
+  // become a band of empty air with tiles in the middle of it.
+  padding: m.rem(14) m.rem(22) m.rem(44);
+  margin-block: m.rem(-12) m.rem(-36);
 
   // The scrollbar is deliberately gone: the arrows say there is more, and a permanent grey bar under a
   // row of cards is the difference between an interface and a web page from 2009.
@@ -44,6 +51,20 @@
     scroll-snap-align: start;
     flex: 0 0 auto;
   }
+}
+
+// Everything fits, so there is nothing to scroll and therefore nothing to clip against: the strip drops
+// its scroll box and the shadows simply have the room. This is the common case with three or four tiles,
+// which is most of this application.
+//
+// **It has to sit after `.strip` and not before it.** Both are one class, so the cascade is decided by
+// source order and the first version of this was written above and did nothing at all: `overflow-x: auto`
+// and the padding below both won. Worth the line, because a rule that loses on specificity renders as no
+// rule and looks like a wrong value rather than a missing one.
+.stripStill {
+  overflow: visible;
+  padding: 0;
+  margin: 0;
 }
 
 .arrow {

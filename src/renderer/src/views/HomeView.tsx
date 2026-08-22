@@ -39,11 +39,15 @@ export function HomeView({ remotes, loading, onOpen, onAdd }: HomeViewProps) {
         <Title order={2} className={classes.title}>
           {empty ? 'Add your first remote' : 'Pick your remote'}
         </Title>
-        <Text className={classes.lead}>
-          {empty
-            ? 'Nothing here yet. Every remote you add is a folder in your documents, yours to copy and keep.'
-            : 'Everything you add lives in your own documents, as a folder each.'}
-        </Text>
+        {/* **A line only where there is something to say**, which on this screen is only the empty case.
+            It used to read "Everything you add lives in your own documents, as a folder each", which is
+            true, is on the page that adds one, and answers a question nobody standing in front of their own
+            remotes is asking. "Pick your remote" is the whole instruction. */}
+        {empty && (
+          <Text className={classes.lead}>
+            Pick the model you have and give it a name. Nothing is written to the remote itself.
+          </Text>
+        )}
       </div>
 
       <Carousel label="Your remotes">

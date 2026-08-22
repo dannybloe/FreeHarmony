@@ -208,12 +208,27 @@ export interface ButtonBinding {
   /** The word printed beside it or drawn on the screen for it. */
   readonly label?: string;
   /**
-   * Which activity this binding applies in, or which device's own mode, by position.
+   * Which activity this binding applies in, by the activity's own position.
    *
-   * A button means different things in different activities, which is the whole point of an activity,
-   * so a binding without a context would be a binding nobody can place.
+   * A button means different things in different activities, which is the whole point of an activity, so a
+   * binding without a context would be a binding nobody can place. **Every keypad binding in the corpus
+   * carries one**, 1122 of them across five configurations and three architectures, and none is context
+   * free, so absent here is the exception rather than the default.
+   *
+   * It held the configuration's own binding **set** number until 22 August 2026, which is a different
+   * numbering space: on one Harmony One the activities are 0 to 6 and 8 while the sets holding their keys
+   * are 7 to 15. Nothing failed, because a plausible number is what a wrong number looks like. The
+   * correction and its control are in `test/import.test.ts`.
    */
   readonly inActivity?: number;
+  /**
+   * Which screen page this binding is on, by the configuration's own page index.
+   *
+   * **Not a device position, and this used to claim it was.** A screen key belongs to a page and a page
+   * belongs to a device mode, but which device a page is for needs a reading that has not been made, so
+   * the honest field is the page. Nothing reads it yet and nothing may treat it as a device until that
+   * reading exists.
+   */
   readonly inDeviceMode?: number;
   readonly sends: readonly Step[];
 }

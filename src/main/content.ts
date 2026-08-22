@@ -20,7 +20,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { RemoteContent } from '../shared/content.ts';
+import type { ButtonBinding, RemoteContent } from '../shared/content.ts';
 import type { DeviceUsage } from '../shared/library.ts';
 import type { RemoteStore } from './store/remotes.ts';
 
@@ -147,4 +147,91 @@ export async function deviceUsage(store: RemoteStore): Promise<DeviceUsage[]> {
     }
   }
   return found;
+}
+
+/**
+ * Rename a position on a remote, or take its name away.
+ *
+ * The label belongs to the **use** and not to the description, which is `deviceUsage`'s whole argument
+ * above: four identical televisions on four remotes are one description under four names. So this writes
+ * a document and touches the library not at all.
+ *
+ * Absent removes the field rather than storing an empty string, for the reason the library's own create
+ * path gives: an empty string satisfies every presence test and then renders as nothing, which is a name
+ * that looks set and is not. With no label the interface shows the library's name, which is the whole
+ * point of a label being optional.
+ */
+export async function labelDeviceUse(
+  store: RemoteStore, name: string, slot: number, label?: string,
+): Promise<RemoteContent> {
+  const wanted = label?.trim();
+  return editContent(store, name, (content) => {
+    if (!content.devices.some((one) => one.slot === slot)) {
+      throw new Error(`${name} has nothing at position ${slot + 1}`);
+    }
+    return {
+      ...content,
+      devices: content.devices.map((one) => {
+        if (one.slot !== slot) return one;
+        const { label: _gone, ...rest } = one;
+        return wanted === undefined || wanted === '' ? rest : { ...rest, label: wanted };
+      }),
+    };
+  });
+}
+
+/**
+ * Point a physical key at one command of one device, inside one activity, or clear it.
+ *
+ * **The activity is required and that is measured rather than a design preference.** Across five
+ * configurations on three architectures, every one of 1122 keypad bindings names an activity and not one is
+ * context free, which follows from what the remote is for: the volume key sends to the amplifier while you
+ * are listening to music and to the television while you are watching it. So a key with no activity is a
+ * key with no answer, and writing one would put a binding in a document that no remote here has ever had.
+ *
+ * A screen key is a separate population, sharing no scan code with the keypad on three of the four
+ * architectures, and it is not written by this at all.
+ *
+ * `command` absent clears the binding rather than writing an empty one, because a key that sends nothing
+ * and a key with a binding that sends nothing are the same thing to a remote and only one of them is
+ * honest in a document.
+ *
+ * **It refuses a contradiction rather than a bad scan code**, which is the division of labour worth
+ * stating: whether this model's key 12 is known at all is the drawing's business, and only 36 of a Harmony
+ * 600's 54 keys have a measured code. What this can see is the document, so what it refuses is two devices
+ * claiming one key in one activity, since the remote would have to choose.
+ */
+export async function assignButton(
+  store: RemoteStore, name: string, scan: number, device: number, activity: number, command?: number,
+): Promise<RemoteContent> {
+  return editContent(store, name, (content) => {
+    if (!content.devices.some((one) => one.slot === device)) {
+      throw new Error(`${name} has nothing at position ${device + 1}`);
+    }
+    if (!content.activities.some((one) => one.slot === activity)) {
+      throw new Error(`${name} has no activity ${activity + 1}`);
+    }
+    // This key in this activity. Every other activity's binding of the same key is left exactly as it is,
+    // which is the point: the key means something different in each of them.
+    const here = (one: ButtonBinding) =>
+      one.surface === 'keypad' && one.scan === scan && one.inActivity === activity;
+    const held = content.buttons.find(here);
+    const owner = held?.sends[0]?.device;
+    if (held !== undefined && owner !== undefined && owner !== device) {
+      throw new Error(`that key already sends to position ${owner + 1} in this activity`);
+    }
+
+    const rest = content.buttons.filter((one) => !here(one));
+    if (command === undefined) return { ...content, buttons: rest };
+
+    const label = held?.label;
+    const binding: ButtonBinding = {
+      surface: 'keypad',
+      scan,
+      ...(label === undefined ? {} : { label }),
+      inActivity: activity,
+      sends: [{ device, command }],
+    };
+    return { ...content, buttons: [...rest, binding] };
+  });
 }

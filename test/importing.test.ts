@@ -19,12 +19,14 @@ import { join } from 'node:path';
 
 import { require_, skipUnless } from '@harmony/lab';
 
-import { contentsOf, importReading } from '../src/main/configuration.ts';
-import { addDeviceUse, storedContentOf, writeContent } from '../src/main/content.ts';
+import { contentsOf, importReading, settleContent } from '../src/main/configuration.ts';
+import { addDeviceUse, assignButton, labelDeviceUse, storedContentOf, writeContent }
+  from '../src/main/content.ts';
 import { importConfiguration } from '../src/main/import.ts';
 import { DeviceLibrary } from '../src/main/store/library.ts';
 import { RemoteStore } from '../src/main/store/remotes.ts';
 import { fingerprintOf, signatureOf } from '../src/shared/library.ts';
+import type { ButtonBinding } from '../src/shared/content.ts';
 import type { DeviceCommand } from '../src/shared/library.ts';
 
 /** Two architectures, because one proves much less than two. */
@@ -277,6 +279,203 @@ test('a second device on one remote takes the next free position, never the coun
     const content = await addDeviceUse(at.store, 'bedroom', 'appliance-aaaa', 'a third');
 
     assert.deepEqual(content.devices.map((one) => one.slot), [0, 4, 5]);
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('a position can be named, renamed and have its name taken away again', async () => {
+  // The label belongs to the **use** and not to the description, which is the whole reason four identical
+  // televisions are one description: taking it away has to leave the description alone and let the library
+  // name it, rather than storing an empty string that satisfies every presence test and renders as nothing.
+  const at = await bench();
+  try {
+    await at.store.create('bedroom');
+    await writeContent(at.store, 'bedroom', {
+      devices: [{ slot: 0, definition: 'appliance-aaaa' }], activities: [], buttons: [],
+      filledFrom: 'here',
+    });
+
+    assert.deepEqual((await labelDeviceUse(at.store, 'bedroom', 0, 'the telly')).devices,
+                     [{ slot: 0, definition: 'appliance-aaaa', label: 'the telly' }]);
+    assert.deepEqual((await labelDeviceUse(at.store, 'bedroom', 0, '  the big telly  ')).devices,
+                     [{ slot: 0, definition: 'appliance-aaaa', label: 'the big telly' }],
+                     'and it is trimmed, since a name with a space on the end is the same name');
+    // Absent and the empty string both take it away, because a field cleared in an interface arrives as
+    // one of the two and they mean the same thing to whoever cleared it.
+    assert.deepEqual((await labelDeviceUse(at.store, 'bedroom', 0)).devices,
+                     [{ slot: 0, definition: 'appliance-aaaa' }]);
+    await labelDeviceUse(at.store, 'bedroom', 0, 'again');
+    assert.deepEqual((await labelDeviceUse(at.store, 'bedroom', 0, '')).devices,
+                     [{ slot: 0, definition: 'appliance-aaaa' }]);
+    // On disk rather than only in the answer, which is what the page reads back.
+    assert.deepEqual((await storedContentOf(at.store, 'bedroom'))?.devices,
+                     [{ slot: 0, definition: 'appliance-aaaa' }]);
+
+    await assert.rejects(() => labelDeviceUse(at.store, 'bedroom', 3, 'nothing there'),
+                         /nothing at position 4/);
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+/** Two devices and two activities, which is the least a keypad question can be asked about. */
+async function aRemoteWithTwoActivities(at: Bench, buttons: ButtonBinding[] = []): Promise<void> {
+  await at.store.create('bedroom');
+  await writeContent(at.store, 'bedroom', {
+    devices: [{ slot: 0 }, { slot: 1 }],
+    activities: [0, 1].map((slot) => ({ slot, roles: [], onStart: [], onStop: [], wants: [],
+                                        devices: [0, 1] })),
+    buttons, filledFrom: 'here',
+  });
+}
+
+test('a key sends to one device within one activity, and a second is refused rather than silent',
+     async () => {
+  const at = await bench();
+  try {
+    await aRemoteWithTwoActivities(at);
+
+    const bound = await assignButton(at.store, 'bedroom', 12, 0, 0, 7);
+    assert.deepEqual(bound.buttons,
+                     [{ surface: 'keypad', scan: 12, inActivity: 0, sends: [{ device: 0, command: 7 }] }]);
+
+    // Pointing the same key at another command of the same device replaces rather than accumulating: in one
+    // activity a key sends one thing, so two bindings for one scan would be a document the remote has to
+    // choose from.
+    const moved = await assignButton(at.store, 'bedroom', 12, 0, 0, 9);
+    assert.equal(moved.buttons.length, 1);
+    assert.deepEqual(moved.buttons[0]?.sends, [{ device: 0, command: 9 }]);
+
+    // **The refusal is the point.** Nothing about the format stops two devices claiming one key, and a
+    // document that did would send both codes or one at random. So the second device is told no, in
+    // words, rather than quietly winning.
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 1, 0, 3),
+                         /already sends to position 1/);
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 4, 0, 3),
+                         /nothing at position 5/);
+    // And an activity the document has not got, since an activity is what makes a keypad binding mean
+    // anything and a number nobody checked would write one that means nothing.
+    await assert.rejects(() => assignButton(at.store, 'bedroom', 12, 0, 9, 3),
+                         /no activity 10/);
+
+    // Clearing it frees the key, and then the other device may have it.
+    assert.deepEqual((await assignButton(at.store, 'bedroom', 12, 0, 0)).buttons, []);
+    assert.deepEqual((await assignButton(at.store, 'bedroom', 12, 1, 0, 3)).buttons[0]?.sends,
+                     [{ device: 1, command: 3 }]);
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('the same key in another activity is another question, and neither edit touches the other',
+     async () => {
+  // **What an activity is for**, as a test: the volume key sends to the amplifier while you are listening
+  // to music and to the television while you are watching it. So one scan carries one binding per activity,
+  // and editing one must leave the others exactly where they were.
+  const at = await bench();
+  try {
+    await aRemoteWithTwoActivities(at);
+
+    await assignButton(at.store, 'bedroom', 12, 0, 0, 7);
+    const both = await assignButton(at.store, 'bedroom', 12, 1, 1, 3);
+    assert.equal(both.buttons.length, 2, 'one key, two activities, two bindings');
+    assert.deepEqual(both.buttons.map((one) => [one.inActivity, one.sends[0]?.device]).sort(),
+                     [[0, 0], [1, 1]]);
+
+    // Clearing it in one leaves the other alone, which is the half a single assertion above cannot show.
+    const cleared = await assignButton(at.store, 'bedroom', 12, 0, 0);
+    assert.deepEqual(cleared.buttons.map((one) => one.inActivity), [1]);
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('a screen key on the same code is a different population and is never touched', async () => {
+  // The screen keys and the keypad keys share no scan code at all on three of the four architectures and
+  // exactly one on the fourth, so a collision is rare rather than impossible, and there is no screen for
+  // editing the screen keys yet. Whichever it is, this must leave it alone.
+  const at = await bench();
+  try {
+    const onTheScreen: ButtonBinding = { surface: 'screen', scan: 12, inDeviceMode: 3,
+                                         sends: [{ device: 1, command: 40 }] };
+    await aRemoteWithTwoActivities(at, [onTheScreen]);
+
+    const bound = await assignButton(at.store, 'bedroom', 12, 0, 0, 7);
+    assert.equal(bound.buttons.length, 2, 'the screen key kept its own');
+    assert.deepEqual(bound.buttons.filter((one) => one.surface === 'screen'), [onTheScreen]);
+
+    const cleared = await assignButton(at.store, 'bedroom', 12, 0, 0);
+    assert.deepEqual(cleared.buttons, [onTheScreen]);
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('a document that has only ever been projected is written down before it is edited',
+     { ...skipUnless(SAMPLES[0]) }, async () => {
+  // **The defect this exists for, with the failing case first.** A document can hold a configuration and no
+  // contents file of its own, which is every document written before that file existed, and `contentsOf`
+  // serves those by projecting the bytes on demand. The editing path reads the file. So the first rename or
+  // button assignment on such a document started from nothing at all: the page showed four devices and the
+  // edit wrote a document with none.
+  //
+  // Nothing failed and nothing could, because starting from empty contents is the **correct** answer for a
+  // remote nobody has imported into, and from inside `editContent` the two cases look identical. It was
+  // found by a window test refusing to assign a button, saying the remote had nothing at position 1 about a
+  // document whose page was showing four.
+  const at = await bench();
+  try {
+    await at.store.create('living room');
+    await at.store.attachConfiguration('living room', 'configuration.bin', require_(SAMPLES[0]),
+                                       'read-from-device', NOW);
+
+    // The state the defect needs: contents on the page, no contents on disk.
+    const projected = await contentsOf(at.store, at.library, 'living room');
+    assert.equal(projected?.content.devices.length, 4, 'the page is being shown four devices');
+    assert.equal(await storedContentOf(at.store, 'living room'), undefined, 'and none is written down');
+
+    // The negative, which is what makes this a check rather than a description: an edit straight into
+    // `editContent` here starts from empty contents and refuses, because the position it is told about does
+    // not exist in what it read.
+    await assert.rejects(() => labelDeviceUse(at.store, 'living room', 0, 'the telly'),
+                         /nothing at position 1/);
+
+    // And with the projection settled first, which is what the three editing methods now do.
+    await settleContent(at.store, at.library, 'living room');
+    const settled = await storedContentOf(at.store, 'living room');
+    assert.deepEqual(settled, projected?.content, 'written down exactly as it was projected');
+
+    const named = await labelDeviceUse(at.store, 'living room', 0, 'the telly');
+    assert.equal(named.devices.length, 4, 'and the other three are still there');
+    assert.equal(named.devices.find((one) => one.slot === 0)?.label, 'the telly');
+
+    // Settling twice changes nothing, since after the first time the file is the truth. Without this the
+    // second edit would throw away whatever the first one wrote.
+    await labelDeviceUse(at.store, 'living room', 1, 'the amplifier');
+    await settleContent(at.store, at.library, 'living room');
+    const after = await storedContentOf(at.store, 'living room');
+    assert.equal(after?.devices.find((one) => one.slot === 0)?.label, 'the telly');
+    assert.equal(after?.devices.find((one) => one.slot === 1)?.label, 'the amplifier');
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('a document with no configuration at all is left alone, since empty contents are right for it',
+     async () => {
+  // The other arm, and it is the reason the fix is a settle rather than a refusal: a remote nobody has
+  // imported into genuinely has no contents, and being able to say what it drives anyway is what the
+  // shared library exists for.
+  const at = await bench();
+  try {
+    await at.store.create('bedroom');
+    await settleContent(at.store, at.library, 'bedroom');
+    assert.equal(await storedContentOf(at.store, 'bedroom'), undefined, 'nothing was written');
+
+    const content = await addDeviceUse(at.store, 'bedroom', 'appliance-aaaa');
+    assert.equal(content.filledFrom, 'here');
+    assert.deepEqual(content.devices, [{ slot: 0, definition: 'appliance-aaaa' }]);
   } finally {
     await rm(at.root, { recursive: true, force: true });
   }

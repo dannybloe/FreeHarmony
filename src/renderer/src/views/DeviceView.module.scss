@@ -1,4 +1,4 @@
-// One device position. Facts, then every command it holds as a run of chips.
+// One device position: the name, then the remote beside what a pressed key can be pointed at.
 
 @use '../mantine' as m;
 
@@ -11,7 +11,7 @@
 
 .heading {
   display: grid;
-  gap: m.rem(4);
+  gap: m.rem(2);
 }
 
 .title {
@@ -19,44 +19,54 @@
   letter-spacing: m.rem(-0.4);
 }
 
-.lead {
-  max-width: m.rem(560);
+.under {
+  font-size: var(--mantine-font-size-sm);
   color: var(--mantine-color-gray-6);
+}
+
+.activities {
+  margin-block-start: m.rem(4);
   font-size: var(--mantine-font-size-sm);
-}
-
-.facts {
-  display: grid;
-  grid-template-columns: m.rem(200) 1fr;
-  gap: m.rem(6) var(--mantine-spacing-sm);
-  margin: 0;
-  max-width: m.rem(620);
-  font-size: var(--mantine-font-size-sm);
-
-  dt {
-    color: var(--mantine-color-gray-6);
-  }
-
-  dd {
-    margin: 0;
-    color: var(--mantine-color-gray-8);
-  }
-}
-
-// Every command as a chip. Dozens of them, so they wrap and stay small: this is a picture of how much
-// there is rather than a list anybody reads through.
-.commands {
-  display: flex;
-  flex-wrap: wrap;
-  gap: m.rem(6);
-  margin-block-start: var(--mantine-spacing-sm);
-}
-
-.command {
-  padding: m.rem(3) m.rem(9);
-  border-radius: var(--mantine-radius-sm);
-  border: 1px solid var(--mantine-color-gray-2);
-  background: var(--mantine-color-gray-0);
-  font-size: var(--mantine-font-size-xs);
   color: var(--mantine-color-gray-7);
+}
+
+// The remote on the left and what a key can do on the right, which is Danny's layout. The left column is
+// as wide as the drawing needs and no wider: a remote is a tall narrow thing and stretching the column to
+// an equal share would put the chooser a hand's width away from the key it is about.
+.board {
+  display: grid;
+  grid-template-columns: auto minmax(m.rem(260), m.rem(420));
+  align-items: start;
+  gap: var(--mantine-spacing-xl);
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+}
+
+.right {
+  position: sticky;
+  // Level with the top of the drawing rather than centred on it: the keys at the bottom of a remote are as
+  // pressable as the ones at the top, and a panel that moved with the pointer would be worse than one that
+  // stays where it was found.
+  inset-block-start: var(--mantine-spacing-md);
+}
+
+.chosen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-md);
+  background: rgb(255 255 255 / 62%);
+}
+
+.chosenTitle {
+  margin: 0;
+  font-size: m.rem(17);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
 }

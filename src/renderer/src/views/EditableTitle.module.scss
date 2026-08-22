@@ -1,0 +1,42 @@
+// The heading and its pencil. The pencil is hidden until the row is hovered, and always visible once it
+// has keyboard focus, which is the pair that makes a fade-in control usable rather than a secret.
+
+@use '../mantine' as m;
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: m.rem(6);
+  min-width: 0;
+}
+
+.title {
+  min-width: 0;
+}
+
+.pencil {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: m.rem(26);
+  height: m.rem(26);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mantine-color-gray-5);
+  cursor: pointer;
+  // Hidden rather than absent, so the row does not change width when the pointer arrives and shift the
+  // title under the cursor.
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+
+  .row:hover &,
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  @include m.hover {
+    color: var(--mantine-color-indigo-6);
+    background: var(--mantine-color-gray-1);
+  }
+}

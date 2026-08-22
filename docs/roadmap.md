@@ -39,9 +39,23 @@ sending exactly what they sent, which is not free. Of the devices that turn up i
 configuration next door, a quarter are described with their commands in a different order, by
 Logitech's own software.
 
-What step 1 still owes you is the rest of the picture: what every individual button sends, and the
-screens drawn the way the remote draws them. Both can be read today, next door, and neither is on
-screen yet.
+**Every device now has a page with your remote drawn on it**, and the buttons on that drawing are
+coloured by what they do: the ones that drive this device, the ones another device has taken, and the
+ones nothing uses yet. Press one and it says which command it sends, and lets you point it at a
+different one.
+
+The keypad is shown **one activity at a time**, and that is not a simplification: on a Harmony, a button
+means something different in each activity, which is the whole point of an activity. The volume key sends
+to the amplifier while you are listening to music and to the television while you are watching it. So
+there is nothing to show for a device no activity uses yet, and the page says so.
+
+Two limits it tells you about rather than hiding. Some buttons cannot be pointed at anything, because what
+they send has never been measured on that model: 36 of a Harmony 600's 54, 34 of a Harmony One's 44, and
+none at all of a Harmony 525's 50. Those are drawn faded and say why when you press one. And the buttons
+**on the screen** are a separate set that this page does not touch yet.
+
+What step 1 still owes you is the screens, drawn the way the remote draws them. They can be read today,
+next door, and they are not on screen yet.
 
 Your devices are kept in their own place, beside the remotes rather than inside one, because the same
 television belongs to every remote that drives it. Reading the same remote twice does not describe

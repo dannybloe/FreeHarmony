@@ -182,10 +182,18 @@ async function main(): Promise<number> {
         // way into the library is a drawing with no words in it. No backticks in here: this comment is
         // inside a template literal, and one would end the string.
         const within = document.querySelector('.mantine-Modal-content') ?? document;
-        for (const it of within.querySelectorAll('button')) {
+        // Anything that says it is a button, not only the element. A key on a drawn remote is a group
+        // inside an SVG carrying role and a label, so a search over the tag alone cannot reach the one
+        // control on the page that most needs photographing.
+        for (const it of within.querySelectorAll('button, [role=button]')) {
           const says = (it.textContent ?? '').trim().includes(wanted)
             || it.getAttribute('aria-label') === wanted;
-          if (says && !it.disabled) { it.click(); return true; }
+          if (!says || it.disabled) continue;
+          // An SVG element has no click method of its own, so the event is dispatched instead. It bubbles,
+          // which is what React needs and also what the keypad needs: its handler is on the wrapper.
+          if (typeof it.click === 'function') it.click();
+          else it.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          return true;
         }
         return false;
       })()`);

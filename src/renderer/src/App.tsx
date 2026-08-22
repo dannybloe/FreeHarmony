@@ -98,6 +98,20 @@ export function App() {
     await contents.reload();
   };
 
+  // The two edits a device's own page makes, and both are the same shape as `addDevice`: they change a
+  // document's contents rather than the folder, so the contents reload and the list does not.
+  const labelDevice = async (name: string, slot: number, label: string) => {
+    await api().remotes.labelDevice(name, slot, label === '' ? undefined : label);
+    await contents.reload();
+  };
+
+  const assignButton = async (
+    name: string, scan: number, slot: number, activity: number, command?: number,
+  ) => {
+    await api().remotes.assignButton(name, scan, slot, activity, command);
+    await contents.reload();
+  };
+
   // A recognised remote moves the flow on by itself, which is what the sketch asked for: you plug it in
   // and you are being asked what to call it. The decision is `advanceOn`, in the view model, where a
   // test can walk it; what is left here is the change of screen and the memory it needs, because a ref
@@ -257,11 +271,16 @@ export function App() {
             return (
               <DeviceView
                 remote={remote.name}
+                model={remote.model}
                 slot={screen.slot}
                 contents={held}
                 definition={definitionIn(
                   library.state,
                   held?.content.devices.find((one) => one.slot === screen.slot)?.definition)}
+                busy={remotes.busy}
+                onLabel={(label) => void labelDevice(remote.name, screen.slot, label)}
+                onAssign={(scan, activity, command) =>
+                  void assignButton(remote.name, scan, screen.slot, activity, command)}
               />
             );
           }

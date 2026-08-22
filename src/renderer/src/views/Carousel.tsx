@@ -74,7 +74,13 @@ export function Carousel({ children, label }: CarouselProps) {
         </button>
       )}
 
-      <div className={classes.strip} ref={strip} onScroll={measure} role="group" aria-label={label}>
+      <div
+        className={scrollable ? classes.strip : `${classes.strip} ${classes.stripStill}`}
+        ref={strip}
+        onScroll={measure}
+        role="group"
+        aria-label={label}
+      >
         {children}
       </div>
 

@@ -1,0 +1,106 @@
+// The clickable remote. Four states, each a `--key-fill` on one key's own group, which is the whole
+// mechanism the drawing library was built for: nothing in the SVG carries a colour, every fill reads a
+// custom property, and a property set on a key group is inherited by the shapes inside it.
+
+@use '../mantine' as m;
+
+.keypad {
+  // The same grey as everywhere else a remote is drawn. `test/styles.test.ts` names this file.
+  @include m.drawing-palette;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  // Tall rather than wide: Danny asked for the remote drawn vertically down the left of the page, so the
+  // height is what is stated and the width follows from the model's own proportions.
+  height: m.rem(560);
+  padding-block: m.rem(4);
+
+  :global(.key-group) {
+    cursor: pointer;
+    transition: opacity 120ms ease;
+  }
+
+  // Sends to the device this page is about. The one state that is a positive fact, so it is the one with
+  // colour in it.
+  :global(.key-group[data-state='mine']) {
+    --key-fill: var(--mantine-color-indigo-2);
+    --key-stroke: var(--mantine-color-indigo-6);
+    --key-text: var(--mantine-color-indigo-9);
+  }
+
+  // Sends to another position on this remote. Present, spoken for, not yours: a warmer grey rather than a
+  // second colour, because two colours would read as two kinds of assignment.
+  :global(.key-group[data-state='taken']) {
+    --key-fill: var(--mantine-color-gray-4);
+    --key-stroke: var(--mantine-color-gray-6);
+    --key-text: var(--mantine-color-gray-7);
+  }
+
+  // Free. The drawing's own key colour, which is white: nothing on it, and the eye should pass over it.
+
+  // No measured code, so nothing can ever be bound here. Faded and not clickable, which is the honest
+  // rendering: a key that looks like the free ones and then refuses is worse than one that never offered.
+  :global(.key-group[data-state='unmeasured']) {
+    cursor: default;
+    opacity: 0.4;
+  }
+
+  :global(.key-group[data-picked]) {
+    --key-stroke: var(--mantine-color-indigo-7);
+  }
+
+  // The ring on the chosen key, drawn as a stroke on the key's own outline rather than as an added shape,
+  // since the shapes in the drawing are the product's own and nothing is added to them.
+  :global(.key-group[data-picked] .key),
+  :global(.key-group[data-picked] .rocker-fill) {
+    stroke-width: 3;
+  }
+
+  // `:global()` has to wrap the **whole** selector, descendant included: a bare `.key` inside it would be
+  // hashed by the bundler and match nothing in a drawing the bundler never saw.
+  :global(.key-group:focus-visible) {
+    outline: none;
+  }
+
+  :global(.key-group:focus-visible .key) {
+    stroke-width: 3;
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: m.rem(4) var(--mantine-spacing-md);
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-6);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: m.rem(6);
+}
+
+// A key, at the size of a word. The same four fills as above, stated once more here because a swatch is
+// not a key group and cannot inherit from one.
+.swatch {
+  width: m.rem(14);
+  height: m.rem(11);
+  border-radius: m.rem(3);
+  border: 1px solid var(--mantine-color-gray-6);
+  background: var(--mantine-color-white);
+
+  &[data-state='mine'] {
+    border-color: var(--mantine-color-indigo-6);
+    background: var(--mantine-color-indigo-2);
+  }
+
+  &[data-state='taken'] {
+    background: var(--mantine-color-gray-4);
+  }
+
+  &[data-state='unmeasured'] {
+    opacity: 0.4;
+  }
+}

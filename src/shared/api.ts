@@ -108,6 +108,25 @@ export interface RemotesApi {
    * device by it.
    */
   addDevice(name: string, definition: string, label?: string): Promise<RemoteContent>;
+  /**
+   * What you call the thing at one position on this remote, or nothing.
+   *
+   * The label belongs to the **use** and not to the description, which is what makes four identical
+   * televisions one description under four names. Absent takes the label away rather than storing an
+   * empty one, and then a screen shows the library's own name for it.
+   */
+  labelDevice(name: string, slot: number, label?: string): Promise<RemoteContent>;
+  /**
+   * Point a physical key at one command of one device, inside one activity, or clear it.
+   *
+   * The activity is not optional. Every keypad binding on every remote in the corpus names one, because a
+   * key means different things in different activities, which is what an activity is for.
+   *
+   * `command` absent clears it. It refuses where another position already owns that key in that activity,
+   * since the remote would have to choose.
+   */
+  assignButton(name: string, scan: number, device: number, activity: number,
+               command?: number): Promise<RemoteContent>;
 }
 
 /**
@@ -204,7 +223,7 @@ export type Namespace = keyof FreeHarmonyApi;
  */
 export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove',
                                'inspectAttached', 'importFrom', 'contents', 'fileDefinitions',
-                               'addDevice'] as const;
+                               'addDevice', 'labelDevice', 'assignButton'] as const;
 export const DEVICE_METHODS = ['attached', 'readHardware'] as const;
 export const LIBRARY_METHODS =
   ['list', 'get', 'put', 'create', 'clone', 'remove',

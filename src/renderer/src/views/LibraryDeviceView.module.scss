@@ -54,14 +54,6 @@
   color: var(--mantine-color-gray-6);
 }
 
-// Why it cannot be shared. Quieter than the name, and a fact rather than a warning: nothing is wrong.
-.private {
-  margin-block-start: m.rem(2);
-  font-size: var(--mantine-font-size-xs);
-  color: var(--mantine-color-gray-5);
-  max-width: m.rem(520);
-}
-
 // The correctable fields, in a row so they take one line rather than a column of four. Deliberately
 // compact: this is not what the page is about.
 .details {
@@ -94,6 +86,11 @@
 // makes a Harmony 525 and a Harmony One line up beside each other.
 .small {
   height: m.rem(72);
+  // The same grey as Home's, and it was missing: without this the drawing falls back to the library's own
+  // paler defaults, so one carousel of remotes looked like a different application from the other. Danny
+  // spotted it as "the grey tint on the home page is nicer"; the cause was a missing include and
+  // `test/styles.test.ts` now names this file so it cannot go missing again.
+  @include m.drawing-palette;
 }
 
 // What a tile shows for a model nobody has drawn, which is most of the forty. The initial, as the chooser

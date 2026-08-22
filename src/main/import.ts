@@ -249,9 +249,34 @@ function activitiesOf(c: Container): Activity[] {
   } satisfies Activity));
 }
 
-/** Every button binding that sends something, on either surface, with the label where one is drawn. */
+/**
+ * Every button binding that sends something, on either surface, with the label where one is drawn.
+ *
+ * **`inActivity` is the activity, and it used to be the configuration's own set number.** Corrected on 22
+ * August 2026, and it was found by building the screen that reads it: a keypad key belongs to a base slot 9
+ * binding set, and this wrote that set's index into a field whose own docstring says "which activity, by
+ * position". The two are different spaces and they do not even overlap. On one Harmony One the activities
+ * are 0 to 6 and 8 and the sets holding their keys are 7 to 15, so every single one of 220 bindings named
+ * an activity that either does not exist or is the wrong one, and nothing failed: the numbers were
+ * plausible, and no test asked what any of them meant.
+ *
+ * The mapping is already read next door, since an activity's own record carries the set its keys live in,
+ * so this is a lookup rather than a derivation. A set no activity claims keeps no context at all rather
+ * than being given a number that would be a guess.
+ *
+ * **`inDeviceMode` is still the configuration's page index and not a device position**, which the field's
+ * docstring now says outright. It is left as it is deliberately: there is no screen that reads it yet, and
+ * resolving it needs the reading that says which device a screen page belongs to. Naming it honestly is
+ * what stops it being trusted in the meantime.
+ */
 function buttonsOf(c: Container): ButtonBinding[] {
   const labels = keyLabels(c);
+  // Which activity each keypad binding set belongs to. One entry per activity, so a set nothing claims is
+  // simply absent and its keys carry no context.
+  const activityOfSet = new Map<number, number>();
+  for (const one of readActivities(c)) {
+    if (one.set >= 0) activityOfSet.set(one.set, one.activity);
+  }
   const out: ButtonBinding[] = [];
   for (const key of keyCodes(c)) {
     // Event type 0 in a handler set is that set's enter or leave handler rather than a key, so it is
@@ -260,11 +285,13 @@ function buttonsOf(c: Container): ButtonBinding[] {
     if (key.codes.length === 0) continue;
     const sends: Step[] = key.codes.map((sent) => ({ device: sent.group, command: sent.code }));
     const label = key.where === 'page' ? labels.get(`${key.index}:${key.scan}`)?.text : undefined;
+    const activity = key.where === 'page' ? undefined : activityOfSet.get(key.index);
     out.push({
       surface: key.where === 'page' ? 'screen' : 'keypad',
       scan: key.scan,
       ...(label === undefined ? {} : { label }),
-      ...(key.where === 'page' ? { inDeviceMode: key.index } : { inActivity: key.index }),
+      ...(key.where === 'page' ? { inDeviceMode: key.index } : {}),
+      ...(activity === undefined ? {} : { inActivity: activity }),
       sends,
     });
   }

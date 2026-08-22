@@ -12,8 +12,9 @@
 import { ipcMain } from 'electron';
 
 import { channelFor, METHODS, type FreeHarmonyApi, type Namespace } from '../shared/api.ts';
-import { contentsOf, fileDefinitionsOf, importInto, inspectAttached } from './configuration.ts';
-import { addDeviceUse, deviceUsage } from './content.ts';
+import { contentsOf, fileDefinitionsOf, importInto, inspectAttached, settleContent }
+  from './configuration.ts';
+import { addDeviceUse, assignButton, deviceUsage, labelDeviceUse } from './content.ts';
 import { attachedRemotes, readHardware } from './devices.ts';
 import { DeviceLibrary } from './store/library.ts';
 import { cloneDefinition, createDefinition } from './library.ts';
@@ -34,7 +35,23 @@ export function registerHandlers(store: RemoteStore, library: DeviceLibrary): vo
     importFrom: (name, token) => importInto(store, library, name, token, now),
     contents: (name) => contentsOf(store, library, name),
     fileDefinitions: (name) => fileDefinitionsOf(store, library, name, now),
-    addDevice: (name, definition, label) => addDeviceUse(store, name, definition, label),
+    // **The three that change a document, and each settles its projection first.** A document may hold a
+    // configuration and no contents file of its own, and then the page is being shown a projection of the
+    // bytes while the editing path reads the file: without this, the first edit starts from nothing and
+    // writes away everything on the screen. `settleContent` says why at length; it is here rather than
+    // inside `editContent` because only this layer has the library the projection needs.
+    addDevice: async (name, definition, label) => {
+      await settleContent(store, library, name);
+      return addDeviceUse(store, name, definition, label);
+    },
+    labelDevice: async (name, slot, label) => {
+      await settleContent(store, library, name);
+      return labelDeviceUse(store, name, slot, label);
+    },
+    assignButton: async (name, scan, device, activity, command) => {
+      await settleContent(store, library, name);
+      return assignButton(store, name, scan, device, activity, command);
+    },
   });
 
   register('devices', {

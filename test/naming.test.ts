@@ -11,7 +11,8 @@ import assert from 'node:assert/strict';
 
 import type { DeviceDefinition } from '../src/shared/library.ts';
 import {
-  KINDS, KIND_NAMES, ORIGINS, ORIGIN_NAMES, describeDefinition, headingFor, provenanceOf,
+  KINDS, KIND_NAMES, ORIGINS, ORIGIN_NAMES, describeDefinition, headingFor, headingOnRemote,
+  provenanceOf,
 } from '../src/shared/library.ts';
 
 function device(over: Partial<DeviceDefinition> = {}): DeviceDefinition {
@@ -85,4 +86,32 @@ test('every category and every origin has words, and the two lists are the same 
   // Exact, so adding a category shows up here rather than only in a screen nobody looked at.
   assert.equal(KINDS.length, 9);
   assert.equal(ORIGINS.length, 4);
+});
+
+test('a position on a remote says nothing twice, which is the whole difference from the library', () => {
+  // **The rule Danny asked for on 22 August 2026, and the third clause is the substance of it**: the line
+  // underneath appears only where it says something the title does not. A tile reading `Sony KD-43` with
+  // `Sony KD-43` written under it is the same words twice, which is what the page did before this existed.
+  const sony = device({ manufacturer: 'Sony', model: 'KD-43' });
+
+  assert.deepEqual(headingOnRemote(undefined, sony, 0), { title: 'Sony KD-43' });
+  // Your own word for it here, and then the make and model identify what it is.
+  assert.deepEqual(headingOnRemote('the telly', sony, 0), { title: 'the telly', under: 'Sony KD-43' });
+  // The description's own name, where it has one and this remote has not been given one. Same rule: no
+  // second line where the two would agree.
+  assert.deepEqual(headingOnRemote(undefined, device({ name: 'Sony KD-43' }), 0),
+                   { title: 'Sony KD-43' });
+  assert.deepEqual(headingOnRemote(undefined, device({ name: 'The big one', manufacturer: 'Sony' }), 0),
+                   { title: 'The big one', under: 'Sony' });
+
+  // **The last arm is not a placeholder, it is the ordinary case.** A configuration states codes and
+  // positions and no words at all, so a freshly imported remote is a page of numbered positions until
+  // somebody names them, and the number is one based because nobody counts their own equipment from zero.
+  assert.deepEqual(headingOnRemote(undefined, device(), 2), { title: 'Position 3' });
+  // And the same where the description is on another machine entirely, which the page says in words
+  // elsewhere rather than in the title.
+  assert.deepEqual(headingOnRemote(undefined, undefined, 0), { title: 'Position 1' });
+  // An empty string is not a name, in either field. Both are reachable: a label is cleared through the
+  // interface, and a definition typed with an empty name went through `put` rather than `create`.
+  assert.deepEqual(headingOnRemote('', device({ name: '' }), 4), { title: 'Position 5' });
 });
