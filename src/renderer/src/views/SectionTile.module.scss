@@ -118,3 +118,12 @@
   background: rgb(255 255 255 / 70%);
   border: 1px solid var(--mantine-color-gray-2);
 }
+
+// The drawing that stands where a number would. The same height as `.value`'s line box, so a row of tiles
+// with pictures and a row with numbers are the same height and can sit next to each other.
+.glyph {
+  display: grid;
+  place-items: center;
+  height: m.rem(36);
+  color: var(--mantine-color-indigo-5);
+}

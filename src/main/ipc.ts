@@ -16,6 +16,7 @@ import { contentsOf, fileDefinitionsOf, importInto, inspectAttached } from './co
 import { addDeviceUse, deviceUsage } from './content.ts';
 import { attachedRemotes, readHardware } from './devices.ts';
 import { DeviceLibrary } from './store/library.ts';
+import { cloneDefinition, createDefinition } from './library.ts';
 import { RemoteStore } from './store/remotes.ts';
 
 export function registerHandlers(store: RemoteStore, library: DeviceLibrary): void {
@@ -45,6 +46,8 @@ export function registerHandlers(store: RemoteStore, library: DeviceLibrary): vo
     list: () => library.list(),
     get: (id) => library.get(id),
     put: (definition) => library.put(definition),
+    create: (draft) => createDefinition(library, draft, now()),
+    clone: (id, name) => cloneDefinition(library, id, name),
     remove: (id) => library.remove(id),
     missingFor: (content) => library.missingFor(content),
     likelyDuplicates: () => library.likelyDuplicates(),

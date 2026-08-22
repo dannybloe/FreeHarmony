@@ -21,6 +21,7 @@
  * in either direction. Adding a screen about a remote and forgetting this is not possible.
  */
 import { isSameModel } from '../catalogue.ts';
+import type { Exhaustive } from '../../../shared/exhaustive.ts';
 import type { RemoteDocument, RemoteModel } from '../../../shared/remote.ts';
 
 /** Where the model on the naming screen came from, which is the one thing that screen words differently. */
@@ -68,6 +69,23 @@ export type Screen =
   | { readonly at: 'connect' }
   /** The application's own settings, which are about no remote in particular. */
   | { readonly at: 'preferences' }
+  /**
+   * The shared library: every appliance this machine has a description of.
+   *
+   * Reached from Home rather than from a remote, and that placement is the decision of 21 August 2026
+   * made visible. An appliance belongs to no remote in particular, so a page about it that could only be
+   * reached through one would be telling a person the opposite of how their own data is arranged.
+   */
+  | { readonly at: 'library' }
+  /**
+   * One appliance in the library, by identifier and never by name.
+   *
+   * The mirror of the rule for a remote, and it comes out the other way for a reason worth stating. A
+   * remote is held by name because its name **is** its identity, its folder. An appliance's name is not:
+   * it is a correctable field, so holding one here would put a screen on the wrong appliance the moment
+   * somebody fixed a spelling. The identifier never changes, which is exactly what a screen needs.
+   */
+  | { readonly at: 'appliance'; readonly id: string }
   | RemoteScreen;
 
 /**
@@ -87,12 +105,6 @@ export type RemoteScreen =
 
 /** Which screens are about a remote, as data, so `renamed` and `removed` need no list of their own. */
 export const REMOTE_SCREENS = ['remote', 'devices', 'device', 'activities', 'settings'] as const;
-
-type Exhaustive<Listed extends string, Union extends string> = [Listed] extends [Union]
-  ? [Union] extends [Listed]
-    ? true
-    : never
-  : never;
 
 /** Fails the typecheck if the list and the type stop naming the same screens, in either direction. */
 export const REMOTE_SCREENS_ARE_EXHAUSTIVE:
@@ -192,6 +204,23 @@ export class NavigationModel {
   }
 
   /**
+   * An appliance was removed from the library, so nothing may still be pointing at it.
+   *
+   * The same shape as `removed` and deliberately a second method rather than one taking a kind: a remote
+   * is addressed by name and an appliance by identifier, so a single method would have to be told which,
+   * and the day somebody passes a name where an identifier is expected it silently matches nothing and
+   * leaves the window on a page about something that is gone.
+   *
+   * **`back` and not `home`**, which matters here more than it does for a remote: deleting an appliance is
+   * done from its own page and the page behind it is the library, which is where a person expects to
+   * land. If several screens behind also named it, the filter above has already taken them out.
+   */
+  definitionRemoved(id: string): void {
+    this.#behind = this.#behind.filter((screen) => applianceOn(screen) !== id);
+    if (applianceOn(this.#screen) === id) this.back();
+  }
+
+  /**
    * The remote this screen is about, resolved against the list the main process gave us.
    *
    * `undefined` where the screen is not about one, and **also** where it names one the list does not
@@ -207,6 +236,11 @@ export class NavigationModel {
     this.#screen = screen;
     this.#changed(screen);
   }
+}
+
+/** Whether a screen is about one appliance, and if so which. The mirror of `remoteOn`. */
+export function applianceOn(screen: Screen): string | undefined {
+  return screen.at === 'appliance' ? screen.id : undefined;
 }
 
 /** The same screen under a new name, or the very same object when it was not about that remote. */

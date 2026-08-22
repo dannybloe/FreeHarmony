@@ -17,14 +17,26 @@
  * whose text begins with the first tile's number. One attribute makes the question exact, and it also
  * says in the markup what these elements are, which no class name of ours can.
  */
+import type { ReactNode } from 'react';
+
 import classes from './SectionTile.module.scss';
 
 interface SectionTileProps {
   /** The big figure. Absent where the tile is not about a count. */
-  readonly value?: string | number;
+  readonly value?: string | number | undefined;
+  /**
+   * A drawing in place of the figure, for a tile that is about a thing rather than about a count.
+   *
+   * The same slot and not a second one, which is the decision: an appliance tile wants a picture where a
+   * section tile wants a number, and both are the one large thing above the title. Two slots would let a
+   * caller fill both and get a tile a hand tall that lines up with nothing.
+   *
+   * `value` wins if somebody passes both, so the layout cannot break, and the two are never both wanted.
+   */
+  readonly glyph?: ReactNode | undefined;
   readonly title: string;
   /** One line under the title. It may be empty and the tile keeps its shape. */
-  readonly caption?: string;
+  readonly caption?: string | undefined;
   /**
    * What pressing it does, or absent because there is nowhere to go yet.
    *
@@ -38,10 +50,13 @@ interface SectionTileProps {
   readonly selected?: boolean;
 }
 
-export function SectionTile({ value, title, caption, onClick, selected = false }: SectionTileProps) {
+export function SectionTile({
+  value, glyph, title, caption, onClick, selected = false,
+}: SectionTileProps) {
   const inside = (
     <>
       {value !== undefined && <span className={classes.value}>{value}</span>}
+      {value === undefined && glyph !== undefined && <span className={classes.glyph}>{glyph}</span>}
       <span className={classes.title}>{title}</span>
       {caption !== undefined && caption !== '' && <span className={classes.caption}>{caption}</span>}
     </>

@@ -13,7 +13,7 @@
 import type { DocumentContents, FiledDefinitions, RemoteContent } from './content.ts';
 import type { AttachedSummary, ImportOutcome } from './import.ts';
 import type { AttachedRemote, HardwareReading } from './devices.ts';
-import type { DeviceDefinition, DeviceUsage } from './library.ts';
+import type { DeviceDefinition, DeviceDraft, DeviceUsage } from './library.ts';
 import type { RemoteDocument, RemoteModel } from './remote.ts';
 
 /** The name the API is published under on `window`. One constant, so no side spells it by hand. */
@@ -149,6 +149,16 @@ export interface LibraryApi {
   get(id: string): Promise<DeviceDefinition>;
   /** Write one, new or corrected. The identifier is the identity and may not be changed by this. */
   put(definition: DeviceDefinition): Promise<DeviceDefinition>;
+  /**
+   * Write down an appliance by hand: a kind, and whatever words its owner has for it.
+   *
+   * Separate from `put` because the caller cannot supply the one field `put` requires. An identifier is
+   * this machine's to mint and never to be reused, and a window that made one up would be a window
+   * deciding what identity means.
+   */
+  create(draft: DeviceDraft): Promise<DeviceDefinition>;
+  /** A second description of the same appliance, with a fresh identifier and optionally a new name. */
+  clone(id: string, name?: string): Promise<DeviceDefinition>;
   remove(id: string): Promise<void>;
   /**
    * Which appliances a document refers to and this machine has not got.
@@ -197,7 +207,8 @@ export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove'
                                'addDevice'] as const;
 export const DEVICE_METHODS = ['attached', 'readHardware'] as const;
 export const LIBRARY_METHODS =
-  ['list', 'get', 'put', 'remove', 'missingFor', 'likelyDuplicates', 'usage'] as const;
+  ['list', 'get', 'put', 'create', 'clone', 'remove',
+   'missingFor', 'likelyDuplicates', 'usage'] as const;
 
 export type RemoteMethod = (typeof REMOTE_METHODS)[number];
 export type DeviceMethod = (typeof DEVICE_METHODS)[number];

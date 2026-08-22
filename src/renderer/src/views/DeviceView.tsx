@@ -17,7 +17,8 @@
 import { Text, Title } from '@mantine/core';
 
 import type { DocumentContents } from '../../../shared/content.ts';
-import { describeDefinition, type DeviceDefinition } from '../../../shared/library.ts';
+import type { DeviceDefinition } from '../../../shared/library.ts';
+import { ORIGIN_NAMES, describeDefinition } from '../../../shared/library.ts';
 import classes from './DeviceView.module.scss';
 
 interface DeviceViewProps {
@@ -64,7 +65,7 @@ export function DeviceView({ remote, slot, contents, definition }: DeviceViewPro
             : activities.map((one) => one.name ?? `activity ${one.slot + 1}`).join(', ')}
         </dd>
         <dt>Where it came from</dt>
-        <dd>{definition === undefined ? 'unknown' : ORIGIN[definition.origin]}</dd>
+        <dd>{definition === undefined ? 'unknown' : ORIGIN_NAMES[definition.origin]}</dd>
       </dl>
 
       {definition !== undefined && definition.commands.length > 0 && (
@@ -81,10 +82,3 @@ export function DeviceView({ remote, slot, contents, definition }: DeviceViewPro
     </section>
   );
 }
-
-/** Where a description came from, which is what decides whether it may ever be shared. */
-const ORIGIN: Readonly<Record<DeviceDefinition['origin'], string>> = {
-  'learned-here': 'taught to this application from a real remote',
-  'from-logitech': "fetched from Logitech's own catalogue",
-  'from-a-configuration': 'read out of a configuration that was already on a remote',
-};

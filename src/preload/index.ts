@@ -67,6 +67,10 @@ const api: FreeHarmonyApi = {
     get: (id) => call('library', 'get', id) as ReturnType<FreeHarmonyApi['library']['get']>,
     put: (definition) =>
       call('library', 'put', definition) as ReturnType<FreeHarmonyApi['library']['put']>,
+    create: (draft) => call('library', 'create', draft) as
+      ReturnType<FreeHarmonyApi['library']['create']>,
+    clone: (id, name) => call('library', 'clone', id, name) as
+      ReturnType<FreeHarmonyApi['library']['clone']>,
     remove: (id) => call('library', 'remove', id) as ReturnType<FreeHarmonyApi['library']['remove']>,
     missingFor: (content) =>
       call('library', 'missingFor', content) as ReturnType<FreeHarmonyApi['library']['missingFor']>,

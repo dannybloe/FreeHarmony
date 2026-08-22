@@ -17,6 +17,7 @@
  * the format on this side is the one thing that must not happen. What crosses from the library next
  * door is values, in `src/main/import.ts`.
  */
+import type { Exhaustive } from './exhaustive.ts';
 
 /**
  * Where a definition came from, which decides what may be done with it.
@@ -37,7 +38,17 @@ export type DefinitionOrigin =
    * codes in a compiled configuration were put there by Logitech's own compiler out of Logitech's own
    * database. Coming off your own hardware does not change where they were authored.
    */
-  | 'from-a-configuration';
+  | 'from-a-configuration'
+  /**
+   * Typed in here by a person, with no codes behind it or codes they added themselves.
+   *
+   * **A fourth value rather than reusing `learned-here`**, which is the tempting shortcut and would be a
+   * lie in the one field this model says cannot be repaired in hindsight. Nothing was learned: somebody
+   * wrote down that they have a television, which is a useful thing to record and not evidence about
+   * anything. So `mayBeShared` is false for it, and it stays false even once it has codes in it, because
+   * where those codes came from is then a question nobody kept the answer to.
+   */
+  | 'typed-here';
 
 /**
  * Whether a definition may ever leave this machine.
@@ -48,6 +59,10 @@ export type DefinitionOrigin =
 export function mayBeShared(origin: DefinitionOrigin): boolean {
   return origin === 'learned-here';
 }
+
+/** Every origin, so a screen or a test can walk them rather than keeping a list of its own. */
+export const ORIGINS =
+  ['learned-here', 'from-logitech', 'from-a-configuration', 'typed-here'] as const;
 
 /**
  * One mark or one space, in microseconds.
@@ -200,6 +215,22 @@ export type DeviceKind =
  */
 export interface DeviceDefinition {
   readonly id: string;
+  /**
+   * What its owner calls it, which is not the same as what it is.
+   *
+   * **This is what makes copying one worth doing.** Two descriptions of the same television, one with the
+   * volume going through an amplifier, are the same manufacturer and the same model and want telling
+   * apart; without a name the two are one row twice over in every list. Added on 22 August 2026 for that
+   * reason.
+   *
+   * Optional, and the fallback is `describeDefinition` rather than a stored default: a name computed from
+   * the manufacturer and the model and then saved would stop following them the moment one was corrected.
+   *
+   * It is **not** the name on a remote. That is `DeviceUse.label`, it belongs to the use, and four
+   * identical televisions on four remotes are one description under four labels. This is the description's
+   * own name and every remote sees the same one.
+   */
+  readonly name?: string;
   readonly manufacturer?: string;
   readonly model?: string;
   readonly kind: DeviceKind;
@@ -259,9 +290,83 @@ export function signatureOf(signal: InfraredSignal): string {
  * something honest to put there rather than a placeholder that reads like a name.
  */
 export function describeDefinition(definition: DeviceDefinition): string | undefined {
-  const words = [definition.manufacturer, definition.model].filter((one) => one !== undefined);
+  if (definition.name !== undefined && definition.name !== '') return definition.name;
+  const words = [definition.manufacturer, definition.model]
+    .filter((one) => one !== undefined && one !== '');
   return words.length === 0 ? undefined : words.join(' ');
 }
+
+/**
+ * What a person can say about an appliance before anything has been taught to it.
+ *
+ * Deliberately four fields and no commands. **An appliance does not have to be complete to be worth
+ * recording**: "the amplifier in the study" is a true and useful thing to write down on the day you
+ * discover the application cannot read its codes yet, and refusing it until it has codes would make the
+ * library unusable for exactly the case it was asked for.
+ */
+export interface DeviceDraft {
+  readonly kind: DeviceKind;
+  readonly name?: string | undefined;
+  readonly manufacturer?: string | undefined;
+  readonly model?: string | undefined;
+}
+
+/**
+ * Where a description came from, in words, for the screen that has to say so.
+ *
+ * Here rather than in a view because two views say it: a device position on a remote and the appliance's
+ * own page. It **was** in one of them and moved on 22 August 2026 when the second arrived, which is this
+ * project's oldest rule applied to a sentence rather than to an opcode table. A second copy would drift
+ * the day one of them was reworded, and nothing would fail.
+ */
+export const ORIGIN_NAMES: Readonly<Record<DefinitionOrigin, string>> = {
+  'learned-here': 'taught to this application from a real remote',
+  'from-logitech': "fetched from Logitech's own catalogue",
+  'from-a-configuration': 'read out of a configuration that was already on a remote',
+  'typed-here': 'written down here by hand',
+};
+
+/**
+ * Every kind, in the order a chooser should offer them: the common ones first, `other` last.
+ *
+ * A list as well as the type, because a form has to offer them in an order and a `Record`'s key order is
+ * not something to rely on. `KINDS_ARE_EXHAUSTIVE` below is what stops the two disagreeing.
+ */
+export const KINDS = [
+  'television', 'receiver', 'set-top-box', 'player', 'recorder',
+  'game-console', 'computer', 'lighting', 'other',
+] as const;
+
+/**
+ * Fails the typecheck if `KINDS` and `DeviceKind` stop naming the same things, in either direction.
+ *
+ * The direction that matters is the one no test would catch: add a kind to the type, forget this list, and
+ * the application compiles with a category nobody can ever choose. A tile would draw for it, because the
+ * drawings are a `Record` the compiler already checks, and the form simply would not offer it.
+ */
+export const KINDS_ARE_EXHAUSTIVE: Exhaustive<(typeof KINDS)[number], DeviceKind> = true;
+
+/** The same for the origins, and for the same reason. */
+export const ORIGINS_ARE_EXHAUSTIVE: Exhaustive<(typeof ORIGINS)[number], DefinitionOrigin> = true;
+
+/**
+ * A kind in words, for a screen and for a label.
+ *
+ * Written out rather than derived from the identifier, because two of them read badly under any rule that
+ * only replaces dashes: `set-top-box` wants "Set-top box" and not "Set top box", and `television` is
+ * usually "TV" on a screen and should not be in a sentence as one.
+ */
+export const KIND_NAMES: Readonly<Record<DeviceKind, string>> = {
+  television: 'Television',
+  receiver: 'Amplifier or receiver',
+  'set-top-box': 'Set-top box',
+  player: 'Player',
+  recorder: 'Recorder',
+  'game-console': 'Games console',
+  computer: 'Computer',
+  lighting: 'Lighting',
+  other: 'Something else',
+};
 
 /**
  * One appliance being used on one remote, under the name that remote gives it.

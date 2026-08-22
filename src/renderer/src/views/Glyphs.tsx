@@ -18,7 +18,15 @@ interface GlyphProps {
   readonly className?: string | undefined;
 }
 
-const stroke = {
+/**
+ * How every line in every drawing here is struck.
+ *
+ * Exported because `KindGlyph.tsx` draws in the same hand and a second copy of these five numbers is a
+ * second copy of a derivation, which is the one thing this project's oldest rule forbids. A stroke width
+ * of 1.6 against a stroke width of 1.5 is not a bug anything can catch: it is one set of pictures that
+ * quietly looks lighter than the other.
+ */
+export const stroke = {
   fill: 'none',
   stroke: 'currentColor',
   strokeWidth: 1.6,

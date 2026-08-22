@@ -15,6 +15,7 @@ import type { RemoteDocument } from '../../../shared/remote.ts';
 import { drawingFor } from '../catalogue.ts';
 import { Carousel } from './Carousel.tsx';
 import { AddTile, RemoteTile } from './RemoteTile.tsx';
+import { SectionTile } from './SectionTile.tsx';
 import classes from './HomeView.module.scss';
 
 interface HomeViewProps {
@@ -22,6 +23,14 @@ interface HomeViewProps {
   readonly loading: boolean;
   readonly onOpen: (name: string) => void;
   readonly onAdd: () => void;
+  /**
+   * How many appliances the shared library holds, or absent while nobody has counted.
+   *
+   * A number rather than the list, because this screen is not about them: it is the way in. Passing the
+   * definitions here would make Home a second place that decides how an appliance is named.
+   */
+  readonly appliances?: number | undefined;
+  readonly onLibrary: () => void;
 }
 
 /** "added 16 August", which is the one fact a tile has room for. */
@@ -30,7 +39,9 @@ function added(remote: RemoteDocument): string {
   return `added ${on.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}`;
 }
 
-export function HomeView({ remotes, loading, onOpen, onAdd }: HomeViewProps) {
+export function HomeView({
+  remotes, loading, onOpen, onAdd, appliances, onLibrary,
+}: HomeViewProps) {
   const empty = !loading && remotes.length === 0;
 
   return (
@@ -58,6 +69,22 @@ export function HomeView({ remotes, loading, onOpen, onAdd }: HomeViewProps) {
         ))}
         <AddTile label="Add..." onClick={onAdd} />
       </Carousel>
+
+      {/* The second way in, and it is here because of how the data is actually arranged: a television
+          belongs to three remotes, so its description sits beside them rather than inside one of them.
+          A page reachable only through a remote would tell somebody the opposite of that. */}
+      <div className={classes.also}>
+        <SectionTile
+          value={appliances}
+          title="Appliances"
+          caption="shared by every remote"
+          onClick={onLibrary}
+        />
+        <Text className={classes.lead}>
+          Televisions, amplifiers and set-top boxes, described once each. Your remotes point at these and
+          give them their own names, so the same television on three remotes is one description.
+        </Text>
+      </div>
     </section>
   );
 }

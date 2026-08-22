@@ -14,7 +14,8 @@ import assert from 'node:assert/strict';
 
 import type { RemoteDocument } from '../src/shared/remote.ts';
 import {
-  NavigationModel, REMOTE_SCREENS, START, afterChoosingModel, remoteOn, type RemoteScreen, type Screen,
+  NavigationModel, REMOTE_SCREENS, START, afterChoosingModel, applianceOn, remoteOn,
+  type RemoteScreen, type Screen,
 } from '../src/renderer/src/viewmodels/navigation.model.ts';
 
 /** A model plus the screens it announced, in order. */
@@ -218,4 +219,68 @@ test('a screen about no remote is left alone by both of them', () => {
     nav.renamed('Woonkamer', 'Zolder');
     assert.deepEqual(nav.screen, screen);
   }
+});
+
+// The library's two screens, which are about no remote at all. That is the property worth pinning: they
+// arrived after `remoteOn` became the one place that says which screens name a remote, so the risk is not
+// that they break something, it is that a later change quietly counts them as remote screens.
+
+test('the library screens are about no remote, so renaming one cannot touch them', () => {
+  const nav = new NavigationModel(() => {});
+
+  nav.go({ at: 'library' });
+  nav.go({ at: 'appliance', id: 'appliance-a' });
+  assert.equal(remoteOn({ at: 'library' }), undefined);
+  assert.equal(remoteOn({ at: 'appliance', id: 'appliance-a' }), undefined);
+
+  // A rename while standing on an appliance page changes nothing, because nothing here names a remote.
+  nav.renamed('Living room', 'Lounge');
+  assert.deepEqual(nav.screen, { at: 'appliance', id: 'appliance-a' });
+  // And removing a remote leaves it alone too, which is the arm a shared `removed` would have got wrong.
+  nav.removed('Living room');
+  assert.deepEqual(nav.screen, { at: 'appliance', id: 'appliance-a' });
+});
+
+test('an appliance is held by identifier, which is the opposite rule from a remote', () => {
+  // A remote is held by name because its name **is** its folder, so a rename has to follow. An appliance's
+  // name is a correctable field, so holding one would put the screen on the wrong appliance the moment
+  // somebody fixed a spelling. Both rules live in `applianceOn` and `remoteOn`, one line each.
+  assert.equal(applianceOn({ at: 'appliance', id: 'appliance-a' }), 'appliance-a');
+  assert.equal(applianceOn({ at: 'library' }), undefined);
+  assert.equal(applianceOn({ at: 'devices', name: 'Living room' }), undefined);
+});
+
+test('throwing an appliance away leaves its page, and lands on the library behind it', () => {
+  const nav = new NavigationModel(() => {});
+  nav.go({ at: 'library' });
+  nav.go({ at: 'appliance', id: 'appliance-a' });
+
+  nav.definitionRemoved('appliance-a');
+
+  // Back rather than home, because deleting is done from the appliance's own page and the page behind it is
+  // the list, which is where a person expects to be put down.
+  assert.deepEqual(nav.screen, { at: 'library' });
+});
+
+test('a deleted appliance is taken out of the history too, not just off the screen', () => {
+  const nav = new NavigationModel(() => {});
+  nav.go({ at: 'library' });
+  nav.go({ at: 'appliance', id: 'appliance-a' });
+  nav.go({ at: 'appliance', id: 'appliance-b' });
+  // Copying lands on the copy's page, so two appliance pages in a row is the ordinary case rather than a
+  // contrived one, and going back onto a deleted one is the bug arriving a moment later.
+  nav.go({ at: 'appliance', id: 'appliance-a' });
+
+  nav.definitionRemoved('appliance-a');
+  assert.deepEqual(nav.screen, { at: 'appliance', id: 'appliance-b' });
+  nav.back();
+  assert.deepEqual(nav.screen, { at: 'library' });
+});
+
+test('another appliance being deleted leaves this page where it is', () => {
+  const nav = new NavigationModel(() => {});
+  nav.go({ at: 'appliance', id: 'appliance-a' });
+  // The control. Without it the two tests above pass for a model that leaves on any delete at all.
+  nav.definitionRemoved('appliance-b');
+  assert.deepEqual(nav.screen, { at: 'appliance', id: 'appliance-a' });
 });

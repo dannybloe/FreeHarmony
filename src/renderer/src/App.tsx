@@ -30,11 +30,13 @@ import { useRemotes } from './viewmodels/useRemotes.ts';
 import { ActivitiesView } from './views/ActivitiesView.tsx';
 import { AddRemoteView } from './views/AddRemoteView.tsx';
 import { AppBar } from './views/AppBar.tsx';
+import { ApplianceView } from './views/ApplianceView.tsx';
 import { ConnectView } from './views/ConnectView.tsx';
 import { DeviceView } from './views/DeviceView.tsx';
 import { DevicesView } from './views/DevicesView.tsx';
 import { ExistingRemotesView } from './views/ExistingRemotesView.tsx';
 import { HomeView } from './views/HomeView.tsx';
+import { LibraryView } from './views/LibraryView.tsx';
 import { NameRemoteView } from './views/NameRemoteView.tsx';
 import { PickDeviceView } from './views/PickDeviceView.tsx';
 import { RemoteView } from './views/RemoteView.tsx';
@@ -61,7 +63,9 @@ export function App() {
   const contents = useContents(remoteOn(screen));
   const importing = useImport();
   // The appliances this machine describes, wanted by the two screens that name one.
-  const library = useLibrary(screen.at === 'devices' || screen.at === 'device');
+  // Which screens want the library. Home is on the list for one number, the count on its tile, which is
+  // cheap: this reads files this application wrote and opens no hardware.
+  const library = useLibrary(['home', 'library', 'appliance', 'devices', 'device'].includes(screen.at));
   const [picking, setPicking] = useState(false);
   // The one thing here that opens a remote. It is a model of its own rather than part of `useDevices`,
   // because that one polls and this one must never be on a timer.
@@ -117,6 +121,8 @@ export function App() {
             loading={remotes.status === 'loading'}
             onOpen={(name) => nav.go({ at: 'remote', name })}
             onAdd={() => nav.go({ at: 'add' })}
+            appliances={library.state.status === 'ready' ? library.state.definitions.length : undefined}
+            onLibrary={() => nav.go({ at: 'library' })}
           />
         )}
 
@@ -183,6 +189,36 @@ export function App() {
               nav.go(afterChoosingModel(remotes.remotes, model, 'device', productId))}
           />
         )}
+
+        {screen.at === 'library' && (
+          <LibraryView
+            state={library.state}
+            onOpen={(id) => nav.go({ at: 'appliance', id })}
+            onCreate={(draft) => library.create(draft)}
+          />
+        )}
+
+        {/* One appliance, and the identifier is resolved against the loaded list rather than fetched.
+            `definitionIn` answers `undefined` for both "not loaded yet" and "not on this machine", and the
+            page says the second, which is the honest reading while the first is a flicker. */}
+        {screen.at === 'appliance' && (() => {
+          const id = screen.id;
+          const definition = definitionIn(library.state, id);
+          return (
+            <ApplianceView
+              definition={definition}
+              usedBy={library.state.status === 'ready'
+                ? library.state.usage.filter((one) => one.definition === id)
+                : []}
+              busy={library.state.status === 'loading'}
+              onSave={(next) => void library.put(next)}
+              // A copy lands on its own page, because a copy you cannot see is indistinguishable from
+              // nothing having happened: the two descriptions are identical bar the identifier.
+              onClone={() => void library.clone(id).then((made) => nav.go({ at: 'appliance', id: made.id }))}
+              onRemove={() => void library.remove(id).then(() => nav.definitionRemoved(id))}
+            />
+          );
+        })()}
 
         {/* Every screen about one remote, resolved once.
             One block rather than five, because all five need the same two things: the document out of the

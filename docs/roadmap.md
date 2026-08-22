@@ -47,6 +47,22 @@ Appliances are kept in their own place, beside the remotes rather than inside on
 television belongs to every remote that drives it. Reading the same remote twice does not describe
 its television twice: an appliance is named after what it sends.
 
+**That place has a screen now, reached from the front page**, and it is where you say what your
+equipment actually is. Every appliance is a tile with a picture of what it is, a television or an
+amplifier or a games console, and the name it goes by. Open one and you can correct all of it, see which
+of your remotes use it and what each of them calls it, copy it, or throw it away. You can also write one
+down from scratch: a picture, a name, a make and a model, with no codes behind it, which is worth having
+on the day you discover the application cannot read your amplifier yet.
+
+**Copying is there for a reason that only turns up once you have two of something.** Two televisions of
+one model send the same codes, so importing both describes them once, and the only way to tell them apart
+is to say so. That is why a description carries a name of its own alongside the name each remote gives it.
+
+One thing to expect and it is not a fault: **a configuration never says what a device is.** It states
+codes and positions and no words at all. So everything that arrives by importing a remote is filed as
+"something else" until somebody says otherwise, and the pictures only start meaning something once they
+have.
+
 ## The steps
 
 ### 1. See what is on your remote

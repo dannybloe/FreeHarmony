@@ -108,6 +108,11 @@ export const DESIRED: Verdicts<DesiredState> = {
 
 export const DEFINITION: Verdicts<DeviceDefinition> = {
   id: { writeback: 'ours' },
+  // Ours, and worth telling apart from `DEVICE_USE.label` two blocks down, which looks like the same
+  // field and is not: a configuration does name the appliance on **that** remote, in base slot 0's name
+  // tree, and that name is the label. What it never names is the description, which belongs to this
+  // machine and is seen the same way by every remote pointing at it.
+  name: { writeback: 'ours', note: 'a configuration names a use, never a description' },
   manufacturer: { writeback: 'ours' },
   model: { writeback: 'ours' },
   kind: { writeback: 'ours' },

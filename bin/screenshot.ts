@@ -17,6 +17,7 @@
  *   pnpm screenshot --remotes "Woonkamer:one,Zolder"         seeded through the application's own API
  *   pnpm screenshot --configuration h600_config              give the first remote a real configuration
  *   pnpm screenshot --click "Add..." --click "Harmony 600"    to reach a screen that is not the first
+ *   pnpm screenshot --appliances "TV:television,Amp:receiver" --click Appliances     the device manager
  *   pnpm screenshot --pretend-attached h600 --configuration h600_config    the import dialogue
  *   pnpm screenshot --width 1280 --height 900
  *
@@ -41,6 +42,7 @@ import { imagePath, require_ } from '@harmony/lab';
 import { importReading } from '../src/main/configuration.ts';
 import { DeviceLibrary } from '../src/main/store/library.ts';
 import { RemoteStore } from '../src/main/store/remotes.ts';
+import { KINDS } from '../src/shared/library.ts';
 import { asRemoteModel, SUPPORTED } from '../src/renderer/src/catalogue.ts';
 import { launch } from '../test/app/electron.ts';
 
@@ -50,6 +52,8 @@ interface Options {
   /** A lab sample to attach to the first seeded remote, so a page can show real contents. */
   configuration: string | undefined;
   clicks: string[];
+  /** Hand written appliances, so the library has something in it that is not from a configuration. */
+  appliances: { name: string; kind: string }[];
   /** A model whose configuration stands in for a remote on the bus, per `src/main/pretend.ts`. */
   pretendAttached?: string;
   width: number;
@@ -74,6 +78,10 @@ function options(argv: string[]): Options {
         }),
     configuration: named('--configuration'),
     clicks: every('--click'),
+    appliances: (named('--appliances') ?? '').split(',').filter((one) => one !== '').map((entry) => {
+      const [name, kind] = entry.split(':');
+      return { name: (name ?? '').trim(), kind: (kind ?? 'other').trim() };
+    }),
     ...(named('--pretend-attached') === undefined
       ? {} : { pretendAttached: named('--pretend-attached')! }),
     width: Number(named('--width') ?? 1100),
@@ -150,7 +158,18 @@ async function main(): Promise<number> {
                             model: asRemoteModel(picked) },
                           () => new Date().toISOString());
     }
-    if (wanted.remotes.length > 0) await app.reload();
+    // Appliances written down by hand, through the same bridge method the form calls. A library seeded
+    // only from a configuration is all one kind, `other`, because a configuration says nothing about what
+    // a device is, so a picture of it would show the same drawing nine times and say nothing about the
+    // drawings.
+    for (const { name, kind } of wanted.appliances) {
+      if (!(KINDS as readonly string[]).includes(kind)) {
+        throw new Error(`no such kind as ${kind}; try ${KINDS.join(', ')}`);
+      }
+      await app.evaluate(`window.freeharmony.library.create(`
+        + `{ kind: ${JSON.stringify(kind)}, name: ${JSON.stringify(name)} })`);
+    }
+    if (wanted.remotes.length > 0 || wanted.appliances.length > 0) await app.reload();
 
     // Presses whatever carries the given text, so a screen several steps in can be photographed. A
     // pause after each, because a click here is a real click and React redraws on its own schedule.

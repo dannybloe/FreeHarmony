@@ -1,0 +1,93 @@
+// The library page: a heading, a row of appliances, and the form behind the plus tile.
+
+@use '../mantine' as m;
+
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: m.rem(4);
+}
+
+.title {
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.lead {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+  max-width: m.rem(620);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+}
+
+// Nine tiles that wrap. A fixed column width rather than `auto-fit`, so the row does not reflow into
+// four and then three as the words underneath change length.
+.kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(m.rem(104), 1fr));
+  gap: var(--mantine-spacing-xs);
+}
+
+.kind {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: m.rem(6);
+  padding: var(--mantine-spacing-xs) m.rem(6);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-md);
+  background: rgb(255 255 255 / 66%);
+  color: var(--mantine-color-gray-5);
+  cursor: pointer;
+  text-align: center;
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.25;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+
+  @include m.hover {
+    border-color: var(--mantine-color-indigo-2);
+    color: var(--mantine-color-indigo-5);
+  }
+
+  span {
+    color: var(--mantine-color-gray-7);
+  }
+}
+
+// The chosen one. The drawing takes the accent and the frame closes around it, so the choice is legible
+// without colour alone carrying it: the border weight changes too.
+.chosen {
+  border-color: var(--mantine-color-indigo-5);
+  background: rgb(255 255 255 / 92%);
+  color: var(--mantine-color-indigo-6);
+  box-shadow: 0 0 0 m.rem(2) var(--mantine-color-indigo-1);
+
+  span {
+    color: var(--mantine-color-indigo-7);
+    font-weight: 600;
+  }
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mantine-spacing-sm);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--mantine-spacing-xs);
+  margin-block-start: var(--mantine-spacing-xs);
+}

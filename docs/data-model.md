@@ -337,6 +337,37 @@ appliance nobody has taught anything to sends the same nothing, so addressing th
 make them all one definition. There is no content to address, so the read that found it is the honest
 identity.
 
+**A definition has a name of its own, and it is not the same as its label.** Added on 22 August 2026
+when the library got a screen, for the case that makes the two necessary: two televisions of one model,
+one of them with its sound going through an amplifier. They send the same codes, so an import makes
+them one description, and telling them apart has to be a deliberate act. Copying one is that act, and a
+copy with no name of its own is one row twice over in every list. The label stays what it always was,
+the word one remote uses for one position, and four identical televisions on four remotes are still one
+description under four labels.
+
+**An appliance can be written down by hand, with no codes at all**, which is what the fourth origin is
+for. Not one of the three that existed: nothing was learned from hardware, nothing came from Logitech,
+and nothing was read out of a configuration, so filling in any of them would put a falsehood in the one
+field this model cannot repair afterwards. It may never be shared, and that stays true even once
+somebody teaches it codes, because by then where those came from is a question nobody kept the answer
+to. It exists because an appliance does not have to be complete to be worth recording, which is the
+ordinary state of things until the application can learn a code.
+
+**Its identifier is random, and the two obvious alternatives are both wrong.** The lowest free number
+**reuses** one after a delete, so a document still naming the old appliance would quietly be pointing at
+a different one, with every button on it sending the wrong thing and nothing to say so. A digest of the
+typed words would make two amplifiers nobody has distinguished yet a single row, and would move the
+identity the moment somebody fixed a spelling. So it is random, never reused, and never changed. The
+price is stated rather than hidden: teach codes to a hand written appliance and it keeps that
+identifier, so an import of the same codes elsewhere writes a second description of one appliance. That
+is what the duplicate report below is for.
+
+**A kind is a picture and nothing else.** Nine of them, the categories Logitech had, each with a
+drawing. Worth knowing before reading a screen: **a configuration does not say what a device is**, so
+everything an import produces is `other`, and a freshly imported library draws one picture nine times.
+That is honest rather than a gap, and it is why the form that lets somebody set one arrived in the same
+week.
+
 **Nothing is ever overwritten and nothing is merged.** Filing the appliances of a document that has
 already been filed reports them as kept, because a definition may have been corrected by hand since it
 arrived. And two definitions that send the same things are **reported** as probably one appliance and
