@@ -45,6 +45,7 @@ import type {
   DeviceCommand, DeviceDefinition, DeviceProperty, InfraredSignal, Pulse, StateTransition,
 } from '../shared/library.ts';
 import { fingerprintOf } from '../shared/library.ts';
+import { seededDeviceMaps } from '../shared/buttonmap.ts';
 
 /** A mark rather than a space, in a duration word. The library states the bit; this names it once. */
 const MARK = 0x8000;
@@ -337,11 +338,22 @@ export function importConfiguration(
   // do with the margin and a document should not carry a confidence somebody will later read as a fact.
   // An absent value means the reader refused, which it does on anything that is not somebody's config.
   const language = configLanguage(c)?.tag;
+  // **A device's own button map, which the configuration does not contain.** Device mode is the old remote
+  // of one appliance: press Devices, pick the television, and every key drives the television. No keypad
+  // map in any configuration read here sends a code outside an activity, so there is nothing to copy, and
+  // an imported document with no device maps would show an empty keypad on every device page.
+  //
+  // So it is reconstructed, once, at the moment of the import: an activity's map is the device's map plus
+  // that activity's overrides, so where every activity that binds a key agrees, that agreement is the
+  // device's own answer. `shared/buttonmap.ts` holds the reasoning and leaves a key the activities disagree
+  // about unbound rather than picking one of two.
+  const activities = activitiesOf(c);
+  const bindings = buttonsOf(c);
   return {
     content: {
       devices: uses,
-      activities: activitiesOf(c),
-      buttons: buttonsOf(c),
+      activities,
+      buttons: [...bindings, ...seededDeviceMaps(bindings, uses.map((one) => one.slot))],
       ...(language === undefined ? {} : { language }),
       filledFrom: 'a-configuration',
     },

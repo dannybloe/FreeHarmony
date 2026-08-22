@@ -117,33 +117,18 @@ export interface RemotesApi {
    */
   labelDevice(name: string, slot: number, label?: string): Promise<RemoteContent>;
   /**
-   * Point a physical key at one command of **one device**, or clear it.
+   * Point a key on the keypad at one command of this device, or clear it.
    *
    * This writes the **device's own button map**, which is what device mode is on a Harmony: press Devices,
-   * pick the television, and every key drives the television. A configuration stores no such map, it
-   * stores one per activity, so this writes the activities that drive the device and answers with which
-   * ones. Writing one only would leave the remote behaving exactly as before in the activity somebody is
-   * sitting in.
+   * pick the television, and every key drives the television. One key, one command of that device.
    *
-   * **The activities where another device holds that key are left alone**, not overwritten and not a
-   * refusal, and they come back in `held` so a page can say so. A key that drives the television in one
-   * activity and the amplifier in another is the ordinary case: 27 of the first device's 30 keys on the
-   * Harmony One in the lab.
+   * **Activities do not come into it.** An activity's map is a different map of the same keypad, mixing
+   * every device you own, and it is edited on a page about the activity. Nothing here reads or writes one.
    *
-   * `only` narrows it to a single activity, which is how an override is made on purpose.
-   *
-   * `command` absent clears it. It refuses where the named activity does not drive the device, where every
-   * driving activity has that key on another device, and where no activity drives the device at all, since
-   * a keypad map belongs to an activity in every configuration here.
+   * `command` absent clears it. The only refusal is a position this remote does not have.
    */
-  assignButton(name: string, scan: number, device: number, command?: number,
-               only?: number): Promise<{
-                 content: RemoteContent;
-                 /** The activities it was written into. */
-                 activities: number[];
-                 /** The ones it left alone because another device holds that key there. */
-                 held: number[];
-               }>;
+  assignButton(name: string, scan: number, device: number,
+               command?: number): Promise<RemoteContent>;
 }
 
 /**

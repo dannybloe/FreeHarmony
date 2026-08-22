@@ -77,8 +77,11 @@ test('a configuration on disk reads back as devices, activities and buttons',
   // moved. These are that file's own figures, which is the point of asserting them again here. They
   // arrive through a different route, off a disk rather than out of a fixture, and a seam that dropped
   // something would show up as a number that no longer matches its neighbour.
-  const expected = { h600_config: { devices: 4, activities: 3, buttons: 229 },
-                     h525_config: { devices: 4, activities: 3, buttons: 220 } } as const;
+  // The three binding populations rather than one total, per `test/import.test.ts`: an activity's map,
+  // the screen keys, and the device's own map, which is what device mode uses.
+  const expected = { h600_config: { devices: 4, activities: 3, activity: 74, screen: 155, map: 68 },
+                     h525_config: { devices: 4, activities: 3, activity: 90, screen: 130, map: 54 },
+                   } as const;
 
   for (const sample of SAMPLES) {
     const at = await bench();
@@ -88,7 +91,13 @@ test('a configuration on disk reads back as devices, activities and buttons',
       assert.ok(found !== undefined, sample);
       assert.equal(found.content.devices.length, expected[sample].devices, `${sample}: devices`);
       assert.equal(found.content.activities.length, expected[sample].activities, `${sample}: activities`);
-      assert.equal(found.content.buttons.length, expected[sample].buttons, `${sample}: buttons`);
+      const buttons = found.content.buttons;
+      assert.deepEqual({
+        activity: buttons.filter((one) => one.inActivity !== undefined).length,
+        screen: buttons.filter((one) => one.surface === 'screen').length,
+        map: buttons.filter((one) => one.surface === 'keypad' && one.inActivity === undefined).length,
+      }, { activity: expected[sample].activity, screen: expected[sample].screen,
+           map: expected[sample].map }, `${sample}: bindings, per population`);
       assert.equal(found.content.filledFrom, 'a-configuration');
     } finally {
       await rm(at.root, { recursive: true, force: true });

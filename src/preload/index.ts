@@ -58,8 +58,8 @@ const api: FreeHarmonyApi = {
     labelDevice: (name, slot, label) =>
       call('remotes', 'labelDevice', name, slot, label) as
         ReturnType<FreeHarmonyApi['remotes']['labelDevice']>,
-    assignButton: (name, scan, device, command, only) =>
-      call('remotes', 'assignButton', name, scan, device, command, only) as
+    assignButton: (name, scan, device, command) =>
+      call('remotes', 'assignButton', name, scan, device, command) as
         ReturnType<FreeHarmonyApi['remotes']['assignButton']>,
   },
   devices: {

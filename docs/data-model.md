@@ -318,55 +318,68 @@ It has to be stable, because three things in the model refer to a device by numb
 step in an activity, a wanted state, and a button binding. So a new position takes the next free number
 and never the count, which would collide the first time one in the middle was removed.
 
-### A button map belongs to a device, and the file stores it per activity
+### A device's map and an activity's map are two maps of the same keypad
 
-**A Harmony has a device mode**: press Devices, pick the television, and every button drives the television.
-So a button map belongs to a **device** first, and an activity's map is the device map plus that activity's
-own overrides. `CLAUDE.md`'s first section is the operating concept and it comes before this one.
+**A Harmony has a device mode**, and Danny's picture of it is the one this model is built on: switching to
+a device is like reaching for the old remote that came in the box with that appliance. There is nothing
+but that appliance on it. So a device's map is one appliance's commands, and nothing else can appear in
+it. `CLAUDE.md`'s first section is the operating concept and it comes before this one.
 
-**The file does not store the device's map.** Every keypad binding in the corpus names an activity, 1122 of
-them across five configurations and three architectures, so the device's map has to be worked out from the
-activities that drive it. Where is device mode's own map then, on the remote: that is the open question
-below and it is not to be closed by guessing.
+**An activity's map is the mixed one**: any key may carry any command of any appliance you own, which is
+what an activity is for.
 
-Working it out has one shape and three answers, `src/shared/buttonmap.ts`, measured on the two
-configurations whose model this application can draw:
+They are separate maps, authored separately, and Logitech's own software has a page for each. In this
+model they are told apart by one field:
 
-| | Harmony 600, its first device | Harmony One, its first device |
-|---|---|---|
-| activities driving it | 3 | 8 |
-| keys it already drives | 5 | 30 |
-| of those, the same command in every one of them | 3 | 3 |
-| of those, another device's key in at least one | 2 | 27 |
-| of those, unbound in at least one | 0 | 24 |
+| | `surface` | `inActivity` | `inDeviceMode` |
+|---|---|---|---|
+| a device's own map | `keypad` | absent | absent |
+| an activity's map | `keypad` | the activity | absent |
+| a key the screen speaks for | `screen` | absent | the page |
 
-So a key that drives the television while you are watching television and the amplifier while you are
-listening to music is the **ordinary** case. Three consequences the interface cannot avoid.
+Nothing was invented for the first row: `ButtonBinding.inActivity` has always documented its own absence
+as device mode's. What changed on 22 August 2026 is that something finally reads and writes it.
 
-A device's page shows the **device's** map, not one activity's. Showing one activity at a time, which this
-document said until 22 August 2026, answers a question nobody asked on a page about a device.
+**Two appliances holding the same key is not a conflict**, and an interface must not treat it as one. The
+television's old remote has a Menu key and so does the amplifier's; you reach one by choosing the
+television and the other by choosing the amplifier.
 
-A change reaches every activity that has room for it and **leaves the others exactly as they are**, naming
-them before the change is made. Writing all of them takes a key off the other device, 27 times of 30 on
-that Harmony One; refusing outright blocks those same 27. Only two commands for one device is a genuine
-conflict, and there the page shows both and picks neither.
+**The file states no device map.** Every keypad binding in the corpus names an activity, 1122 of them
+across five configurations and three architectures. Where the remote keeps its device map is open, below,
+and must not be guessed at. So an import reconstructs one: an activity's map is the device map plus that
+activity's overrides, so where every activity that binds a key agrees, that agreement is the device's own
+answer, and 1096 of 1105 pairs across the corpus agree. The nine that do not are left unbound, because a
+map with a guess in it is worse than one with a hole. `src/shared/buttonmap.ts`.
 
-And a device no activity drives has no button to show at all, which the page says, since creating an
-activity is what comes first.
+Counted per sample in `test/import.test.ts`, which is where the size of that reconstruction shows: the
+Harmony One configuration has 220 activity bindings and 145 device map entries, since the same key counted
+once per activity there is counted once per appliance here.
 
-**The claim is about these files and not about the format**, and the difference was Danny's on 22 August
-2026: a Harmony also has a **device mode**, where the keypad drives one device with nothing running, and a
-map for that would be a keypad binding with no activity. So the sets were counted rather than the conclusion
-restated. Of 48 keypad maps in the five configurations, 21 are installed by something in the configuration
-and 16 of those by an activity, and **exactly those 16 send an infrared code**. The other 32 send nothing at
-any depth, and ten of them bind fifty or more keys to lists made of comparisons and mode entries, which is a
-menu rather than a device.
+**The screen keys are the bigger half of device mode and are not modelled yet.** An old remote has far
+more buttons than a Harmony, so what people build in device mode is pages on the screen, a screenful of
+commands at a time, for the functions the keypad has no room for. `inDeviceMode` is the configuration's
+own page index and nothing may treat it as a device until the reading that says which device a page
+belongs to exists.
 
-So these files carry no keypad map for a device mode. **That the hardware remaps its keypad is not in
-doubt**, since the Harmony 885's own manual says so and Danny has used it for years; what is open is where
-that map is stored, which is a question for the remote on the bench rather than for the bytes. The field
-stays optional and the test states the population, so a sample that does carry one fails rather than being
-absorbed.
+### Where the remote keeps a device's map is open
+
+**No keypad map in any configuration here sends an infrared code outside an activity.** Counted rather than
+concluded, since that is the whole difference: of 48 keypad maps in the five files, 21 are installed by
+something in the configuration and 16 of those by an activity, and **exactly those 16 send a code**. The
+other 32 send nothing at any depth, and ten of them bind fifty or more keys to comparisons and mode
+entries, which is a menu rather than an appliance.
+
+**That the keypad is remapped is not in doubt**, since Logitech's own manuals say so and Danny has used it
+for years. Only where the map is stored is open, `docs/findings.md` section 151 next door, and it is not to
+be closed by inventing a mechanism. The field stays optional and the test states the population, so a
+sample that does carry one fails rather than being absorbed.
+
+**Three earlier versions of this section were wrong and the shape of the error was the same each time.** It
+said a device's page shows the keypad one activity at a time; then that a change to a device's button must
+reach every activity that inherited it; then that it must reach the ones with room for it and name the
+rest. All three answered a question about the **activity** map on a page about a device. The measurement
+that produced them was correct and could not have said otherwise, which is the point of the rule in
+`CLAUDE.md`: a count over these files says what they contain and never what the product does.
 
 `ButtonBinding.inActivity` held the configuration's own **binding set** number until 22 August 2026, which
 is a different numbering space: on one Harmony One the activities are 0 to 6 and 8 while the sets holding

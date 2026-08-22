@@ -21,7 +21,6 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { ButtonBinding, RemoteContent } from '../shared/content.ts';
-import { drivingActivities, keyAcrossActivities } from '../shared/buttonmap.ts';
 import type { DeviceUsage } from '../shared/library.ts';
 import type { RemoteStore } from './store/remotes.ts';
 
@@ -182,93 +181,52 @@ export async function labelDeviceUse(
 }
 
 /**
- * Point a physical key at one command of **one device**, or clear it.
+ * Point a key on the keypad at one command of this device, or clear it.
  *
  * **This writes the device's own button map, which is what device mode is on a Harmony**: press Devices,
- * pick the television, and every key drives the television. `CLAUDE.md`'s first section is the operating
- * concept. A page about a device edits this and nothing else.
+ * pick the television, and every key drives the television. One key, one command of **this** device, and
+ * nothing else in it. `CLAUDE.md`'s first section is the operating concept and `shared/buttonmap.ts` is
+ * the shape.
  *
- * **A configuration does not store that map, it stores one per activity**, so a change goes into the
- * activities that drive this device. Writing one of them only would leave the remote behaving exactly as
- * before in the activity somebody is sitting in, with the checksum still passing and nothing to say so.
+ * **Activities do not come into it, and that was got wrong twice.** The first version showed and wrote one
+ * activity's map, which is a different map of the same keypad. The second wrote every activity that drives
+ * the device, refused where another device held the key, and reported which activities it had reached, all
+ * of which is the activity map's business and none of it belongs to a device. An activity draws on every
+ * device you own; a device draws on itself.
  *
- * **And it goes into the ones with room for it, not all of them**, which is the correction that turned this
- * function from four lines into this. A key that drives the television in one activity and the amplifier in
- * another is the ordinary case, not a corner: on the Harmony One configuration in the lab, 27 of the first
- * device's 30 keys are another device's key in at least one of the eight activities that drive it. Writing
- * all eight would take those keys away from the other device, which is a destructive edit nobody asked for;
- * refusing outright, which this did for a day, would block 27 of 30 keys instead. So the activities where
- * another device holds it are left exactly as they are and named in the answer, and `shared/buttonmap.ts`
- * is where that set is worked out, once, for this and for the page that has to say it beforehand.
- *
- * `only` narrows it to one activity, which is how an override is made deliberately rather than by accident.
- * Absent means the device's map, which is what the device page uses.
+ * So there is one binding per key here, it carries no activity, and it can only be refused for reasons
+ * about **this** document: no such position, and nothing else. There is no other device to be in the way,
+ * because in this map there is no other device.
  *
  * `command` absent clears the binding rather than writing an empty one, because a key that sends nothing
  * and a key with a binding that sends nothing are the same thing to a remote and only one is honest.
  *
- * **It refuses a contradiction rather than a bad scan code**, which is the division of labour: whether this
- * model's key 12 exists at all is the drawing's business, and only 36 of a Harmony 600's 54 keys have a
- * measured code. What this can see is the document.
+ * Whether a model's key 12 exists at all is the drawing's business and not this one's, which is the same
+ * division of labour as before: only 36 of a Harmony 600's 54 keys have a measured scan code.
  */
 export async function assignButton(
-  store: RemoteStore, name: string, scan: number, device: number,
-  command?: number, only?: number,
-): Promise<{ content: RemoteContent; activities: number[]; held: number[] }> {
-  let wrote: number[] = [];
-  let left: number[] = [];
-  const content = await editContent(store, name, (held) => {
+  store: RemoteStore, name: string, scan: number, device: number, command?: number,
+): Promise<RemoteContent> {
+  return editContent(store, name, (held) => {
     if (!held.devices.some((one) => one.slot === device)) {
       throw new Error(`${name} has nothing at position ${device + 1}`);
     }
-    const driving = drivingActivities(held.activities, device);
-    if (driving.length === 0) {
-      // The honest refusal, and it is the one a person will actually hit: a device no activity drives has
-      // nowhere for a keypad binding to live, because a keypad map belongs to an activity in every
-      // configuration here. Creating an activity is what comes first, and it is a later round.
-      throw new Error(`no activity on ${name} drives position ${device + 1}, so a button cannot be set`);
-    }
-
-    const across = keyAcrossActivities(held.buttons, device, held.activities, scan);
-    if (only !== undefined && !driving.includes(only)) {
-      throw new Error(`activity ${only + 1} on ${name} does not drive position ${device + 1}`);
-    }
-    if (only !== undefined && across.held.includes(only)) {
-      throw new Error(`that key already sends to position ${(across.perActivity
-        .find((one) => one.activity === only)?.heldBy ?? 0) + 1} in that activity on ${name}`);
-    }
-    const targets = only === undefined ? [...across.writable] : [only];
-    if (targets.length === 0) {
-      // Every activity that drives this device has the key on another device, so there is no room at all.
-      // Named after the device that has it, since that is who has to give it up.
-      const owner = across.perActivity.find((one) => one.heldBy !== undefined)?.heldBy ?? 0;
-      throw new Error(`that key sends to position ${owner + 1} in every activity that drives `
-        + `position ${device + 1} on ${name}`);
-    }
-    wrote = targets;
-    left = only === undefined ? [...across.held] : [];
-
+    // This device's own binding for this key, if there is one. An activity binding on the same key is a
+    // different map and is left exactly as it is.
     const mine = (one: ButtonBinding) =>
-      one.surface === 'keypad' && one.scan === scan
-      && one.inActivity !== undefined && targets.includes(one.inActivity);
+      one.surface === 'keypad' && one.scan === scan && one.inActivity === undefined
+      && one.sends[0]?.device === device;
     const rest = held.buttons.filter((one) => !mine(one));
     if (command === undefined) return { ...held, buttons: rest };
-
-    // The label is per activity and is carried where there was one, since it is a word the generator drew
-    // and not something this application has any business inventing.
-    const labels = new Map(held.buttons.filter(mine)
-      .map((one) => [one.inActivity as number, one.label]));
-    const added: ButtonBinding[] = targets.map((activity) => {
-      const label = labels.get(activity);
-      return {
-        surface: 'keypad' as const,
-        scan,
-        ...(label === undefined ? {} : { label }),
-        inActivity: activity,
-        sends: [{ device, command }],
-      };
-    });
-    return { ...held, buttons: [...rest, ...added] };
+    // The label is carried where there was one, since it is a word the generator drew and not something
+    // this application has any business inventing.
+    const label = held.buttons.find(mine)?.label;
+    const added: ButtonBinding = {
+      surface: 'keypad',
+      scan,
+      ...(label === undefined ? {} : { label }),
+      sends: [{ device, command }],
+    };
+    return { ...held, buttons: [...rest, added] };
   });
-  return { content, activities: wrote, held: left };
 }

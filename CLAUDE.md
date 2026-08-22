@@ -16,10 +16,12 @@ runs.
 ## How a Harmony works, and why this comes before everything else
 
 **Read this before designing anything.** It is the operating concept of the product, and it is here at
-the top because its absence has already cost a whole screen: on 22 August 2026 a device page was built
-that showed a keypad per **activity**, on the strength of a correct measurement over fifteen
-configuration files, and the thing being built was the **device mode** editor. The measurement could not
-have said so. Nothing in either repository described what a Harmony does.
+the top because its absence has already cost three rebuilds of one screen: on 22 August 2026 a device
+page was built that showed a keypad per **activity**, on the strength of a correct measurement over
+fifteen configuration files, and the thing being built was the **device mode** editor. Then it was
+rebuilt to show the device's map but annotated with activities, which was the same mistake wearing a
+hat. The measurement could never have said any of this. Nothing in either repository described what a
+Harmony does.
 
 A configuration is a program and the firmware is its interpreter, so the format work can always say what
 a byte does. It can never say what the product is for. **The order for a design question is: what does
@@ -31,69 +33,90 @@ from him is worth an afternoon of counting.
 
 **An activity.** "Watch TV", "Listen to Music". Pressing it switches the right equipment on, sets the
 inputs, and gives the keypad a map that spans **several devices at once**: volume to the amplifier,
-channels to the set top box, transport to whatever is playing. That is what a Harmony is for and what it
-was sold on.
+channels to the set top box, transport to whatever is playing. In an activity **any key may carry any
+command of any appliance you own**. That is what a Harmony is for and what it was sold on.
 
-**Device mode.** Press **Devices** and the screen lists your equipment. Pick the television and **every
-button on the remote now drives the television and nothing else**. Getting back is per model, and the
-wording differs: a Harmony One offers **Current Activity** on its panel, a Harmony 600 offers
-**Activity**, a Harmony 525 has its own Activities key, and on a Harmony 885 you press Devices again.
+**Device mode.** Press **Devices**, the screen lists your equipment, and picking the television means
+**every button now drives the television and nothing else**.
 
-Both map the whole keypad. Neither is a special case of the other.
+**Danny's picture of device mode is the one to build from**, and it is worth more than any measurement
+here: switching to a device is like reaching for the old remote that came in the box with that appliance.
+On that old remote there is nothing but that appliance. You cannot reach the amplifier from it, because
+it has no amplifier on it. That is exactly what device mode is.
 
-### Device mode is not a corner of the product
+Logitech says the same in its own manuals: "After you select a device, the Harmony One controls only that
+device" (Harmony One), and "if you choose Television as the device, the number, volume and channel buttons
+will all control your television" (Harmony 885).
 
-It is the ordinary way to reach a command that is not on an activity's map, and most commands are not: an
-activity binds the thirty or so buttons that make sense while you are watching television, and a
-television answers to a hundred and more.
+Both map the whole keypad. Neither is a special case of the other, and **they are two separate maps of
+the same keys, authored separately**. Logitech's own software has a page for each, called "Changing how
+buttons work for a device" and "Changing how buttons work in an Activity" in the Harmony 600 manual's
+contents.
 
-The flow, in Danny's words: you have chosen an activity, you want an obscure setting of your television
-that you almost never touch and that no button in the activity map carries, so you switch to device TV,
-press the button for that setting, and switch back to Current Activity.
+### What that means for this application, and it is short
 
-Every model works this way and each reaches it differently, which is worth getting right because a
-drawing here has to agree with it. The **Harmony 525** and the **Harmony 885** have a Devices key printed
-as such. The **Harmony One** has one on its touch panel. The **Harmony 600 does not have one at all**:
-its screen writes "Devices" above the centre key of the three below the display, which is why the traced
-drawing of a 600 carries no such key and must not grow one. It is intrinsic to the product, not a feature
-of a generation.
+**A page about a device shows that device's map and says nothing about activities.** Not which activity
+uses a key, not which other appliance holds it, not where a change will land. Those are all facts about
+the **activity** map, which is a different page. Inside one device's map there is one appliance, so:
 
-### What that means for this application
+* a key sends one of that appliance's commands, or it sends nothing
+* two appliances may hold the same key, and that is not a conflict: the television's old remote has a
+  Menu key and so does the amplifier's
+* a change is one binding, and it touches no activity
+* an appliance no activity uses still has a map, since device mode needs no activity running. The 885
+  manual says so: "to access device mode you do not need to be in an Activity"
 
-**A button map belongs to a device before it belongs to an activity.** Logitech's own software is
-authored that way, and the corpus agrees from the other side, `docs/findings.md` section 151 next door:
-of 1105 pairs of a device and a button across fifteen configurations, **1096 send the same command in
-every activity that binds them**, and 47 of 50 devices agree everywhere. An activity's map is the device
-map plus that activity's own overrides.
+In the model a device map binding is a **keypad binding with no activity**, which is the shape
+`ButtonBinding` already had. `src/shared/buttonmap.ts` is the derivation and carries the history of
+getting it wrong.
 
-So, and these are requirements rather than preferences:
+**The screen is the bigger half of device mode, and it is not built yet.** An old remote has far more
+buttons than a Harmony, so what people actually do in device mode is build **pages on the screen**, a
+screenful of commands at a time, for the obscure functions the keypad has no room for. Those would never
+fit an activity's map, and they are not meant to: an activity carries what you use often. That is also
+why Logitech can say you should hardly ever need device mode and be right, and why it is still worth
+having: without it you walk to the cupboard for the old remote.
 
-* **A page about a device shows the device's map.** Showing one activity's map on a device's page answers
-  a question nobody asked. A page about an activity shows the activity's, which is a different screen.
-* **A change to a device's button has to reach every activity that inherited it.** Change it in one place
-  and it is invisible in the activity somebody is actually sitting in, which is the worst failure
-  available: the file changed, the checksum still passes, and the remote behaves exactly as before.
-* **Except where another device already has that button in one of those activities**, which is the
-  ordinary case and not an edge: of the first device's 30 bound keys on the Harmony One in the lab, 27 are
-  another device's key in at least one of the eight activities that drive it. A key that works the
-  television while you are watching television and the amplifier while you are listening to music is how a
-  Harmony is set up. So a change goes where there is room for it, leaves those alone, and **says which
-  before it is made**. Writing all of them steals keys; refusing outright blocks 27 of 30. One derivation
-  answers both halves, `src/shared/buttonmap.ts`, so the sentence a page shows and the change itself
-  cannot disagree.
-* **The screen keys are a second population and are not the keypad.** They share no scan code with it on
-  three of the four architectures and exactly one on the fourth. A device mode's screen shows that
-  device's commands a few at a time; the keypad is the other question. An interface must keep them apart.
+**A change to an activity's map has to reach the whole activity**, and that is the other page's rail, not
+this one's. Do not import it here.
 
-### The one thing that is open, and must not be guessed
+### Where device mode's own map lives on the remote is open
 
-**Where device mode's own keypad map lives is unknown.** No keypad map in any configuration here sends an
-infrared code outside an activity: 158 maps, 65 installed by the configuration, 50 of those by an
-activity, and exactly those 50 send codes. Three readings remain and none is established. Do not close it
-by inventing a mechanism, and do not restate the dead version of it, which is the phrase
-`every keypad binding belongs to an activity` in the superseded table next door.
+**No keypad map in any configuration read here sends a code outside an activity**: 158 maps, 65 installed
+by the configuration, 50 of those by an activity, and exactly those 50 send codes. So the file states no
+device map and where the remote keeps one is unsettled. Three readings remain, `docs/findings.md` section
+151 next door, and **do not close it by inventing a mechanism**.
 
-The long form of all of this, with citations and the per model differences, is
+That the keypad **is** remapped is not in doubt, since Logitech says so and Danny has used it for years.
+Only the storage is open.
+
+An import therefore has nothing to copy, and reconstructs a device map instead: an activity's map is the
+device map plus that activity's overrides, so where every activity that binds a key agrees, that agreement
+is the device's own answer. 1096 of 1105 pairs across the corpus agree, and the nine that do not are left
+unbound rather than guessed. `src/shared/buttonmap.ts`.
+
+### Getting in and out, per model
+
+Small differences, and worth being exact about because a drawing has to agree with the remote.
+
+| model | how you get in | how you get out |
+|---|---|---|
+| Harmony 525 | a **Devices** key on the keypad | its **Activities** key |
+| Harmony 600 | **no key at all**: the screen writes "Devices" above the **centre key** of the three below the display | the same key, which then writes "Activity" |
+| Harmony One | a **Devices** item on the touch panel | a **Current Activity** item |
+| Harmony 885 | a **DEVICE** key beside the display | **DEVICE** again |
+
+Two corrections that were live in this file for a day. The **Harmony 600 has no Devices key**: its
+manual's button table lists every key on the remote without one. And **"Current Activity" is the Harmony
+One's wording**, not the product's, so an interface must not print it as vocabulary.
+
+### The screen keys are a third population
+
+They share no scan code with the keypad on three of the four architectures and exactly one on the fourth,
+so an interface keeps them apart from the keypad rather than merging them. They are where device mode's
+pages live, per above, and nothing here reads or writes them yet.
+
+The long form, with the citations and the per model differences, is
 `../harmony-explorations/docs/how-a-harmony-works.md`, and the ritual that makes it get read is the
 `how-a-harmony-works` skill.
 

@@ -26,23 +26,33 @@ import { mayBeShared } from '../src/shared/library.ts';
  * One per architecture we hold, with what each has to produce.
  *
  * **Per sample and exact**, rather than one total over the loop. A total hides which side moved, and it
- * hides a sample dropping out of the loop entirely; these four rows move only when a reader changes or
- * a sample is added, and then they move in a diff somebody reads. `steps` is bindings plus macros, so
- * it exceeds `buttons` wherever a button sends more than one code.
+ * hides a sample dropping out of the loop entirely; these rows move only when a reader changes or a
+ * sample is added, and then they move in a diff somebody reads. `steps` is bindings plus macros, so it
+ * exceeds `buttons` wherever a button sends more than one code.
+ *
+ * **The bindings are three populations and they are counted separately**, which they were not until 22
+ * August 2026, when it was one `buttons` total. A device's own map is device mode, the old remote of one
+ * appliance; an activity's map is the mixed one; and a screen key is the third. A single total cannot
+ * tell those apart and a device page reads only the first, so they get a column each.
+ *
+ * `map` is the number the import **reconstructs**: a configuration holds no device map at all, so it is
+ * derived from what the activity maps agree on, `src/shared/buttonmap.ts`. It is well below `activity`
+ * wherever several activities drive one appliance, 145 against 220 on the Harmony One, because that is
+ * the same key counted once per activity there and once per appliance here.
  */
 const SAMPLES = [
-  { name: 'one_config', devices: 5, activities: 8, buttons: 461, steps: 461,
+  { name: 'one_config', devices: 5, activities: 8, activity: 220, screen: 241, map: 145, steps: 606,
     properties: 9, transitions: 41, language: 'en' },
-  { name: 'h600_config', devices: 4, activities: 3, buttons: 229, steps: 241,
+  { name: 'h600_config', devices: 4, activities: 3, activity: 74, screen: 155, map: 68, steps: 309,
     properties: 7, transitions: 17, language: 'en' },
-  { name: 'h525_config', devices: 4, activities: 3, buttons: 220, steps: 220,
+  { name: 'h525_config', devices: 4, activities: 3, activity: 90, screen: 130, map: 54, steps: 274,
     properties: 6, transitions: 16, language: 'en' },
-  { name: 'arch8_config_a', devices: 3, activities: 1, buttons: 210, steps: 210,
+  { name: 'arch8_config_a', devices: 3, activities: 1, activity: 36, screen: 174, map: 36, steps: 246,
     properties: 5, transitions: 15, language: 'en' },
   // **The fifth row exists for one field.** Twelve of the thirteen configurations in the corpus are in
   // English, so a language assertion over the four above would pass on a reader that answered `en`
   // unconditionally. This one is Dutch, and it is the only sample here that can fail that claim.
-  { name: 'h525_config_2', devices: 1, activities: 1, buttons: 102, steps: 102,
+  { name: 'h525_config_2', devices: 1, activities: 1, activity: 30, screen: 72, map: 30, steps: 132,
     properties: 2, transitions: 22, language: 'nl' },
 ] as const;
 
@@ -52,13 +62,24 @@ const NOW = '2026-08-21T12:00:00.000Z';
 
 test('every configuration fills the model, and what it cannot say it leaves absent',
      skipUnless(...NAMES), () => {
-  for (const { name, devices, activities, buttons, steps, language } of SAMPLES) {
+  for (const { name, devices, activities, activity, screen, map, steps, language } of SAMPLES) {
     const imported = importConfiguration(require_(name), { now: NOW, idPrefix: name });
     const { content, definitions } = imported;
 
     assert.equal(content.devices.length, devices, `${name}: devices`);
     assert.equal(content.activities.length, activities, `${name}: activities`);
-    assert.equal(content.buttons.length, buttons, `${name}: bindings that send something`);
+    // The three populations, each exact. An activity's map, the screen keys, and the device's own map,
+    // which is what device mode uses and what a page about a device reads.
+    const counted = {
+      activity: content.buttons.filter((one) => one.inActivity !== undefined).length,
+      screen: content.buttons.filter((one) => one.surface === 'screen').length,
+      map: content.buttons.filter((one) =>
+        one.surface === 'keypad' && one.inActivity === undefined).length,
+    };
+    assert.deepEqual(counted, { activity, screen, map }, `${name}: bindings, per population`);
+    // And nothing outside them, which is what makes the three exhaustive rather than a sample of the
+    // list: a fourth kind of binding would leave this sum short.
+    assert.equal(content.buttons.length, activity + screen + map, `${name}: and nothing else`);
     assert.equal(content.buttons.reduce((n, one) => n + one.sends.length, 0), steps, `${name}: steps`);
     // A provisional definition per device, which is the import's own promise: a device the remote
     // drives is an appliance the library has to have something to say about, even if that something is
@@ -105,13 +126,15 @@ test('every configuration fills the model, and what it cannot say it leaves abse
 
     for (const button of content.buttons) {
       assert.ok(button.sends.length > 0, `${name}: a binding in the map sends something`);
-      // The two surfaces are what the format keeps strictly apart, so a binding is on one of them and
-      // is placed in exactly one context. A binding nobody can place is a binding nobody can show.
-      assert.equal(
-        (button.inActivity === undefined) !== (button.inDeviceMode === undefined),
-        true,
-        `${name}: a binding sits in exactly one context`,
-      );
+      // **A binding sits in exactly one of three places**, and the third was added on 22 August 2026 when
+      // a device's own map stopped being conflated with an activity's. A screen key names its page; a key
+      // in an activity's map names the activity; a key in the device's own map names neither, because
+      // device mode needs no activity. What must never happen is both, which would be a binding nobody
+      // can place.
+      const where = [button.inDeviceMode !== undefined, button.inActivity !== undefined];
+      assert.ok(!(where[0] && where[1]), `${name}: a binding sits in one context, not two`);
+      assert.equal(button.inDeviceMode !== undefined, button.surface === 'screen',
+                   `${name}: a page index is what a screen key has and a keypad key has not`);
     }
   }
 });
@@ -274,13 +297,15 @@ test('a keypad key names the activity it belongs to, and never the configuration
   // an action list, so agreement between them is not arithmetic on one number.
   let agree = 0;
   let activities = 0;
-  for (const { name } of SAMPLES) {
+  for (const { name, map } of SAMPLES) {
     const { content } = importConfiguration(require_(name), { now: NOW, idPrefix: name });
     const keypad = content.buttons.filter((one) => one.surface === 'keypad');
-    // Every one of them, on every architecture: a physical key on a real remote is always inside an
-    // activity. Which is also why the device page cannot show a key's command without naming one.
-    assert.deepEqual(keypad.filter((one) => one.inActivity === undefined), [],
-                     `${name}: a keypad key with no activity`);
+    // **Every keypad binding the configuration states names an activity**, on every architecture, which is
+    // the fact this test is about and is why the mix-up above was possible at all. The ones with no
+    // activity are the device maps this import reconstructs, since a configuration holds none, and their
+    // number is asserted per sample in the first test rather than left to be inferred here.
+    assert.equal(keypad.filter((one) => one.inActivity === undefined).length, map,
+                 `${name}: the only keypad bindings with no activity are the reconstructed device maps`);
     for (const activity of content.activities) {
       activities += 1;
       const here = keypad.filter((one) => one.inActivity === activity.slot);

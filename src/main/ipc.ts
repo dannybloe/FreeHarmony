@@ -48,9 +48,9 @@ export function registerHandlers(store: RemoteStore, library: DeviceLibrary): vo
       await settleContent(store, library, name);
       return labelDeviceUse(store, name, slot, label);
     },
-    assignButton: async (name, scan, device, command, only) => {
+    assignButton: async (name, scan, device, command) => {
       await settleContent(store, library, name);
-      return assignButton(store, name, scan, device, command, only);
+      return assignButton(store, name, scan, device, command);
     },
   });
 
