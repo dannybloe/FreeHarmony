@@ -17,6 +17,12 @@
  * | of those, a different device in at least one | 2 | 27 |
  * | of those, free in at least one | 0 | 24 |
  *
+ * The sibling repository counts the same thing over the whole corpus and states 35 buttons and 32 for that
+ * receiver where this table says 30 and 27, `docs/findings.md` section 151. The difference is the
+ * population and not a disagreement: it counts every bound scan code, and this counts only the buttons the
+ * **drawing** has a measured code for, 34 of a Harmony One's 44. Two numbers for one fact are worth
+ * reconciling out loud, since that is how one of them quietly becomes wrong.
+ *
  * So the interesting case is the ordinary one, and two blunt answers are both wrong. Picking one activity's
  * answer invents the map. Writing every driving activity **takes the key away from the other device** in the
  * activities where it is that device's key, which is a destructive edit nobody asked for: on that Harmony
