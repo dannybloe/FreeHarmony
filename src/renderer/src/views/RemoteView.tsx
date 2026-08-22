@@ -18,6 +18,8 @@ import type { AttachedRemote } from '../../../shared/devices.ts';
 import { whyNameIsRefused, type RemoteDocument } from '../../../shared/remote.ts';
 import { drawingFor, isSameModel } from '../catalogue.ts';
 import type { Contents } from '../viewmodels/useContents.ts';
+import type { Importing } from '../viewmodels/useImport.ts';
+import { ImportView } from './ImportView.tsx';
 import { Inventory } from './Inventory.tsx';
 import { Silhouette } from './Silhouette.tsx';
 import classes from './RemoteView.module.scss';
@@ -25,8 +27,10 @@ import classes from './RemoteView.module.scss';
 interface RemoteViewProps {
   readonly remote: RemoteDocument;
   readonly busy: boolean;
-  /** What the document holds, and what a read of a device is doing. */
+  /** What the document holds. */
   readonly contents: Contents;
+  /** The import, which is the only thing on this page that touches hardware. */
+  readonly importing: Importing;
   /** Attached remotes, so that reading is offered only when the right one is plugged in. */
   readonly attached: readonly AttachedRemote[];
   readonly onRename: (to: string) => void;
@@ -47,7 +51,7 @@ const ORIGIN: Readonly<Record<RemoteDocument['provenance'], string>> = {
 };
 
 export function RemoteView({
-  remote, busy, contents, attached, onRename, onDuplicate, onRemove,
+  remote, busy, contents, importing, attached, onRename, onDuplicate, onRemove,
 }: RemoteViewProps) {
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
@@ -127,20 +131,21 @@ export function RemoteView({
 
         {/* Offered only where it can be done: a remote of this model has to be attached. A button that
             is always there and fails when nothing is plugged in makes somebody find that out by
-            pressing it. */}
+            pressing it.
+            **The word is Import and not Read**, decided on 22 August 2026. Reading a remote is an
+            import and never a synchronisation, the way back is always built from the document, and
+            "read" reads as looking where this replaces. Looking is what the dialogue's first half is
+            for, and it is reached by the same button. */}
         {thisOne !== undefined && (
           <div className={classes.read}>
             <Button
               size="xs"
               variant={remote.baseConfiguration === undefined ? 'filled' : 'default'}
-              loading={contents.read.status === 'reading'}
-              onClick={() => void contents.readFrom(thisOne.productId)}
+              loading={importing.inspection.status === 'inspecting'}
+              onClick={() => void importing.inspect(thisOne.productId, remote.name)}
             >
-              {remote.baseConfiguration === undefined ? 'Read what is on it' : 'Read it again'}
+              {remote.baseConfiguration === undefined ? 'Import from the remote' : 'Import again'}
             </Button>
-            {contents.read.status === 'failed' && (
-              <Text className={classes.readError}>{contents.read.error}</Text>
-            )}
           </div>
         )}
 
@@ -156,6 +161,8 @@ export function RemoteView({
           </Button>
         </div>
       </div>
+
+      <ImportView importing={importing} into={remote.name} onImported={() => void contents.reload()} />
 
       <Modal opened={confirming} onClose={() => setConfirming(false)} title={`Remove ${remote.name}?`}
              centered radius="md">

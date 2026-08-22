@@ -41,9 +41,12 @@ const api: FreeHarmonyApi = {
     duplicate: (name) =>
       call('remotes', 'duplicate', name) as ReturnType<FreeHarmonyApi['remotes']['duplicate']>,
     remove: (name) => call('remotes', 'remove', name) as ReturnType<FreeHarmonyApi['remotes']['remove']>,
-    readConfiguration: (name, productId) =>
-      call('remotes', 'readConfiguration', name, productId) as
-        ReturnType<FreeHarmonyApi['remotes']['readConfiguration']>,
+    inspectAttached: (productId, into) =>
+      call('remotes', 'inspectAttached', productId, into) as
+        ReturnType<FreeHarmonyApi['remotes']['inspectAttached']>,
+    importFrom: (name, token) =>
+      call('remotes', 'importFrom', name, token) as
+        ReturnType<FreeHarmonyApi['remotes']['importFrom']>,
     contents: (name) =>
       call('remotes', 'contents', name) as ReturnType<FreeHarmonyApi['remotes']['contents']>,
     fileDefinitions: (name) =>

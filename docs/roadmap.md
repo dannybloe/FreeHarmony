@@ -18,11 +18,26 @@ something anybody can schedule.
 **Step 2 is done and step 1 works.** There is a window: it keeps a list of your remotes, each one a
 folder in your own documents, and you can add one, name it, rename it, copy it and remove it.
 
-Open one with the remote plugged in and it offers to read what is on it. That read takes a minute or
-so, it changes nothing on the remote, and afterwards the page lists your devices with the number of
-buttons each one answers to, and your activities with the devices each one drives. The names are
-yours: the ones you typed into Logitech's software, and for an activity the words the remote draws on
-its own screen.
+Open one with the remote plugged in and it offers to **import** what is on it. It reads the remote,
+which takes a minute or so and changes nothing on it, and then shows you what it found: your devices
+with the number of commands each one has, your activities, and how many buttons are set up. Nothing is
+written down until you say so, so this is also how you simply look at what is on a remote. Say yes and
+the page lists your devices with the number of buttons each one answers to, and your activities with
+the devices each one drives. The names are yours: the ones you typed into Logitech's software, and for
+an activity the words the remote draws on its own screen.
+
+**It is an import and never a synchronisation**, and that is worth being plain about because the two
+look alike from the outside. What comes off the remote replaces what is in that entry, and the way
+back, when it exists, will be built from the entry rather than merged into it. Every reading is kept as
+its own file, so nothing you have imported is ever thrown away, and if an entry already holds something
+you are told what it is before anything is replaced. Copy it first if you want to keep both.
+
+Appliances it recognises are matched on what they send rather than on a name, which is the only thing a
+configuration states about them: it names no manufacturer, no model and not one command. So a
+television already in your library keeps the words you gave it, and the buttons that used it keep
+sending exactly what they sent, which is not free. Of the appliances that turn up in more than one
+configuration next door, a quarter are described with their commands in a different order, by
+Logitech's own software.
 
 What step 1 still owes you is the rest of the picture: what every individual button sends, and the
 screens drawn the way the remote draws them. Both can be read today, next door, and neither is on

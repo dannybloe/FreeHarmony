@@ -14,7 +14,9 @@ import assert from 'node:assert/strict';
 import { MODELS } from '@harmony/silhouettes';
 import { MODELS_BY_SKIN, SKINS_WITHOUT_A_MODEL_RECORD } from '@harmony/usb/models';
 
-import { fullName, NOT_CALLED_HARMONY, remoteModelForSkin } from '../src/shared/models.ts';
+import {
+  NOT_CALLED_HARMONY, fullName, remoteModelForSkin, whyImportIsRefused,
+} from '../src/shared/models.ts';
 
 test('every drawing label is what the rule produces from its own skin, which is the copy check', () => {
   // The assertion this file is for. Three drawings, three skins, three names, and the rule has to
@@ -119,4 +121,33 @@ test('One is the one Harmony name that is a word, which is why the list cannot b
   // this is the pair that proves it.
   assert.equal(fullName('One'), 'Harmony One');
   assert.equal(fullName('Olive'), 'Olive');
+});
+
+test('a remote of the same model may be imported, whichever region it reports', () => {
+  // The decision of 22 August 2026, and the case it turns on. A document created by picking `Harmony One`
+  // from the chooser records skin 54; a European unit reports 59. Comparing skins outright would refuse a
+  // real Harmony One against a document about a Harmony One, which is the ordinary case here.
+  const chosen = { name: 'Harmony One', skin: 54 };
+  assert.equal(whyImportIsRefused(chosen, 54), undefined);
+  assert.equal(whyImportIsRefused(chosen, 59), undefined, 'the European variant of the same remote');
+});
+
+test('a different remote is refused, and the refusal names both of them', () => {
+  const refused = whyImportIsRefused({ name: 'Harmony One', skin: 54 }, 71);
+  assert.match(refused ?? '', /Harmony 600 is attached and this document is about a Harmony One/);
+});
+
+test('a document with no model adopts whatever is attached rather than refusing it', () => {
+  // Not a hole: those documents predate the field, and an import is the first thing able to answer the
+  // question properly. What makes it safe is the caller, which records the skin the remote reported.
+  assert.equal(whyImportIsRefused(undefined, 54), undefined);
+});
+
+test('a remote nothing here recognises is refused by number, not by a guessed name', () => {
+  // The one case where refusing is the honest answer even though nothing is wrong with the remote:
+  // without a name there is no way to say whether it matches, and inventing one would put a wrong model
+  // in somebody's documents.
+  assert.match(whyImportIsRefused({ name: 'Harmony One', skin: 54 }, 250) ?? '', /skin 250/);
+  assert.match(whyImportIsRefused({ name: 'Harmony One', skin: 54 }, undefined) ?? '',
+               /does not say which model/);
 });

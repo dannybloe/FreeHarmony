@@ -48,6 +48,49 @@ repository's `readConfig`, imported through the `@harmony/corpus/read` subpath, 
 checks nothing here should reimplement: the end marker has to sit where the header said, and the
 trailer checksum has to recompute.
 
+## The document is the source, and that is now true on disk
+
+Decided on 22 August 2026. **Reading a remote is an import and never a synchronisation**: the way back
+is always built from the document, so the two directions are not symmetrical and nothing should be
+built as though they were.
+
+Three consequences, each of which is code rather than intent.
+
+**A document holds its own contents**, in `content.json` beside its manifest, written once when an
+import lands. Until that day they were worked out from the configuration bytes on every single look,
+which was cheap, always consistent, and left nowhere at all for anything a person adds: a television
+typed in by hand had no place to be. `src/main/content.ts` is the one writer. The projection survives
+as the fallback for a document that has bytes and no contents file, which is what carries the documents
+written before the file existed.
+
+**An import replaces everything the document holds**, and says what that is in numbers before it does.
+What is never lost is the readings: each one is a file named after the moment it arrived, so an earlier
+import can be projected again. This is the known seam getting sharper rather than a new one, and it is
+the reason a document records when it was imported.
+
+**Importing is two halves.** `inspectAttached` opens the remote, reads it and writes nothing;
+`importInto` writes. Looking and committing have different costs, so somebody who only wants to know
+what is on their remote gets the whole answer and leaves no trace. The compatibility refusal runs
+**before the device is opened**, since holding somebody's hardware for a minute in order to tell them no
+is the wrong order.
+
+### The appliance an import recognises
+
+An appliance already in the library keeps everything a person or Logitech's catalogue put on it, because
+a configuration states no manufacturer, no model and not one command name. It is recognised by what it
+sends, which is a comparison that needs no vocabulary.
+
+**That comparison sorts, and a button reference does not.** A binding does not name a command, it names
+*the hundred and twelfth* command of whatever sits in that position, so pointing a position at another
+description of the same appliance changes what every button on it sends unless the references are
+rewritten onto the codes. Nothing throws and no count moves: the document simply becomes wrong.
+
+`src/shared/relink.ts` is that rewrite and `test/relink.test.ts` is the check, with a control in every
+test because a rewrite that did nothing would otherwise pass. It is not a precaution: of the twelve
+appliances that appear in more than one configuration in the corpus next door, three are described with
+their commands in a different order, and those are four configurations of one remote from Logitech's own
+generator ten minutes apart.
+
 **The table is enforced by the compiler**, not by a habit: every entry in `writeback.ts` is a mapped
 type over the interface it describes, so adding a field to the model fails the typecheck until somebody
 has said what happens to it.

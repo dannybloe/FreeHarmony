@@ -75,3 +75,40 @@ export function remoteModelForSkin(skin: number | undefined): RemoteModel | unde
   const bare = MODELS_BY_SKIN[skin]?.name ?? SKINS_WITHOUT_A_MODEL_RECORD[skin];
   return bare === undefined ? undefined : { name: fullName(bare), skin };
 }
+
+/**
+ * Why a configuration on an attached remote may not be imported into this document, or `undefined`.
+ *
+ * **The refusal lives here rather than in the window**, for the reason every rail in this project's
+ * neighbour lives in a library: a rail a screen enforces is enforced until somebody writes a script.
+ * The window calls this too, to explain before anybody presses anything, which is the same arrangement
+ * `whyNameIsRefused` has.
+ *
+ * It takes the **skin** the remote reported rather than a model, so that it can name a number nobody has
+ * recorded instead of being handed an `undefined` it cannot explain.
+ *
+ * The comparison is on the **name**, which is what makes a regional pair one answer without a pairing
+ * table: `fullName` drops the regional suffix, so skins 54 and 59 are both `Harmony One`. That was
+ * decided on 22 August 2026 against comparing skins outright, which would refuse a European Harmony One
+ * against a document created by picking `Harmony One` from the chooser, and that is the ordinary case in
+ * the region this is developed in. What makes it safe is not the comparison but what the caller does
+ * after it: the document takes over the skin the remote reported, so the variant is recorded rather than
+ * assumed.
+ *
+ * A document with no model at all is allowed and adopts what is attached. That is not a hole: those
+ * documents predate the field, and the import is the first thing that can answer the question properly.
+ */
+export function whyImportIsRefused(
+  document: RemoteModel | undefined, attachedSkin: number | undefined,
+): string | undefined {
+  const attached = remoteModelForSkin(attachedSkin);
+  if (attached === undefined) {
+    const which = attachedSkin === undefined
+      ? 'the attached remote does not say which model it is'
+      : `nothing here recognises a remote reporting skin ${attachedSkin}`;
+    return `${which}, so its configuration cannot be placed`;
+  }
+  if (document === undefined) return undefined;
+  if (document.name === attached.name) return undefined;
+  return `a ${attached.name} is attached and this document is about a ${document.name}`;
+}

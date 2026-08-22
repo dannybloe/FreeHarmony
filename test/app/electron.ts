@@ -93,6 +93,14 @@ export interface LaunchOptions {
   readonly visible?: boolean;
   /** Where the store goes. A temporary directory by default, removed on `close`. */
   readonly store?: string;
+  /**
+   * A configuration file standing in for a remote on the bus, per `src/main/pretend.ts`.
+   *
+   * The value the seam's own environment variable takes. It is here because `test/app/import.test.ts` is
+   * the only place either half of the import can be exercised at all: one opens a remote, and the other
+   * is the rail that refuses a reading which came out of a file.
+   */
+  readonly pretendRemote?: string;
 }
 
 /** Launches the built application and waits until its page has finished loading. */
@@ -101,13 +109,16 @@ export async function launch(options: LaunchOptions = {}): Promise<RunningApplic
   const store = options.store ?? await mkdtemp(join(tmpdir(), 'freeharmony-app-'));
   const child = spawn(await electronBinary(), ['.', '--remote-debugging-port=0'], {
     cwd: REPO,
-    // Two things are added to the environment and nothing else about this run differs from what
-    // somebody starting the application would get: where the store goes, and whether a window appears.
-    // See `STAY_HIDDEN` in `src/main/index.ts` for why that is the nearest thing to headless here.
+    // Three things are added to the environment and nothing else about this run differs from what
+    // somebody starting the application would get: where the store goes, whether a window appears, and
+    // whether a file stands in for a remote. See `STAY_HIDDEN` in `src/main/index.ts` for why the second
+    // is the nearest thing to headless here, and `src/main/pretend.ts` for what the third costs.
     env: {
       ...process.env,
       FREEHARMONY_STORE: store,
       ...(options.visible === true ? {} : { FREEHARMONY_HIDDEN: '1' }),
+      ...(options.pretendRemote === undefined
+        ? {} : { FREEHARMONY_PRETEND_REMOTE: options.pretendRemote }),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

@@ -11,6 +11,7 @@
  * the configuration bytes stay in the main process because they cannot casually leave it.
  */
 import type { DocumentContents, FiledDefinitions, RemoteContent } from './content.ts';
+import type { AttachedSummary, ImportOutcome } from './import.ts';
 import type { AttachedRemote, HardwareReading } from './devices.ts';
 import type { DeviceDefinition } from './library.ts';
 import type { RemoteDocument, RemoteModel } from './remote.ts';
@@ -40,23 +41,40 @@ export interface RemotesApi {
   remove(name: string): Promise<void>;
 
   /**
-   * Read the whole configuration off an attached remote and keep it against this document.
+   * Read an attached remote and say what is on it. **Writes nothing at all.**
    *
    * **The second method on this API that claims hardware and by far the heavier one**: it holds an
    * irreplaceable device for the length of a transfer of up to 1.6 MB. Reads only, one device, closed
-   * afterwards, and never on a timer. It either files a configuration that passed both of the read's
-   * own checks or it throws and the document keeps what it had.
+   * afterwards, and never on a timer. It either returns a summary of a configuration that passed both of
+   * the read's own checks or it throws.
    *
    * The product id names a model rather than a unit, so it refuses when two of one model are attached.
+   * Whether the remote's configuration may go into `into` is settled **before the device is opened**, so
+   * an incompatible remote is never claimed.
    *
-   * **The bytes do not come back.** They stay in the main process, where the library can read them,
-   * and what the window gets is the document's manifest. `contents` is how it sees inside.
+   * `into` is the document this is destined for, absent on the route from the chooser where there is not
+   * one yet. With it the summary also says what an import would replace, in numbers.
    *
-   * It also puts a description of every appliance the remote drives into the shared library, because
-   * that is what an import is. Nothing already there is overwritten, so reading the same remote again
-   * costs nothing and changes nothing.
+   * **The bytes do not come back.** They stay in the main process, against the token in the summary,
+   * until `importFrom` commits them or something else is read. Walk away and they are gone, which costs a
+   * repeated read and nothing else.
    */
-  readConfiguration(name: string, productId: number): Promise<RemoteDocument>;
+  inspectAttached(productId: number, into?: string): Promise<AttachedSummary>;
+
+  /**
+   * Commit a reading into a document, **replacing everything it holds**.
+   *
+   * The other half of `inspectAttached`, and the only half that writes. It is expected to be called
+   * after somebody has been shown `AttachedSummary.replacing`, which is why this method does not ask
+   * again: a confirmation that the interface can skip is not a confirmation.
+   *
+   * The document adopts the model the remote reported, every appliance goes into the shared library
+   * without overwriting anything already there, and every button reference to an appliance the library
+   * already knew is rewritten onto the code it names rather than the position it sat at.
+   *
+   * It refuses when the token no longer names a held reading, which means reading the remote again.
+   */
+  importFrom(name: string, token: string): Promise<ImportOutcome>;
 
   /**
    * What this document holds: devices, activities and what every button sends.
@@ -149,7 +167,7 @@ export type Namespace = keyof FreeHarmonyApi;
  * forgetting to register it is a typecheck failure instead of a channel that answers nothing.
  */
 export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove',
-                               'readConfiguration', 'contents', 'fileDefinitions'] as const;
+                               'inspectAttached', 'importFrom', 'contents', 'fileDefinitions'] as const;
 export const DEVICE_METHODS = ['attached', 'readHardware'] as const;
 export const LIBRARY_METHODS =
   ['list', 'get', 'put', 'remove', 'missingFor', 'likelyDuplicates'] as const;

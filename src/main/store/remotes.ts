@@ -187,6 +187,26 @@ export class RemoteStore {
     return { ...stored, name };
   }
 
+  /**
+   * Record which remote a document is about, which an import is the first thing able to answer properly.
+   *
+   * **Separate from `attachConfiguration` on purpose**, and the reason is what the two facts are. The
+   * bytes are a configuration that was read; this is what the hardware said it was. A remote reports a
+   * skin, and a document created by picking a model from a list only has the skin of whichever variant
+   * the chooser recorded, so an import that adopts the reported one is correcting a guess rather than
+   * decorating a read.
+   *
+   * The cost of keeping them apart is two writes to one manifest. That is accepted: if the second never
+   * happens, a document holds the right bytes under a slightly wrong label, which the next import
+   * repairs and which nothing downstream reads as anything but a label.
+   */
+  async setModel(name: string, model: RemoteModel): Promise<RemoteDocument> {
+    const existing = await this.get(name);
+    const stored: StoredRemote = { ...toStored(existing), model, updatedAt: this.#now() };
+    await this.#write(name, stored);
+    return { ...stored, name };
+  }
+
   /** The shared rule, applied here because this is the refusal that counts. */
   #acceptable(name: string): string {
     const refused = whyNameIsRefused(name);

@@ -1,0 +1,80 @@
+// The import dialogue. A list of what is on the remote, and where something would be replaced, a block
+// that says so in numbers.
+
+@use '../mantine' as m;
+
+.reading {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-md);
+}
+
+.what {
+  color: var(--mantine-color-gray-7);
+}
+
+.appliances {
+  margin: var(--mantine-spacing-md) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: m.rem(2);
+}
+
+.appliance {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+  padding: m.rem(6) m.rem(10);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-gray-0);
+  font-size: var(--mantine-font-size-sm);
+}
+
+.applianceName {
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.applianceNote {
+  color: var(--mantine-color-gray-6);
+  text-align: right;
+}
+
+.activities {
+  margin-block-start: var(--mantine-spacing-md);
+  color: var(--mantine-color-gray-7);
+}
+
+.activitiesLabel {
+  display: block;
+  font-size: var(--mantine-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: m.rem(0.5);
+  color: var(--mantine-color-gray-5);
+  margin-block-end: m.rem(2);
+}
+
+// The one block on this screen that has to be read before the button is pressed, so it is the one block
+// with a colour. Amber rather than red: replacing is what an import is for, not an accident.
+.replacing {
+  margin-block-start: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-sm);
+  border: 1px solid var(--mantine-color-yellow-3);
+  background: var(--mantine-color-yellow-0);
+  display: grid;
+  gap: m.rem(2);
+}
+
+.done {
+  display: grid;
+  gap: var(--mantine-spacing-sm);
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--mantine-spacing-sm);
+  margin-block-start: var(--mantine-spacing-lg);
+}

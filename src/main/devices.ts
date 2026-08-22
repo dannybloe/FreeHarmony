@@ -17,8 +17,18 @@
  */
 import { HarmonyRemote, listHarmony, openHarmony, readVersion, skinId } from '@harmony/usb';
 
+/**
+ * The product id a pretended remote reports.
+ *
+ * A real one, `0xc121`, because the value has to reach `profileFor` on the other side and a made up
+ * number would be refused there for the wrong reason. It selects a **model** and never a unit, so it
+ * identifies nothing either way.
+ */
+const PRETEND_PRODUCT_ID = 0xc121;
+
 import type { AttachedRemote, HardwareReading } from '../shared/devices.ts';
 import { remoteModelForSkin } from '../shared/models.ts';
+import { pretence, pretendedEnumeration } from './pretend.ts';
 
 /**
  * Every attached Harmony, as plain data the window can be told.
@@ -37,6 +47,20 @@ import { remoteModelForSkin } from '../shared/models.ts';
  * one to leak.
  */
 export async function attachedRemotes(): Promise<AttachedRemote[]> {
+  // The seam, per `pretend.ts`: with it set there is nothing on the bus to enumerate, so the import
+  // dialogue would be unreachable and the screen it shows would be designed by guessing. Off unless an
+  // environment variable names a configuration file, and the half that writes refuses such a reading.
+  const faking = pretence();
+  if (faking !== undefined) {
+    const { skin } = pretendedEnumeration(faking);
+    const model = remoteModelForSkin(skin);
+    return [{
+      productId: PRETEND_PRODUCT_ID,
+      ...(skin === undefined ? {} : { skin }),
+      ...(model === undefined ? {} : { model }),
+    }];
+  }
+
   return (await listHarmony()).map((device) => {
     const skin = device.release === undefined ? undefined : skinId(device.release);
     const model = remoteModelForSkin(skin);

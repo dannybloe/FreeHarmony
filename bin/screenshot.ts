@@ -17,6 +17,7 @@
  *   pnpm screenshot --remotes "Woonkamer:one,Zolder"         seeded through the application's own API
  *   pnpm screenshot --configuration h600_config              give the first remote a real configuration
  *   pnpm screenshot --click "Add..." --click "Harmony 600"    to reach a screen that is not the first
+ *   pnpm screenshot --pretend-attached h600 --configuration h600_config    the import dialogue
  *   pnpm screenshot --width 1280 --height 900
  *
  * A remote is seeded as `Name` or `Name:model`, where the model is a drawing's id, so a picture can be
@@ -35,7 +36,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-import { require_ } from '@harmony/lab';
+import { imagePath, require_ } from '@harmony/lab';
 
 import { RemoteStore } from '../src/main/store/remotes.ts';
 import { asRemoteModel, SUPPORTED } from '../src/renderer/src/catalogue.ts';
@@ -47,6 +48,8 @@ interface Options {
   /** A lab sample to attach to the first seeded remote, so a page can show real contents. */
   configuration: string | undefined;
   clicks: string[];
+  /** A model whose configuration stands in for a remote on the bus, per `src/main/pretend.ts`. */
+  pretendAttached?: string;
   width: number;
   height: number;
 }
@@ -69,6 +72,8 @@ function options(argv: string[]): Options {
         }),
     configuration: named('--configuration'),
     clicks: every('--click'),
+    ...(named('--pretend-attached') === undefined
+      ? {} : { pretendAttached: named('--pretend-attached')! }),
     width: Number(named('--width') ?? 1100),
     height: Number(named('--height') ?? 760),
   };
@@ -76,6 +81,30 @@ function options(argv: string[]): Options {
 
 async function main(): Promise<number> {
   const wanted = options(process.argv.slice(2));
+
+  // A remote on the bus, and a reading off it, without either existing.
+  //
+  // Set **before the application starts**, because the seam is in the main process and there is no way
+  // to reach it afterwards: `contextBridge` freezes the API deeply and `window.freeharmony` is neither
+  // writable nor configurable, so a page side stub silently does nothing. Measured on 22 August 2026,
+  // which is how this ended up here instead of in an `evaluate`.
+  //
+  // What it buys is a dialogue full of what a real configuration actually holds. What it cannot do is
+  // import: `importInto` refuses a pretended reading, per `src/main/pretend.ts`.
+  if (wanted.pretendAttached !== undefined) {
+    const model = SUPPORTED.find((m) => m.id === wanted.pretendAttached);
+    if (model === undefined) {
+      throw new Error(`no drawing called ${wanted.pretendAttached}; `
+                      + `try ${SUPPORTED.map((m) => m.id).join(', ')}`);
+    }
+    if (wanted.configuration === undefined) {
+      throw new Error('--pretend-attached needs a --configuration for it to be reading');
+    }
+    const file = imagePath(wanted.configuration);
+    if (file === undefined) throw new Error(`no configuration called ${wanted.configuration} in the lab`);
+    process.env['FREEHARMONY_PRETEND_REMOTE'] = JSON.stringify({ skin: model.skin, file });
+  }
+
   const app = await launch({ visible: true });
   try {
     // Seeded through the bridge rather than by writing folders, so the picture is of the application

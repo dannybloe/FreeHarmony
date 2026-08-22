@@ -19,6 +19,7 @@ import { asRemoteModel, isSameModel } from './catalogue.ts';
 import { advanceOn } from './viewmodels/devices.model.ts';
 import { afterChoosingModel } from './viewmodels/navigation.model.ts';
 import { useContents } from './viewmodels/useContents.ts';
+import { useImport } from './viewmodels/useImport.ts';
 import { useDevices } from './viewmodels/useDevices.ts';
 import { useHardware } from './viewmodels/useHardware.ts';
 import { useNavigation } from './viewmodels/useNavigation.ts';
@@ -48,6 +49,7 @@ export function App() {
   const devices = useDevices(screen.at === 'connect' || screen.at === 'remote');
   // What the open document holds. Keyed on the name, so opening a different remote asks about that one.
   const contents = useContents(screen.at === 'remote' ? screen.name : undefined);
+  const importing = useImport();
   // The one thing here that opens a remote. It is a model of its own rather than part of `useDevices`,
   // because that one polls and this one must never be on a timer.
   const hardware = useHardware();
@@ -174,6 +176,7 @@ export function App() {
               remote={remote}
               busy={remotes.busy}
               contents={contents}
+              importing={importing}
               attached={devices.attached}
               onRename={(to) => void rename(remote.name, to)}
               onDuplicate={() => void remotes.duplicate(remote.name)}

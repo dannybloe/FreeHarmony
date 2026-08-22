@@ -12,7 +12,7 @@
 import { ipcMain } from 'electron';
 
 import { channelFor, METHODS, type FreeHarmonyApi, type Namespace } from '../shared/api.ts';
-import { contentsOf, fileDefinitionsOf, readConfigurationFrom } from './configuration.ts';
+import { contentsOf, fileDefinitionsOf, importInto, inspectAttached } from './configuration.ts';
 import { attachedRemotes, readHardware } from './devices.ts';
 import { DeviceLibrary } from './store/library.ts';
 import { RemoteStore } from './store/remotes.ts';
@@ -28,8 +28,8 @@ export function registerHandlers(store: RemoteStore, library: DeviceLibrary): vo
     rename: (name, to) => store.rename(name, to),
     duplicate: (name) => store.duplicate(name),
     remove: (name) => store.remove(name),
-    readConfiguration: (name, productId) =>
-      readConfigurationFrom(store, library, name, productId, now),
+    inspectAttached: (productId, into) => inspectAttached(store, library, productId, into, now),
+    importFrom: (name, token) => importInto(store, library, name, token, now),
     contents: (name) => contentsOf(store, library, name),
     fileDefinitions: (name) => fileDefinitionsOf(store, library, name, now),
   });

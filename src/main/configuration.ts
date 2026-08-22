@@ -1,10 +1,14 @@
 /**
  * The configuration a document is based on: getting one off a remote, and reading one back.
  *
- * Two halves that look alike and are not. `readConfigurationFrom` **opens an irreplaceable device**
- * and pulls a megabyte and a half off it; `contentsOf` opens a file this application wrote earlier.
- * They live in one file because they are the two ends of the same fact, and their docstrings say which
- * is which so nobody has to guess from a name.
+ * **An import, never a synchronisation**, and that word is the shape of this file. `inspectAttached`
+ * opens an irreplaceable device, pulls a megabyte and a half off it, works out what is on it and writes
+ * **nothing**. `importInto` writes. `contentsOf` opens a file this application wrote earlier. The first
+ * two are one act split in two, because looking and committing have different costs and somebody who
+ * only wants to know what is on their remote should be able to find out and leave no trace.
+ *
+ * The split is also what makes the confirmation honest: an import replaces everything a document holds,
+ * so the screen that asks can state what is about to go in numbers, having already read the remote.
  *
  * **The bytes never cross the bridge**, which is a decision and not an accident. A configuration is up
  * to 1.6 MB and only the library may interpret one, so the main process keeps the file and the window
@@ -21,6 +25,7 @@
  * which pulls in no lab and no filing. Whether that function belongs in `@harmony/usb` instead is a
  * question for the repository that owns it.
  */
+import { createHash, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -28,14 +33,38 @@ import { profileFor, readConfig } from '@harmony/corpus/read';
 import { HarmonyRemote, openHarmony } from '@harmony/usb';
 
 import type { DocumentContents, FiledDefinitions } from '../shared/content.ts';
+import type { AppliancePlan, AttachedSummary, ImportOutcome } from '../shared/import.ts';
 import type { DeviceDefinition } from '../shared/library.ts';
-import type { RemoteDocument } from '../shared/remote.ts';
+import { remoteModelForSkin, whyImportIsRefused } from '../shared/models.ts';
+import { matchBySignal, relinkAppliance } from '../shared/relink.ts';
+import type { RemoteModel } from '../shared/remote.ts';
+import { storedContentOf, writeContent } from './content.ts';
+import { attachedRemotes } from './devices.ts';
+import { pretence, pretendedBytes } from './pretend.ts';
 import { importConfiguration } from './import.ts';
 import type { DeviceLibrary } from './store/library.ts';
 import type { RemoteStore } from './store/remotes.ts';
 
 /**
- * Read the whole configuration off an attached remote and attach it to a document.
+ * The bytes of the one reading waiting for a decision, and nothing else.
+ *
+ * **At most one**, which is a statement about what this is for rather than a limit: a person inspects a
+ * remote, looks at what came back, and either imports it or does not. A second inspection means they
+ * changed their mind, so it replaces the first.
+ *
+ * They are held in memory and never written, which is the whole point of the split. Walk away and the
+ * reading is gone; the cost of being wrong about that is one repeated read, which takes a minute and
+ * touches nothing on the remote. The alternative, writing the bytes somewhere provisional, would mean
+ * the "writes nothing" half writes something.
+ */
+let waiting: {
+  token: string; bytes: Uint8Array; skin?: number; model?: RemoteModel;
+  /** Read out of a file rather than off a remote, which `importInto` refuses. See `pretend.ts`. */
+  pretended?: true;
+} | undefined;
+
+/**
+ * Read the whole configuration off an attached remote and say what is on it. **Writes nothing.**
  *
  * **The heaviest thing this application does.** It claims a device nobody can replace and holds it for
  * as long as the transfer takes, which is thousands of `READ_FLASH` commands. So:
@@ -45,36 +74,211 @@ import type { RemoteStore } from './store/remotes.ts';
  *   - it runs when somebody asks, once, and never on a timer
  *   - the handle is closed in a `finally`, because a clean read only session is what leaves a remote
  *     on its normal screen afterwards
- *   - **nothing is filed until both of the read's own checks pass.** A failure throws and the document
- *     keeps whatever it had, which for a new document is nothing at all. A configuration that half
- *     arrived is worse than none, because everything downstream would then be reading somebody's
- *     equipment out of the wrong bytes
+ *   - **the refusal comes first.** Whether this remote's configuration may go into this document is
+ *     settled by enumeration, before the device is opened, so an incompatible remote is never claimed
+ *     and never read. Getting that order the other way round would mean holding somebody's hardware for
+ *     a minute in order to tell them no
  *
- * The file name carries the moment of the read, so a second read of the same remote does not overwrite
- * the first, and the store records its digest.
+ * `into` names the document this is destined for, and is absent when there is not one yet, which is the
+ * route from the chooser. With it, the summary can also say what would be replaced.
  */
-export async function readConfigurationFrom(
-  store: RemoteStore, library: DeviceLibrary, name: string, productId: number, now: () => string,
-): Promise<RemoteDocument> {
-  const profile = profileFor(productId);
-  const remote = new HarmonyRemote(await openHarmony({ productId }));
+export async function inspectAttached(
+  store: RemoteStore, library: DeviceLibrary, productId: number,
+  into: string | undefined, now: () => string,
+): Promise<AttachedSummary> {
+  const faking = pretence();
+  const candidates = faking !== undefined
+    // The pretence stands in for enumeration as well, because there is nothing on the bus to enumerate.
+    // The refusal below still runs against it, so an incompatible pretence is refused like a real remote.
+    ? [{ productId, ...(faking.skin === undefined ? {} : { skin: faking.skin }),
+         ...(remoteModelForSkin(faking.skin) === undefined
+           ? {} : { model: remoteModelForSkin(faking.skin)! }) }]
+    : (await attachedRemotes()).filter((one) => one.productId === productId);
+  if (candidates.length === 0) throw new Error('no remote of that kind is attached');
+  // `openHarmony` refuses an ambiguous selector rather than guessing, and a product id names a model
+  // rather than a unit, so two of one model is a real case with no answer. Saying so beats its error.
+  if (candidates.length > 1) {
+    throw new Error(`two of that remote are attached, so there is no way to say which one to read`);
+  }
+  const attached = candidates[0]!;
+
+  const document = into === undefined ? undefined : await store.get(into);
+  const refused = whyImportIsRefused(document?.model, attached.skin);
+  if (refused !== undefined) throw new Error(refused);
+
   let bytes: Uint8Array;
-  try {
-    bytes = (await readConfig(remote, profile)).bytes;
-  } finally {
-    await remote.close();
+  if (faking !== undefined) {
+    bytes = await pretendedBytes(faking);
+  } else {
+    const profile = profileFor(productId);
+    const remote = new HarmonyRemote(await openHarmony({ productId }));
+    try {
+      bytes = (await readConfig(remote, profile)).bytes;
+    } finally {
+      await remote.close();
+    }
   }
 
+  const digest = createHash('sha256').update(bytes).digest('hex');
+  const imported = importConfiguration(bytes, { idPrefix: prefixFor(digest), now: now() });
+  const held = new Map((await library.list()).map((one) => [one.id, one]));
+
+  const appliances: AppliancePlan[] = imported.content.devices.map((use) => {
+    const definition = imported.definitions.find((one) => one.id === use.definition);
+    const already = use.definition === undefined ? undefined : held.get(use.definition);
+    const knownAs = already === undefined ? undefined : describe(already);
+    return {
+      slot: use.slot,
+      ...(use.label === undefined ? {} : { label: use.label }),
+      commandCount: definition?.commands.length ?? 0,
+      definition: use.definition ?? '',
+      disposition: already === undefined ? 'new' : 'linked',
+      ...(knownAs === undefined ? {} : { knownAs }),
+    };
+  });
+
+  // **What the document shows, not what it has written down**, and the difference was a real fault: a
+  // document with bytes and no contents file of its own still displays four appliances and eight
+  // activities, and computing this from the file alone made the confirmation silently claim there was
+  // nothing to lose. Found by looking at the dialogue rather than by a test, which is what looking is for.
+  const existing = into === undefined
+    ? undefined : (await contentsOf(store, library, into))?.content;
+  const token = randomUUID();
+  waiting = {
+    token, bytes,
+    ...(attached.skin === undefined ? {} : { skin: attached.skin }),
+    ...(attached.model === undefined ? {} : { model: attached.model }),
+    ...(faking === undefined ? {} : { pretended: true as const }),
+  };
+
+  return {
+    token,
+    ...(attached.model === undefined ? {} : { model: attached.model }),
+    ...(attached.skin === undefined ? {} : { skin: attached.skin }),
+    byteLength: bytes.byteLength,
+    appliances,
+    activities: imported.content.activities.map((activity) => ({
+      slot: activity.slot,
+      ...(activity.name === undefined ? {} : { name: activity.name }),
+    })),
+    buttonCount: imported.content.buttons.length,
+    ...(imported.content.language === undefined ? {} : { language: imported.content.language }),
+    ...(existing === undefined ? {} : {
+      replacing: {
+        devices: existing.devices.length,
+        activities: existing.activities.length,
+        buttons: existing.buttons.length,
+        labels: existing.devices.filter((one) => one.label !== undefined).length,
+      },
+    }),
+  };
+}
+
+/**
+ * What the library already calls an appliance, for a summary to show beside a position on the remote.
+ *
+ * The reason a person cares whether an appliance was recognised: a configuration offers no manufacturer,
+ * no model and no command names at all, so what survives an import is whatever they or Logitech's
+ * catalogue put there. `undefined` where nothing has, which is every appliance that only ever came out
+ * of a configuration.
+ */
+function describe(definition: DeviceDefinition): string | undefined {
+  const words = [definition.manufacturer, definition.model].filter((one) => one !== undefined);
+  return words.length === 0 ? undefined : words.join(' ');
+}
+
+/**
+ * Commit the reading that is waiting: the bytes, the contents, and a library entry per appliance.
+ *
+ * **This replaces everything the document holds.** That is the decision of 22 August 2026 and it is why
+ * the caller is expected to have shown `AttachedSummary.replacing` first. What is never lost is the
+ * bytes: every reading is a file of its own with its own timestamp, so an earlier import can be
+ * projected again even after this one.
+ *
+ * Three things happen that are worth naming separately, because each could go wrong on its own:
+ *
+ *   - **the document adopts the model the remote reported.** An import knows more than the chooser did,
+ *     so a document created by picking `Harmony One` from a list records the skin its own remote states
+ *   - **appliances go into the library and nothing is overwritten.** An entry already there may have been
+ *     corrected by hand, named, or had a better code learned into it
+ *   - **every reference to a linked appliance is rewritten onto the code it names**, per `relink.ts`,
+ *     because identity is blind to the order the commands sit in and a button reference is not
+ */
+export async function importInto(
+  store: RemoteStore, library: DeviceLibrary, name: string, token: string, now: () => string,
+): Promise<ImportOutcome> {
+  const ready = waiting;
+  if (ready === undefined || ready.token !== token) {
+    throw new Error('that reading is no longer held, so the remote has to be read again');
+  }
+  // The refusal that makes `pretend.ts` acceptable. A pretended reading may be looked at and may never be
+  // filed, because a document saying it was read off a device has to have been.
+  if (ready.pretended === true) {
+    throw new Error('this reading came out of a file rather than off a remote, so it cannot be imported');
+  }
+  const outcome = await importReading(store, library, name, ready, now);
+  waiting = undefined;
+  return outcome;
+}
+
+/**
+ * Everything importing does, given bytes, and **that is why it is a separate function**.
+ *
+ * The half above decides *which* bytes; this one is all of the behaviour. Keeping them together made the
+ * behaviour reachable only through a remote on the bus, so the replacement, the model adoption, the
+ * library filing and the rewrite of every button reference were between them untestable. A function whose
+ * only route in is somebody's hardware is a function with no tests, which was not noticed until it was
+ * time to write them.
+ *
+ * `reading` is what came off a remote: the bytes, and what that remote said about itself.
+ */
+export async function importReading(
+  store: RemoteStore, library: DeviceLibrary, name: string,
+  reading: { bytes: Uint8Array; skin?: number; model?: RemoteModel }, now: () => string,
+): Promise<ImportOutcome> {
+  const ready = reading;
+  const document = await store.get(name);
+  // Checked again rather than trusted: the summary may have been taken for a different document, or this
+  // one may have been renamed or re-modelled in between. The reading knows which remote it came off.
+  const refused = whyImportIsRefused(document.model, ready.skin);
+  if (refused !== undefined) throw new Error(refused);
+
+  // The same question as `AttachedSummary.replacing`, so the two cannot disagree: whether the document
+  // held anything a person was looking at, however it came to be holding it.
+  const replaced = (await contentsOf(store, library, name)) !== undefined;
   const at = now();
-  const document = await store.attachConfiguration(name, fileNameFor(at), bytes,
-                                                   'read-from-device', at);
-  // The appliances go into the library as part of the read, and that is a considered exception to the
-  // rule that nothing writes a shared collection as a side effect. Looking at a document must not,
-  // which is why `contentsOf` files nothing. But this **is** the import: somebody asked for their
-  // remote to be read, and a document whose four televisions are not described anywhere is an import
-  // that only half happened. Nothing is overwritten, so a re-read costs nothing and changes nothing.
-  await fileDefinitionsOf(store, library, name, now);
-  return document;
+  await store.attachConfiguration(name, fileNameFor(at), ready.bytes, 'read-from-device', at);
+  if (ready.model !== undefined) await store.setModel(name, ready.model);
+
+  const digest = createHash('sha256').update(ready.bytes).digest('hex');
+  const imported = importConfiguration(ready.bytes, { idPrefix: prefixFor(digest), now: at });
+  const held = new Map((await library.list()).map((one) => [one.id, one]));
+
+  const linked: string[] = [];
+  const created: string[] = [];
+  let content = imported.content;
+  let moved = 0;
+  let unmatched = 0;
+
+  for (const use of imported.content.devices) {
+    const provisional = imported.definitions.find((one) => one.id === use.definition);
+    if (use.definition === undefined || provisional === undefined) continue;
+    const already = held.get(use.definition);
+    if (already === undefined) {
+      await library.put(provisional);
+      created.push(use.definition);
+      continue;
+    }
+    linked.push(use.definition);
+    const result = relinkAppliance(
+      content, use.slot, matchBySignal(provisional.commands, already.commands));
+    content = result.content;
+    moved += result.moved;
+    unmatched += result.unmatched;
+  }
+
+  await writeContent(store, name, content);
+  return { linked, created, replaced, moved, unmatched };
 }
 
 /**
@@ -107,13 +311,22 @@ function fileNameFor(at: string): string {
  * screen that drew it as a remote with no devices would be describing somebody's equipment wrongly.
  * There is nothing to show, so there is nothing.
  *
- * Recomputed from the bytes on every call rather than cached beside them. A cache would be a second
- * copy of what the file already says, and this repository's neighbour is named for what happens next.
- * It costs a parse of a file this machine wrote, which is milliseconds.
+ * **The stored contents win, and the projection is the fallback.** That is the import decision expressed
+ * as a lookup order: a document that has been imported into holds its own contents, and those are what is
+ * being edited. Projecting the bytes again would throw away everything added since.
+ *
+ * The fallback is not dead code and not a migration hack either. It carries the documents written before
+ * `content.json` existed, and it is what makes a document usable the moment its bytes arrive even if
+ * writing the contents failed. It costs a parse of a file this machine wrote, which is milliseconds.
  */
 export async function contentsOf(
   store: RemoteStore, library: DeviceLibrary, name: string,
 ): Promise<DocumentContents | undefined> {
+  const stored = await storedContentOf(store, name);
+  if (stored !== undefined) {
+    return { content: stored, missing: await library.missingFor(stored) };
+  }
+
   const document = await store.get(name);
   const base = document.baseConfiguration;
   if (base === undefined) return undefined;
