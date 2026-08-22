@@ -25,7 +25,7 @@ import { useContents } from './viewmodels/useContents.ts';
 import { useDevices } from './viewmodels/useDevices.ts';
 import { useHardware } from './viewmodels/useHardware.ts';
 import { useImport } from './viewmodels/useImport.ts';
-import { useLibrary } from './viewmodels/useLibrary.ts';
+import { useCommandUses, useLibrary } from './viewmodels/useLibrary.ts';
 import { useLibraryNavigation } from './viewmodels/useLibraryNavigation.ts';
 import { useNavigation } from './viewmodels/useNavigation.ts';
 import { useRemotes } from './viewmodels/useRemotes.ts';
@@ -70,6 +70,9 @@ export function App() {
   // Wanted while the panel is open, and by the two screens inside a remote that name a device. Cheap: this
   // reads files this application wrote and opens no hardware.
   const library = useLibrary(panel.open || screen.at === 'devices' || screen.at === 'device');
+  // Only while the commands page is showing: it reads every document on the machine, and the panel's other
+  // screens do not want that.
+  const uses = useCommandUses(panel.screen.at === 'commands' ? panel.screen.id : undefined);
   const [picking, setPicking] = useState(false);
   // The one thing here that opens a remote. It is a model of its own rather than part of `useDevices`,
   // because that one polls and this one must never be on a timer.
@@ -310,6 +313,8 @@ export function App() {
         onSave={(next) => void library.put(next)}
         onClone={(id, name) => library.clone(id, name)}
         onRemove={(id) => void library.remove(id).then(() => panel.removed(id))}
+        onNameCommand={(id, names) => void library.nameCommands(id, names)}
+        uses={uses}
         onOpenRemote={(name) => {
           // The remote you came from closes the panel and leaves you where you were; any other one takes
           // you there. Danny's, and it is the difference between a shortcut and a detour.

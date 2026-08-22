@@ -70,6 +70,12 @@ function bridge(held: DeviceDefinition[] = []) {
     missingFor: async () => { asked.push('missingFor'); return []; },
     likelyDuplicates: async () => { asked.push('likelyDuplicates'); return []; },
     usage: async () => { asked.push('usage'); return []; },
+    nameCommands: async (id, names) => {
+      asked.push(`nameCommands ${id} ${names.map((one) => `${one.slot}=${one.name ?? '-'}`).join(',')}`);
+      return appliance(id);
+    },
+    framesOf: async (id) => { asked.push(`framesOf ${id}`); return []; },
+    inUseOn: async (id) => { asked.push(`inUseOn ${id}`); return []; },
   };
   return { api, asked };
 }

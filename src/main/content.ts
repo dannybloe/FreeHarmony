@@ -20,6 +20,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import type { CommandInUse } from '../shared/api.ts';
 import type { ButtonBinding, RemoteContent } from '../shared/content.ts';
 import type { DeviceUsage } from '../shared/library.ts';
 import type { RemoteStore } from './store/remotes.ts';
@@ -229,4 +230,49 @@ export async function assignButton(
     };
     return { ...held, buttons: [...rest, added] };
   });
+}
+
+/**
+ * Every place each of one appliance's commands is used on a remote, with whatever that remote calls it.
+ *
+ * **Why this exists, in one sentence: a configuration states no command names but it does draw words.** A
+ * screen key that sends a command has a word printed beside it on the display, because that is how the
+ * person pressing it knows what it does. So a television imported as eighty nameless codes is not actually
+ * nameless: a good part of it is named on its own remote's screen, in the owner's own language, and nobody
+ * had to fetch anything or guess.
+ *
+ * It walks every document, since a command may be used on more than one remote and the words may differ.
+ * The keypad half carries no word, because a keypad key's name is printed on the plastic rather than in the
+ * file, so the scan code is handed over and the drawing names it on the other side.
+ *
+ * **Every binding, not just the device map.** A key bound only inside one activity is still a key of
+ * theirs with a word on it, and this question is about vocabulary rather than about which map a binding
+ * belongs to.
+ */
+export async function commandsInUse(store: RemoteStore, definition: string): Promise<CommandInUse[]> {
+  const found: CommandInUse[] = [];
+  for (const document of await store.list()) {
+    const content = await storedContentOf(store, document.name);
+    if (content === undefined) continue;
+    // Which positions on this remote point at the appliance being asked about. More than one is a real
+    // arrangement: a television driven directly and through an amplifier is two positions, one description.
+    const positions = content.devices
+      .filter((one) => one.definition === definition)
+      .map((one) => one.slot);
+    if (positions.length === 0) continue;
+
+    for (const binding of content.buttons) {
+      for (const step of binding.sends) {
+        if (!positions.includes(step.device)) continue;
+        found.push({
+          slot: step.command,
+          remote: document.name,
+          surface: binding.surface,
+          ...(binding.scan === undefined ? {} : { scan: binding.scan }),
+          ...(binding.label === undefined ? {} : { label: binding.label }),
+        });
+      }
+    }
+  }
+  return found;
 }

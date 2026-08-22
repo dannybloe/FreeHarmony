@@ -14,10 +14,12 @@ import { ipcMain } from 'electron';
 import { channelFor, METHODS, type FreeHarmonyApi, type Namespace } from '../shared/api.ts';
 import { contentsOf, fileDefinitionsOf, importInto, inspectAttached, settleContent }
   from './configuration.ts';
-import { addDeviceUse, assignButton, deviceUsage, labelDeviceUse } from './content.ts';
+import {
+  addDeviceUse, assignButton, commandsInUse, deviceUsage, labelDeviceUse,
+} from './content.ts';
 import { attachedRemotes, readHardware } from './devices.ts';
 import { DeviceLibrary } from './store/library.ts';
-import { cloneDefinition, createDefinition } from './library.ts';
+import { cloneDefinition, createDefinition, framesOfDefinition, nameCommands } from './library.ts';
 import { RemoteStore } from './store/remotes.ts';
 
 export function registerHandlers(store: RemoteStore, library: DeviceLibrary): void {
@@ -69,6 +71,9 @@ export function registerHandlers(store: RemoteStore, library: DeviceLibrary): vo
     missingFor: (content) => library.missingFor(content),
     likelyDuplicates: () => library.likelyDuplicates(),
     usage: () => deviceUsage(store),
+    nameCommands: (id, names) => nameCommands(library, id, names),
+    framesOf: (id) => framesOfDefinition(library, id),
+    inUseOn: (id) => commandsInUse(store, id),
   });
 }
 

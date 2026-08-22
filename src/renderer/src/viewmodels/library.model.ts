@@ -9,7 +9,7 @@
  * the appliance a position points at, so it asks by identifier against what it already has rather than
  * going back over the bridge per tile.
  */
-import type { LibraryApi } from '../../../shared/api.ts';
+import type { CommandNaming, LibraryApi } from '../../../shared/api.ts';
 import type { DeviceDefinition, DeviceDraft, DeviceUsage } from '../../../shared/library.ts';
 import { KIND_NAMES, describeDefinition, headingFor, namesUsedFor } from '../../../shared/library.ts';
 
@@ -88,6 +88,22 @@ export class LibraryModel {
    */
   async put(definition: DeviceDefinition): Promise<void> {
     await this.#api.put(definition);
+    await this.load();
+  }
+
+  /**
+   * Name commands, or clear a name by leaving it out of an entry.
+   *
+   * **A method rather than `put` with an edited list**, and the difference is what happens when somebody
+   * types quickly: `put` sends the whole definition, so two names typed within one reload of each other
+   * would have the second overwrite the first with a list that still held its old value. The bridge does
+   * the read and the write on the far side, on the file, where there is nothing stale to read.
+   *
+   * It takes a list because one page writes a whole column at once, and doing that name by name would
+   * reload the library thirty seven times under somebody's pointer.
+   */
+  async nameCommands(id: string, names: readonly CommandNaming[]): Promise<void> {
+    await this.#api.nameCommands(id, names);
     await this.load();
   }
 

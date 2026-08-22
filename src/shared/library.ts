@@ -140,6 +140,22 @@ export interface DeviceCommand {
 }
 
 /**
+ * What to call one command, which is its name where anybody has given it one.
+ *
+ * **The fallback is the position and that is the honest answer**, not a placeholder. A configuration
+ * states the codes an appliance answers to and no words at all, so a command read off a remote genuinely
+ * is "the twelfth code this television understands" and nothing more. Writing "Unknown" there would look
+ * like a name and say less.
+ *
+ * One based, because the position in the file is zero based and nobody reading a screen is. The two
+ * screens that show commands both said `Command ${slot + 1}` in their own hands until 22 August 2026,
+ * which is the two copies of one derivation this project's oldest rule is about.
+ */
+export function commandLabel(command: DeviceCommand): string {
+  return command.name === undefined || command.name === '' ? `Command ${command.slot + 1}` : command.name;
+}
+
+/**
  * One step in an appliance's own state machine.
  *
  * **This is the piece that makes a Harmony feel clever**, and the model was missing it for a day. The

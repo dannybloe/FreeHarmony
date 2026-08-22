@@ -88,13 +88,29 @@ front page. If it is **not** in the row, the row offers to add the device to it 
 the second way round: from a remote you pick a device out of the library, and from the library you push a
 device onto the remote you came from.
 
-**Three buttons on that page are drawn and switched off**, which is on purpose rather than unfinished
-work left showing. Commands is where you will name and learn codes and build sequences of them, Inputs is
-where you say which input on the amplifier belongs to which thing plugged into it, and Settings is where
-the waiting times live: how long your television takes after being switched on before it will listen to
-anything. That last one is not waiting on the interface. Logitech's own software asked you for those
-numbers, so the file holds them somewhere, and where has not been read yet. See "Deliberately not decided
-yet" below.
+**Commands works and the other two buttons are drawn and switched off**, which is on purpose rather than
+unfinished work left showing. Inputs is where you say which input on the amplifier belongs to which thing
+plugged into it, and Settings is where the waiting times live: how long your television takes after being
+switched on before it will listen to anything. That last one is not waiting on the interface. Logitech's
+own software asked you for those numbers, so the file holds them somewhere, and where has not been read
+yet. See "Deliberately not decided yet" below.
+
+**The commands page is where a code stops being a number**, and most of the work is already done for you.
+An imported television answers to eighty codes and the file says nothing about what any of them is, so
+they read as "Command 41". But your remote does know: every word it shows on its screen is in that file,
+because that is how you knew what you were pressing. So the page lists every code with a field for its
+name, and beside each one the word your own remote already uses for it. One button at the top takes the
+lot, and on a real television that is 37 names out of 81 in one press. Every one of them lands in a field
+you can correct or empty, which is the difference between a suggestion and a claim.
+
+Nothing about the signal is on that page, and the first version of it had three such things: how fast the
+lamp flickers, how many flashes and pauses the transmission is made of, and the code as a hexadecimal
+number. All three are true and none of them is any use to somebody filling in names.
+
+The forty odd codes with no word are the obscure ones your remote never had a button for, and two later
+steps go after them: matching a code against a catalogue we already have, and fetching the names from
+Logitech's own service while it is still answering. Neither makes this page redundant. They both need
+somewhere to land, and a name a machine guessed is a name somebody should be able to look at.
 
 **Every screen says where you are, and that trail is the whole of the navigation.** It runs along the top
 of the window, starting at FreeHarmony and adding a step for every level down, and every step is a way

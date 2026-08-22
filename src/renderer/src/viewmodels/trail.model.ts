@@ -105,6 +105,11 @@ function libraryBelow(screen: LibraryScreen, names: TrailNames): LibraryCrumb[] 
       return [{ label: 'Add device' }];
     case 'device':
       return [{ label: names.deviceInLibrary?.(screen.id) ?? 'Device' }];
+    case 'commands':
+      // Two crumbs, because the appliance is the place above its commands and not merely context: the way
+      // back off this page is onto the television, which is where its remotes and its actions are.
+      return [{ label: names.deviceInLibrary?.(screen.id) ?? 'Device', to: { at: 'device', id: screen.id } },
+              { label: 'Commands' }];
   }
 }
 

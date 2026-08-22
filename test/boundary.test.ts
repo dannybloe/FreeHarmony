@@ -85,13 +85,18 @@ const LIBRARIES: readonly {
 }[] = [
   {
     // 361 until 21 August 2026, then 374 for a reader of what a length change would move, then 377 for
-    // the language reader this product asked for. The number moving is this row doing its job: a
-    // boundary whose surface drifts unwatched is the one that surprises somebody later.
+    // the language reader this product asked for, then 378 for `framesOfPulses`, which is the frame
+    // decoder given an entry point that takes durations instead of a container so that this repository
+    // could reuse it rather than copy it. The number moving is this row doing its job: a boundary whose
+    // surface drifts unwatched is the one that surprises somebody later.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 377,
+    exports: 378,
     entry: ['packages', 'codec', 'src', 'index.ts'],
-    functions: ['parse', 'inventory', 'devices', 'activities', 'trailerChecksum'],
+    // `framesOfPulses` is named here rather than left to the count, because it is the one export this
+    // repository reaches for from its own model's shape: a count moving says the surface changed and
+    // a name says the thing we depend on is still there.
+    functions: ['parse', 'inventory', 'devices', 'activities', 'trailerChecksum', 'framesOfPulses'],
   },
   {
     name: '@harmony/silhouettes',

@@ -208,6 +208,94 @@ export interface LibraryApi {
    * would mean picking whichever remote happened to be imported first.
    */
   usage(): Promise<DeviceUsage[]>;
+
+  /**
+   * Name commands, or take names away by leaving `name` out of an entry.
+   *
+   * **A method of its own rather than `put` with an edited definition**, and the reason is what a caller
+   * would have to do otherwise: read the definition, rebuild its command list with the changed elements,
+   * and send the lot back. A window doing that owns a merge rule about a list its own screen is showing a
+   * stale copy of, and the failure is silent: two names typed quickly, the second read of the definition
+   * still holding the first's old value, and one of them is gone.
+   *
+   * **A list rather than one, so that taking a whole column of suggestions is one write.** The page offers
+   * to accept every name the remote already draws, which is 37 of a real television's 81, and thirty seven
+   * separate calls would be thirty seven reads, thirty seven writes and thirty seven reloads of the list
+   * underneath somebody's pointer. One entry is the ordinary case and costs nothing extra.
+   *
+   * The identity is untouched by construction. A name is not part of what an appliance sends, so the
+   * fingerprint that addresses it cannot move, which is why this is allowed to be a small write.
+   */
+  nameCommands(id: string, names: readonly CommandNaming[]): Promise<DeviceDefinition>;
+
+  /**
+   * The bit frame each of an appliance's commands encodes, for the ones that decode to exactly one.
+   *
+   * **Derived on every call and deliberately not stored.** A frame a catalogue stated and a frame we
+   * decoded out of durations ourselves are different claims, and a store holding both in one field
+   * loses which is which. `src/main/frames.ts` says the rest, including why an ambiguous reading is
+   * reported as no reading.
+   *
+   * Sparse: a command whose durations do not read as a frame is simply absent from the answer.
+   *
+   * **No screen shows this and none should.** It is a matching key: the step that carries names across
+   * from a catalogue compares these numbers, because a number can be compared with a number written down
+   * elsewhere where a rhythm can only be compared with another rhythm. It was on the commands page for a
+   * few hours on 22 August 2026 and it was this project talking to itself.
+   */
+  framesOf(id: string): Promise<CommandFrame[]>;
+
+  /**
+   * Where each of an appliance's commands already appears on somebody's remote, in their own words.
+   *
+   * **This is what makes an imported appliance nameable at all, and it costs nothing to know.** A
+   * configuration states no command names, which is why every code reads as "Command 41". But it does
+   * carry the words the remote **draws**: a screen key that sends a command has the word printed beside
+   * it on the display, because that is how the person using it knows what they are pressing. And a code
+   * on the keypad is on a key with a name on it.
+   *
+   * So the answer is one entry per place a command is used, and a page turns those into a suggestion. It
+   * is deliberately raw: a scan code and a drawn word, with no ranking and no choosing between them,
+   * because which one reads better is a question about a screen.
+   */
+  inUseOn(id: string): Promise<CommandInUse[]>;
+}
+
+/**
+ * One place a command is used on a remote, and whatever that remote calls it there.
+ *
+ * `label` is the word the configuration draws for it, which is present on nearly every screen key and on
+ * no keypad key: a keypad key has a name because it is printed on the plastic, and that name comes from
+ * the drawing rather than from the file. So the two halves are complementary and both are handed over raw.
+ */
+/** One command's new name, or its name being taken away where `name` is absent. */
+export interface CommandNaming {
+  readonly slot: number;
+  readonly name?: string;
+}
+
+export interface CommandInUse {
+  readonly slot: number;
+  /** Which document, so a suggestion can say where it came from. */
+  readonly remote: string;
+  readonly surface: 'keypad' | 'screen';
+  readonly scan?: number;
+  readonly label?: string;
+}
+
+/**
+ * One command's frame: the number the appliance reads out of the blinking, with the bit count it needs.
+ *
+ * **Both, never the value alone.** A frame only means anything beside its width, since `0x10ef` at 16
+ * bits and at 32 bits are different codes, and it is what makes this comparable with a number written
+ * down anywhere else. That comparison is the whole point of the field: it is how a catalogue's names
+ * reach codes read off somebody's remote.
+ */
+export interface CommandFrame {
+  readonly slot: number;
+  readonly bits: number;
+  /** Lower case hexadecimal, no prefix, exactly as `frame` is spelled in the model. */
+  readonly frame: string;
 }
 
 export interface FreeHarmonyApi {
@@ -229,7 +317,7 @@ export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove'
 export const DEVICE_METHODS = ['attached', 'readHardware'] as const;
 export const LIBRARY_METHODS =
   ['list', 'get', 'put', 'create', 'clone', 'remove',
-   'missingFor', 'likelyDuplicates', 'usage'] as const;
+   'missingFor', 'likelyDuplicates', 'usage', 'nameCommands', 'framesOf', 'inUseOn'] as const;
 
 export type RemoteMethod = (typeof REMOTE_METHODS)[number];
 export type DeviceMethod = (typeof DEVICE_METHODS)[number];

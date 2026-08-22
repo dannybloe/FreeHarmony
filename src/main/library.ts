@@ -8,7 +8,9 @@
  */
 import { randomBytes } from 'node:crypto';
 
+import type { CommandFrame, CommandNaming } from '../shared/api.ts';
 import type { DeviceDefinition, DeviceDraft } from '../shared/library.ts';
+import { frameOf } from './frames.ts';
 import type { DeviceLibrary } from './store/library.ts';
 
 /**
@@ -89,4 +91,59 @@ function cleaned(draft: DeviceDraft): Partial<DeviceDefinition> {
     if (value !== undefined && value !== '') kept[field] = value;
   }
   return kept;
+}
+
+/**
+ * Name commands, or take names away.
+ *
+ * Read, change the named elements, write, which is `create` and `clone`'s shape and is here for the same
+ * reason: the store knows about files and this knows what an edit means. **The narrowness is the safety.**
+ * The only field it can touch is `name`, so nothing it does can move an identifier, change a code, or
+ * reorder a list that every document's button bindings point into by position.
+ *
+ * One read and one write however many names arrive, which is the point of taking a list: the page offers to
+ * accept every word the remote already draws for an appliance, and on a real television that is 37 of 81.
+ *
+ * An empty or blank name **removes** it rather than storing `''`, which is the same rule the typed fields
+ * follow: a field that satisfies every presence test and renders as nothing is a field that looks filled
+ * in. And it is a real thing to want, since the way to undo a name typed by mistake is to clear it.
+ *
+ * A position nobody has is refused rather than ignored, and it refuses the **whole** call: a silent no-op
+ * would show as a name that would not stick, and a partial write would leave nobody able to say which half
+ * landed.
+ */
+export async function nameCommands(
+  library: DeviceLibrary, id: string, names: readonly CommandNaming[],
+): Promise<DeviceDefinition> {
+  const held = await library.get(id);
+  for (const naming of names) {
+    if (!held.commands.some((one) => one.slot === naming.slot)) {
+      throw new Error(`${id} has no command at position ${naming.slot + 1}`);
+    }
+  }
+  // The last entry for a position wins, which only matters for a caller that sent one twice. Building the
+  // map up front is also what keeps this one pass over the commands rather than one per name.
+  const wanted = new Map(names.map((one) => [one.slot, one.name?.trim() ?? '']));
+  return library.put({
+    ...held,
+    commands: held.commands.map((one) => {
+      const to = wanted.get(one.slot);
+      if (to === undefined) return one;
+      const { name: _was, ...rest } = one;
+      return to === '' ? rest : { ...rest, name: to };
+    }),
+  });
+}
+
+/** Every command of one appliance that reads as a frame, with the ones that do not left out. */
+export async function framesOfDefinition(
+  library: DeviceLibrary, id: string,
+): Promise<CommandFrame[]> {
+  const held = await library.get(id);
+  const out: CommandFrame[] = [];
+  for (const command of held.commands) {
+    const found = frameOf(command.signal);
+    if (found !== undefined) out.push({ slot: command.slot, ...found });
+  }
+  return out;
 }

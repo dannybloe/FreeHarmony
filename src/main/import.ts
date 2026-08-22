@@ -1,9 +1,11 @@
 /**
  * Fill the model from a configuration that was read off a remote.
  *
- * **The only file in this repository that reads values out of `@harmony/codec` and turns them into
- * ours**, which is why it is in the main process and not in `src/shared`: the shared model is plain
- * data with no library behind it, and the projection lives on one side of that line.
+ * **The file that reads values out of `@harmony/codec` and turns them into ours**, which is why it is in
+ * the main process and not in `src/shared`: the shared model is plain data with no library behind it, and
+ * the projection lives on one side of that line. It said "the only file" until 22 August 2026, when
+ * `src/main/frames.ts` became the second: it adapts our own model's durations to that library's frame
+ * decoder, which is a different job and is next to this one for the same reason.
  *
  * It is a **projection and not a second reading**. Every fact below comes out of a reader next door;
  * nothing here decodes a byte, walks a pointer or interprets an opcode. If something needed here does

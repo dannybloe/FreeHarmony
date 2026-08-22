@@ -83,6 +83,12 @@ const api: FreeHarmonyApi = {
     likelyDuplicates: () =>
       call('library', 'likelyDuplicates') as ReturnType<FreeHarmonyApi['library']['likelyDuplicates']>,
     usage: () => call('library', 'usage') as ReturnType<FreeHarmonyApi['library']['usage']>,
+    nameCommands: (id, names) => call('library', 'nameCommands', id, names) as
+      ReturnType<FreeHarmonyApi['library']['nameCommands']>,
+    framesOf: (id) => call('library', 'framesOf', id) as
+      ReturnType<FreeHarmonyApi['library']['framesOf']>,
+    inUseOn: (id) => call('library', 'inUseOn', id) as
+      ReturnType<FreeHarmonyApi['library']['inUseOn']>,
   },
 };
 

@@ -71,7 +71,8 @@ test('from every screen there is, the root is one press away', () => {
     if (screen.at === 'home') assert.equal(first?.to, undefined, 'Home does not link to itself');
     else assert.deepEqual(first?.to, { at: 'home' }, `${screen.at} cannot reach Home`);
   }
-  for (const screen of [{ at: 'add' } as const, { at: 'device', id: 'a' } as const]) {
+  for (const screen of [{ at: 'add' } as const, { at: 'device', id: 'a' } as const,
+                        { at: 'commands', id: 'a' } as const]) {
     assert.deepEqual(libraryTrailFor(screen)[0]?.to, { at: 'list' },
                      `the panel's ${screen.at} cannot reach the list`);
   }
@@ -124,6 +125,15 @@ test('the panel has its own trail, and it names the device rather than its ident
     ['Device library', 'The big telly']);
   // An identifier is a digest and means nothing to anybody, so where the name is not loaded the crumb says
   // the kind of thing it is instead. It must never fall back to the identifier.
+  // The commands page is two below the root, and the appliance in the middle is a **link**: the way off a
+  // list of eighty codes is onto the television they belong to, where its remotes and its actions are.
+  assert.deepEqual(
+    libraryTrailFor({ at: 'commands', id: 'appliance-a' },
+                    { deviceInLibrary: () => 'The big television' }).map((one) => one.label),
+    ['Device library', 'The big television', 'Commands']);
+  assert.deepEqual(
+    libraryTrailFor({ at: 'commands', id: 'appliance-a' })[1]?.to,
+    { at: 'device', id: 'appliance-a' }, 'and it goes to that appliance and not to the list');
   assert.deepEqual(libraryTrailFor({ at: 'device', id: 'appliance-a' }).map((one) => one.label),
                    ['Device library', 'Device']);
   // And the panel's root is its own word rather than the application's, which is what says a person is

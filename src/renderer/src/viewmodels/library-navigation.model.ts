@@ -18,11 +18,18 @@
  * No React and no DOM, like `navigation.model.ts` next door, so every path is walkable by `node:test`.
  */
 
-/** The screens inside the panel. `commands` and `inputs` exist as places; their pages are a later round. */
+/** The screens inside the panel. `inputs` and `settings` exist as places; their pages are a later round. */
 export type LibraryScreen =
   | { readonly at: 'list' }
   | { readonly at: 'add' }
-  | { readonly at: 'device'; readonly id: string };
+  | { readonly at: 'device'; readonly id: string }
+  /**
+   * One appliance's commands, which is where a code read off a remote gets a word put on it.
+   *
+   * A screen of its own under the device rather than a block on its page, because there are 81 of them on
+   * an ordinary television and because it is the one page somebody sits at for ten minutes typing.
+   */
+  | { readonly at: 'commands'; readonly id: string };
 
 export const LIBRARY_START: LibraryScreen = { at: 'list' };
 
@@ -96,5 +103,5 @@ export class LibraryNavigationModel {
 
 /** Which device a panel screen is about, if any. */
 export function idOn(screen: LibraryScreen): string | undefined {
-  return screen.at === 'device' ? screen.id : undefined;
+  return screen.at === 'device' || screen.at === 'commands' ? screen.id : undefined;
 }

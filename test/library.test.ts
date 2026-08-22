@@ -19,7 +19,8 @@ import { join } from 'node:path';
 import type { RemoteContent } from '../src/shared/content.ts';
 import type { DeviceDefinition, Pulse } from '../src/shared/library.ts';
 import { mayBeShared } from '../src/shared/library.ts';
-import { cloneDefinition, createDefinition } from '../src/main/library.ts';
+import { cloneDefinition, createDefinition, framesOfDefinition, nameCommands }
+  from '../src/main/library.ts';
 import { DeviceLibrary } from '../src/main/store/library.ts';
 
 const AT = '2026-08-21T12:00:00.000Z';
@@ -289,4 +290,172 @@ await withLibrary(async (held) => {
     // An empty string is the other thing a form hands back, and it means "I typed nothing" rather than
     // "call it nothing".
     assert.equal((await cloneDefinition(held, 'appliance-abc', '')).name, 'The big one');});
+});
+
+/**
+ * A textbook NEC press: a 9000 and 4500 header, then 32 bits in the length of each space.
+ *
+ * Written out rather than taken off a real remote, because the value has to be known **before** the
+ * decoder is asked: a fixture copied out of a configuration would only ever prove that the decoder agrees
+ * with itself. `0x20df10ef` is the number this train spells, first bit sent in the top position, and it is
+ * spelled here by the bits rather than by the constant so that a typo shows as a mismatch and not as a
+ * different but plausible answer.
+ */
+const NEC_FRAME = 0x20df10ef;
+function necPulses(): Pulse[] {
+  const out: Pulse[] = [{ mark: true, us: 9000 }, { mark: false, us: 4500 }];
+  for (let bit = 31; bit >= 0; bit -= 1) {
+    out.push({ mark: true, us: 560 });
+    out.push({ mark: false, us: (NEC_FRAME >>> bit) & 1 ? 1690 : 560 });
+  }
+  // The closing mark, which is not a bit: it has no space after it, so it is not a pair.
+  out.push({ mark: true, us: 560 });
+  return out;
+}
+
+test('naming one command changes that command and nothing else about the appliance', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'freeharmony-naming-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const library = new DeviceLibrary({ root });
+
+  const held = await library.put({
+    ...television('appliance-named', ON),
+    commands: [
+      { slot: 0, signal: { carrierHz: 38000, once: ON }, origin: 'from-a-configuration' },
+      { slot: 1, signal: { carrierHz: 38000, once: necPulses() }, origin: 'from-a-configuration' },
+    ],
+  });
+
+  const named = await nameCommands(library, 'appliance-named', [{ slot: 1, name: 'Volume up' }]);
+  assert.equal(named.commands[1]?.name, 'Volume up');
+  assert.equal(named.commands[0]?.name, undefined, 'the other command is untouched');
+  // **The identity cannot move by this route**, which is what makes a small write safe here: a name is not
+  // part of what the appliance sends, so the digest that addresses it is the same digest.
+  assert.equal(named.id, held.id);
+  assert.deepEqual(named.commands.map((one) => one.signal), held.commands.map((one) => one.signal));
+
+  // And it is on disk rather than in an answer, which is the half a return value cannot show.
+  assert.equal((await library.get('appliance-named')).commands[1]?.name, 'Volume up');
+});
+
+test('clearing a name removes the field rather than storing an empty one', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'freeharmony-unnaming-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const library = new DeviceLibrary({ root });
+  await library.put({
+    ...television('appliance-cleared', ON),
+    commands: [{ slot: 0, name: 'Wrong row', signal: { once: ON }, origin: 'from-a-configuration' }],
+  });
+
+  // Undoing a name typed into the wrong row is emptying the field, so the empty string has to mean absent.
+  // An `''` would satisfy every presence test in the application and then draw as nothing, which is a
+  // field that looks filled in.
+  const cleared = await nameCommands(library, 'appliance-cleared', [{ slot: 0, name: '' }]);
+  assert.equal('name' in (cleared.commands[0] ?? {}), false);
+  assert.equal(await nameCommands(library, 'appliance-cleared', [{ slot: 0, name: '   ' }])
+    .then((one: DeviceDefinition) => 'name' in (one.commands[0] ?? {})), false,
+               'and so does a field of spaces');
+  const away = await nameCommands(library, 'appliance-cleared', [{ slot: 0 }]);
+  assert.equal('name' in (away.commands[0] ?? {}), false, 'as does asking with no name at all');
+});
+
+test('a position the appliance has not got is refused rather than ignored', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'freeharmony-noslot-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const library = new DeviceLibrary({ root });
+  await library.put(television('appliance-short', ON));
+
+  // A silent no-op here would show on the page as a name that would not stick, which is the class of thing
+  // somebody retypes four times before mentioning it.
+  await assert.rejects(
+    () => nameCommands(library, 'appliance-short', [{ slot: 7, name: 'Nowhere' }]), /position 8/);
+
+  // **And it refuses the whole call rather than the one entry**, which is the shape a list makes possible
+  // to get wrong: a partial write would leave nobody able to say which half landed. The control is that
+  // the good name in the same call is not on disk afterwards.
+  await assert.rejects(() => nameCommands(library, 'appliance-short',
+                                          [{ slot: 0, name: 'Power' }, { slot: 7, name: 'Nowhere' }]),
+                       /position 8/);
+  assert.equal((await library.get('appliance-short')).commands[0]?.name, undefined);
+});
+
+test('a column of names is one write, and the last word for a position wins', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'freeharmony-namesmany-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const library = new DeviceLibrary({ root });
+  await library.put({
+    ...television('appliance-many', ON),
+    commands: [0, 1, 2, 3].map((slot) => ({
+      slot, signal: { carrierHz: 38000, once: ON }, origin: 'from-a-configuration' as const,
+    })),
+  });
+
+  // The case the list exists for: the page offers to accept every word the remote already draws, which on a
+  // real television is 37 of 81, and name by name that would be 37 reads, 37 writes and 37 reloads of the
+  // list under somebody's pointer.
+  const done = await nameCommands(library, 'appliance-many', [
+    { slot: 0, name: 'Turn on' },
+    { slot: 2, name: 'Input Hdmi1' },
+    // A position sent twice, which only a confused caller does; the last word is what lands, stated so that
+    // the behaviour is decided rather than incidental.
+    { slot: 3, name: 'first' },
+    { slot: 3, name: 'second' },
+  ]);
+
+  assert.deepEqual(done.commands.map((one) => one.name),
+                   ['Turn on', undefined, 'Input Hdmi1', 'second']);
+  assert.deepEqual((await library.get('appliance-many')).commands.map((one) => one.name),
+                   ['Turn on', undefined, 'Input Hdmi1', 'second']);
+});
+
+test('a command\'s durations read back as the frame the appliance sees', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'freeharmony-frames-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const library = new DeviceLibrary({ root });
+  await library.put({
+    ...television('appliance-framed', ON),
+    commands: [
+      // Two durations, which is not a frame: the decoder wants at least eight bits before it will call
+      // anything a code, and this is the ordinary shape of a code nobody can compare with a catalogue.
+      { slot: 0, signal: { carrierHz: 38000, once: ON }, origin: 'from-a-configuration' },
+      { slot: 1, signal: { carrierHz: 38000, once: necPulses() }, origin: 'from-a-configuration' },
+      // A frame a source stated wins over one decoded from durations, because that source knew the
+      // protocol where this only knows the rhythm. Upper case in, lower case out, so a comparison against
+      // a decoded frame is a comparison of like with like.
+      { slot: 2, signal: { protocol: 'NEC1', bits: 16, frame: 'A90' }, origin: 'from-logitech' },
+    ],
+  });
+
+  const framed = await framesOfDefinition(library, 'appliance-framed');
+  // **This is the assertion the whole feature rests on**: the number is known before the decoder is asked,
+  // so it can be wrong. The count is exact and not a floor, because sparse is the answer's shape and a
+  // floor would pass with the one command that matters missing.
+  assert.deepEqual(framed, [
+    { slot: 1, bits: 32, frame: NEC_FRAME.toString(16) },
+    { slot: 2, bits: 16, frame: 'a90' },
+  ]);
+});
+
+test('a code that reads two ways is reported as reading no way at all', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'freeharmony-ambiguous-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const library = new DeviceLibrary({ root });
+
+  // **The negative, and it is the assertion that keeps this honest.** Consumer infrared puts a bit in the
+  // length of one half of a mark and space pair, and which half is the protocol's business. A train where
+  // both halves vary reads as a frame under both conventions and spells two different numbers. Handing a
+  // caller one of them would put a wrong code into a comparison against a catalogue, which is worse than
+  // handing back nothing: nothing shows on the page as a row with no number in it, and somebody types the
+  // name in by hand.
+  const both: Pulse[] = [{ mark: true, us: 9000 }, { mark: false, us: 4500 }];
+  for (let bit = 0; bit < 16; bit += 1) {
+    both.push({ mark: true, us: bit % 2 === 0 ? 560 : 1690 });
+    both.push({ mark: false, us: bit % 3 === 0 ? 560 : 1690 });
+  }
+  await library.put({
+    ...television('appliance-ambiguous', ON),
+    commands: [{ slot: 0, signal: { carrierHz: 38000, once: both }, origin: 'from-a-configuration' }],
+  });
+
+  assert.deepEqual(await framesOfDefinition(library, 'appliance-ambiguous'), []);
 });

@@ -71,8 +71,22 @@ test('a device is held by identifier, which is the opposite rule from a remote',
   // name is a correctable field, so holding one would put the screen on the wrong device the moment
   // somebody fixed a spelling.
   assert.equal(idOn({ at: 'device', id: 'appliance-a' }), 'appliance-a');
+  // The commands page is about one appliance too, so deleting that appliance has to take you off it. A
+  // screen this did not answer for would leave the panel on a page about a file that is gone.
+  assert.equal(idOn({ at: 'commands', id: 'appliance-a' }), 'appliance-a');
   assert.equal(idOn({ at: 'list' }), undefined);
   assert.equal(idOn({ at: 'add' }), undefined);
+});
+
+test('throwing a device away leaves its commands page too', () => {
+  const panel = new LibraryNavigationModel(() => {});
+  panel.openFrom(undefined);
+  panel.go({ at: 'commands', id: 'appliance-a' });
+
+  panel.removed('appliance-b');
+  assert.deepEqual(panel.screen, { at: 'commands', id: 'appliance-a' }, 'somebody else going changes nothing');
+  panel.removed('appliance-a');
+  assert.deepEqual(panel.screen, LIBRARY_START);
 });
 
 test('throwing a device away leaves its page and lands on the list', () => {

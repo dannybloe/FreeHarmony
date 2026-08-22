@@ -47,11 +47,12 @@ interface LibraryDeviceViewProps {
   readonly onRemove: () => void;
   readonly onOpenRemote: (name: string) => void;
   readonly onAddToCurrent: () => void;
+  readonly onOpenCommands: () => void;
 }
 
 export function LibraryDeviceView({
   definition, heading, usedBy, remotes, current, busy,
-  onSave, onClone, onRemove, onOpenRemote, onAddToCurrent,
+  onSave, onClone, onRemove, onOpenRemote, onAddToCurrent, onOpenCommands,
 }: LibraryDeviceViewProps) {
   const [confirming, setConfirming] = useState<'delete' | 'duplicate' | undefined>(undefined);
 
@@ -138,11 +139,16 @@ export function LibraryDeviceView({
           </Button>
         </div>
         <div className={classes.places}>
-          {/* Three places that do not exist yet, drawn and disabled rather than absent, which is Danny's
-              and is right: grey says "this is coming" where a missing button says nothing and a working
-              button that opens an empty page says "this is broken". `docs/roadmap.md` carries what each of
-              them is waiting on, and Settings is waiting on a finding in the other repository. */}
-          <Button variant="subtle" disabled>Commands</Button>
+          {/* Commands works from 22 August 2026. The other two are drawn and disabled rather than absent,
+              which is Danny's and is right: grey says "this is coming" where a missing button says nothing
+              and a working button that opens an empty page says "this is broken". `docs/roadmap.md` carries
+              what each of them is waiting on, and Settings is waiting on a finding in the other repository.
+
+              The count is on the button because it is the one thing worth knowing before pressing it: an
+              imported appliance has eighty of these and none of them has a name. */}
+          <Button variant="subtle" onClick={onOpenCommands}>
+            Commands{definition.commands.length === 0 ? '' : ` (${definition.commands.length})`}
+          </Button>
           <Button variant="subtle" disabled>Inputs</Button>
           <Button variant="subtle" disabled>Settings</Button>
         </div>

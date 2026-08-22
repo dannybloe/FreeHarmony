@@ -11,7 +11,7 @@
  * the application's way back while the panel was up, which is the panel reaching down and altering the
  * thing it is supposed to be lying on top of.
  *
- * Three screens inside, each a page rather than a dialogue, with the panel's own trail carrying the way up.
+ * Four screens inside, each a page rather than a dialogue, with the panel's own trail carrying the way up.
  * The pages themselves are the three files next door; this one is the sheet, the bar and the routing.
  */
 import { Modal, Tooltip } from '@mantine/core';
@@ -22,7 +22,9 @@ import { headingFor } from '../../../shared/library.ts';
 import type { LibraryNavigationModel } from '../viewmodels/library-navigation.model.ts';
 import { libraryTrailFor } from '../viewmodels/trail.model.ts';
 import { definitionIn, headingIn, type LibraryState } from '../viewmodels/library.model.ts';
+import type { CommandInUse, CommandNaming } from '../../../shared/api.ts';
 import { AddDeviceView } from './AddDeviceView.tsx';
+import { CommandsView } from './CommandsView.tsx';
 import { Header } from './Header.tsx';
 import { LibraryDeviceView } from './LibraryDeviceView.tsx';
 import { LibraryListView } from './LibraryListView.tsx';
@@ -47,10 +49,21 @@ interface LibraryPanelProps {
   readonly onOpenRemote: (name: string) => void;
   /** Put this device on the remote the panel was opened from, then close. */
   readonly onAddToCurrent: (id: string) => void;
+  readonly onNameCommand: (id: string, names: readonly CommandNaming[]) => void;
+  /**
+   * Where the showing appliance's commands are already used on a remote, or `undefined` while that is on
+   * its way.
+   *
+   * Loaded by the application rather than by the page, and passed in like everything else here, because
+   * this panel is deliberately a set of pages that are given what they show: a page that fetched for
+   * itself would be a page a test cannot put in a state.
+   */
+  readonly uses: readonly CommandInUse[] | undefined;
 }
 
 export function LibraryPanel({
   nav, state, onCreate, onSave, onClone, onRemove, remotes, onOpenRemote, onAddToCurrent,
+  onNameCommand, uses,
 }: LibraryPanelProps) {
   const screen = nav.screen;
   const crumbs = libraryTrailFor(screen, {
@@ -163,6 +176,21 @@ export function LibraryPanel({
             onRemove={() => onRemove(screen.id)}
             onOpenRemote={onOpenRemote}
             onAddToCurrent={() => onAddToCurrent(screen.id)}
+            onOpenCommands={() => nav.go({ at: 'commands', id: screen.id })}
+          />
+        )}
+
+        {screen.at === 'commands' && (
+          <CommandsView
+            definition={definitionIn(state, screen.id)}
+            title={(() => {
+              const definition = definitionIn(state, screen.id);
+              return definition === undefined ? '' : headingIn(definition, state).title;
+            })()}
+            uses={uses}
+            remotes={remotes}
+            busy={state.status === 'loading'}
+            onName={(names) => onNameCommand(screen.id, names)}
           />
         )}
       </div>

@@ -41,7 +41,7 @@ import { useState } from 'react';
 
 import type { DocumentContents } from '../../../shared/content.ts';
 import type { DeviceDefinition } from '../../../shared/library.ts';
-import { headingOnRemote } from '../../../shared/library.ts';
+import { commandLabel, headingOnRemote } from '../../../shared/library.ts';
 import type { RemoteModel } from '../../../shared/remote.ts';
 import { drawingFor } from '../catalogue.ts';
 import { activitiesUsing, boundKeys, keypadFor, measuredKeys, spelledOut, type KeyOnScreen }
@@ -221,10 +221,11 @@ function Chosen({ chosen, definition, model, keys, busy, onAssign }: {
             placeholder="nothing"
             data={commands.map((command) => ({
               value: String(command.slot),
-              // The name where there is one, and the position where there is not, which is nearly always:
-              // a configuration states codes and no words at all, so `Command 12` is the fact rather than
-              // a placeholder.
-              label: command.name ?? `Command ${command.slot + 1}`,
+              // The name where there is one, and the position where there is not, which is nearly always.
+              // The rule is `commandLabel` in the shared model, shared with the commands page in the
+              // library: this had its own copy of it until 22 August 2026, and two copies of one
+              // derivation is the thing this project has been bitten by twice.
+              label: commandLabel(command),
             }))}
             value={chosen.command === undefined ? null : String(chosen.command)}
             disabled={busy}

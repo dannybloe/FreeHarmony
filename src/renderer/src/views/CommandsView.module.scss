@@ -1,0 +1,162 @@
+// One appliance's commands: a position, a name to fill in, what it sends, and the code itself.
+
+@use '../mantine' as m;
+
+.commands {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+}
+
+.heading {
+  display: grid;
+  gap: m.rem(2);
+}
+
+.title {
+  margin: 0;
+  font-size: m.rem(22);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+  line-height: 1.2;
+}
+
+.under,
+.quiet {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+// The search stays put while the list scrolls under it, because on an appliance with eighty codes the box
+// is the only way to find a row and it would otherwise be the first thing off the top of the screen. It has
+// to be opaque: the heading scrolls underneath it, not behind a gap.
+.tools {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  padding-block: var(--mantine-spacing-xs);
+  background: var(--mantine-color-white);
+}
+
+.search {
+  flex: 0 1 m.rem(280);
+}
+
+.counted {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-gray-6);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  // A hairline between rows rather than a border each, so eighty of them read as one list.
+  //
+  // **It does not scroll inside itself**, and that is deliberate: the panel's page already scrolls, and a
+  // list with its own scrollbar inside a scrolling page gives two of them a hand's width apart, where a
+  // flick of a trackpad lands in whichever one the pointer happens to be over. One scroll area, and the
+  // search box above stays put instead.
+  gap: 0;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-md);
+  background: rgb(255 255 255 / 62%);
+}
+
+// **The columns are declared here and shared by every row through `subgrid`**, which is the fix rather
+// than the flourish: with each row its own grid, every row sized its own columns from its own content, so
+// "repeats while held" on one row pushed that row's code out and the codes did not line up down the page.
+// A column of hexadecimal that does not line up is a column nobody can compare with anything.
+//
+// Position, the field, the word to take, and any other words. Declared here and shared by every row
+// through `subgrid`: with each row its own grid, every row sized its own columns from its own content, so
+// nothing lined up down the page.
+.list {
+  grid-template-columns: m.rem(34) minmax(m.rem(160), m.rem(230)) max-content minmax(0, 1fr);
+}
+
+.row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  padding: m.rem(2) var(--mantine-spacing-sm);
+  border-block-start: 1px solid var(--mantine-color-gray-1);
+
+  &:first-child {
+    border-block-start: none;
+  }
+
+  &:hover {
+    background: var(--mantine-color-gray-0);
+  }
+}
+
+.slot {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-5);
+  // Digits in a column line up, which is the whole reason a position is worth showing at all.
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+// The field carries no border until it is being used, so a list of eighty does not read as eighty boxes.
+.name input {
+  font-size: var(--mantine-font-size-sm);
+  border-radius: var(--mantine-radius-sm);
+
+  &::placeholder {
+    color: var(--mantine-color-gray-5);
+  }
+
+  &:focus {
+    background: var(--mantine-color-white);
+    box-shadow: 0 0 0 m.rem(2) var(--mantine-color-indigo-1);
+  }
+}
+
+// The word the remote already shows, as something to press. It reads as a suggestion rather than as a
+// value: dotted underline, the accent colour, and it fills the field beside it.
+.suggestion {
+  justify-self: start;
+  padding: m.rem(2) m.rem(6);
+  border: none;
+  border-radius: var(--mantine-radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-indigo-7);
+  text-decoration: underline dotted;
+  text-underline-offset: m.rem(3);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mantine-color-indigo-0);
+    text-decoration: underline solid;
+  }
+
+  &:disabled {
+    color: var(--mantine-color-gray-5);
+    cursor: default;
+  }
+}
+
+// The other words a command is known by, where they disagree. Quiet, and not pressable.
+.others {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nothing {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+}
