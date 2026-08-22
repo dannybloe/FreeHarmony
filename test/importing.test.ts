@@ -20,7 +20,7 @@ import { join } from 'node:path';
 import { require_, skipUnless } from '@harmony/lab';
 
 import { contentsOf, importReading } from '../src/main/configuration.ts';
-import { storedContentOf, writeContent } from '../src/main/content.ts';
+import { addDeviceUse, storedContentOf, writeContent } from '../src/main/content.ts';
 import { importConfiguration } from '../src/main/import.ts';
 import { DeviceLibrary } from '../src/main/store/library.ts';
 import { RemoteStore } from '../src/main/store/remotes.ts';
@@ -224,6 +224,59 @@ test('a document with bytes and no contents file still reads, which carries the 
     assert.ok((seen?.content.devices.length ?? 0) > 0);
     assert.equal(await storedContentOf(at.store, 'living room'), undefined,
                  'and looking wrote nothing, because looking never writes');
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('a remote nothing has been imported into can still be given a device',
+     { ...skipUnless(SAMPLES[0]) }, async () => {
+  // **The case the whole library arrangement exists for**, and it was refused two layers down until 22
+  // August 2026: you import the living room remote, then set up a bedroom one and say it drives the same
+  // television. That second remote has no configuration and will not have one until somebody compiles it.
+  //
+  // Found by being asked what a screenshot was showing. The picker had nothing useful to offer in the only
+  // state it could be photographed in, and the reason was a refusal in `editContent`.
+  const at = await bench();
+  try {
+    await at.store.create('living room');
+    await importReading(at.store, at.library, 'living room',
+                        { bytes: require_(SAMPLES[0]), skin: A_HARMONY_600 }, () => NOW);
+    const television = (await at.library.list())
+      .filter((one) => one.commands.length > 0)
+      .sort((a, b) => b.commands.length - a.commands.length)[0];
+    assert.ok(television !== undefined, 'the import described something');
+
+    await at.store.create('bedroom');
+    const content = await addDeviceUse(at.store, 'bedroom', television.id, 'the same telly');
+
+    assert.equal(content.filledFrom, 'here', 'built here, not read off anything');
+    assert.deepEqual(content.devices, [{ slot: 0, definition: television.id, label: 'the same telly' }]);
+    // And it is on disk rather than only in the answer, which is what a page reads back.
+    assert.deepEqual((await storedContentOf(at.store, 'bedroom'))?.devices, content.devices);
+    // The appliance is described once and shared, so nothing was copied into the second document.
+    assert.equal((await at.library.list()).length, (await at.library.list()).length);
+    assert.deepEqual(await at.library.missingFor(content), [], 'and this machine has what it names');
+  } finally {
+    await rm(at.root, { recursive: true, force: true });
+  }
+});
+
+test('a second device on one remote takes the next free position, never the count',
+     { ...skipUnless(SAMPLES[0]) }, async () => {
+  // Three things in the model refer to a device by number and nothing else, so a position has to be
+  // stable. Using the count would collide the first time one in the middle had been removed; nothing
+  // removes one yet, and writing it this way means nothing has to remember to when something does.
+  const at = await bench();
+  try {
+    await at.store.create('bedroom');
+    await writeContent(at.store, 'bedroom', {
+      devices: [{ slot: 0 }, { slot: 4 }], activities: [], buttons: [], filledFrom: 'here',
+    });
+
+    const content = await addDeviceUse(at.store, 'bedroom', 'appliance-aaaa', 'a third');
+
+    assert.deepEqual(content.devices.map((one) => one.slot), [0, 4, 5]);
   } finally {
     await rm(at.root, { recursive: true, force: true });
   }

@@ -1,0 +1,59 @@
+// One remote's settings. The same definition list and the same button row that used to sit at the foot
+// of the remote's front page, which is where they came from on 22 August 2026.
+
+@use '../mantine' as m;
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-xl) var(--mantine-spacing-lg);
+}
+
+.heading {
+  display: grid;
+  gap: m.rem(4);
+}
+
+.title {
+  font-weight: 700;
+  letter-spacing: m.rem(-0.4);
+}
+
+.lead {
+  max-width: m.rem(560);
+  color: var(--mantine-color-gray-6);
+  font-size: var(--mantine-font-size-sm);
+}
+
+// A definition list rather than a table: four facts, each with a word for what it is.
+.facts {
+  display: grid;
+  grid-template-columns: m.rem(170) 1fr;
+  gap: m.rem(6) var(--mantine-spacing-sm);
+  margin: var(--mantine-spacing-sm) 0 0;
+  max-width: m.rem(560);
+  font-size: var(--mantine-font-size-sm);
+
+  dt {
+    color: var(--mantine-color-gray-6);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--mantine-color-gray-8);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: var(--mantine-spacing-xs);
+  margin-block-start: var(--mantine-spacing-lg);
+}
+
+.confirm {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--mantine-spacing-xs);
+  margin-block-start: var(--mantine-spacing-lg);
+}

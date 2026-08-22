@@ -87,9 +87,16 @@ test('an appliance is described once and a second read of the same document adds
   assert.deepEqual(after?.missing, [], 'and the document knows nothing is missing any more');
 });
 
-test('the page shows a row per device and per activity', skipUnless(SAMPLE), async (t) => {
-  // Through the interface rather than through the bridge, because a model that crosses and is never
-  // drawn is a model nobody sees. Rows are counted; the words in them are not read.
+test('the devices page shows a tile per device, and the activities page one per activity',
+     skipUnless(SAMPLE), async (t) => {
+  // **This test moved rather than being written.** Its subject was a list of devices and a list of
+  // activities on the remote's own front page; on 22 August 2026 that page became a way in to three
+  // others, and showing both lists on the way in to pages about them was the same content twice. So the
+  // claim is the same and the route to it is two clicks longer.
+  //
+  // Through the interface rather than through the bridge, because a model that crosses and is never drawn
+  // is a model nobody sees. Tiles are counted; the words in them are not read, since they are somebody's
+  // own equipment and this repository is public.
   const app = await launch();
   t.after(() => app.close());
 
@@ -99,26 +106,59 @@ test('the page shows a row per device and per activity', skipUnless(SAMPLE), asy
                                   'read-from-device', new Date().toISOString());
   await app.reload();
 
-  // Into the document's own page, the same way a person gets there.
-  const opened = await app.evaluate<boolean>(`(() => {
-    for (const it of document.querySelectorAll('button')) {
-      if ((it.textContent ?? '').includes('living room')) { it.click(); return true; }
-    }
-    return false;
-  })()`);
-  assert.equal(opened, true, 'the remote is on Home to be opened');
+  /**
+   * Presses whatever says this, waiting for it to appear first.
+   *
+   * The wait is not politeness: React draws when it is ready and a document's contents are fetched after
+   * its page mounts, so a click issued straight after the previous one lands on a page that has not been
+   * replaced yet. Matched on the label as well as the text, which is how the bar's back arrow is reached.
+   */
+  const press = async (what: string): Promise<boolean> => {
+    const wanted = JSON.stringify(what);
+    return app.evaluate<boolean>(`(async () => {
+      for (let tries = 0; tries < 40; tries += 1) {
+        for (const it of document.querySelectorAll('button')) {
+          const says = (it.textContent ?? '').includes(${wanted});
+          if (says || it.getAttribute('aria-label') === ${wanted}) { it.click(); return true; }
+        }
+        await new Promise((wake) => setTimeout(wake, 100));
+      }
+      return false;
+    })()`);
+  };
 
-  // React draws when it is ready, and the contents are fetched after the page mounts.
-  const rows = await app.evaluate<number[]>(`(async () => {
-    for (let tries = 0; tries < 40; tries += 1) {
-      const lists = [...document.querySelectorAll('section ul')];
-      const counted = lists.map((list) => list.children.length);
-      if (counted.length >= 2) return counted;
-      await new Promise((wake) => setTimeout(wake, 100));
-    }
-    return [];
-  })()`);
+  /**
+   * How many tiles a section holds, once it has drawn.
+   *
+   * Found by heading and by `data-tile`, and both halves were arrived at the hard way. Class names are
+   * hashed by the bundler so a test cannot ask by class, per `test/styles.test.ts`; and counting by shape
+   * instead **nearly passed for the wrong reason**, because the grid holding the tiles is itself a `div`
+   * whose text starts with the first tile's number. It counted four activities where there are three, and
+   * it counted the devices correctly only because that grid also holds the add tile and was filtered out
+   * by its label. So the attribute exists, and the add tile carries a different value.
+   */
+  const tiles = async (heading: string): Promise<number> => {
+    const wanted = JSON.stringify(heading);
+    return app.evaluate<number>(`(async () => {
+      for (let tries = 0; tries < 40; tries += 1) {
+        const section = [...document.querySelectorAll('section')]
+          .find((one) => (one.querySelector('h2')?.textContent ?? '') === ${wanted});
+        if (section) {
+          const drawn = section.querySelectorAll('[data-tile=""]');
+          if (drawn.length > 0) return drawn.length;
+        }
+        await new Promise((wake) => setTimeout(wake, 100));
+      }
+      return -1;
+    })()`);
+  };
 
-  assert.deepEqual(rows, [DEVICES, ACTIVITIES],
-                   'one list of devices and one of activities, each with a row per item');
+  assert.equal(await press('living room'), true, 'the remote is on Home to be opened');
+  assert.equal(await press('Devices'), true, 'and its page offers a way in to the devices');
+  assert.equal(await tiles('Devices'), DEVICES, 'one tile per device, the add tile aside');
+
+  // Back to the remote, the way a person goes back: the arrow in the bar.
+  assert.equal(await press('Back'), true);
+  assert.equal(await press('Activities'), true);
+  assert.equal(await tiles('Activities'), ACTIVITIES, 'one tile per activity');
 });

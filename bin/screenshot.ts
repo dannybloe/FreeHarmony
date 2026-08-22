@@ -38,6 +38,8 @@ import { dirname, resolve } from 'node:path';
 
 import { imagePath, require_ } from '@harmony/lab';
 
+import { importReading } from '../src/main/configuration.ts';
+import { DeviceLibrary } from '../src/main/store/library.ts';
 import { RemoteStore } from '../src/main/store/remotes.ts';
 import { asRemoteModel, SUPPORTED } from '../src/renderer/src/catalogue.ts';
 import { launch } from '../test/app/electron.ts';
@@ -121,14 +123,32 @@ async function main(): Promise<number> {
       await app.evaluate(
         `window.freeharmony.remotes.create(${JSON.stringify(name)}, ${asModel})`);
     }
-    // A real configuration behind the first remote, through the store's own method. The reload below is
-    // what makes the window notice, since nothing polls the disk.
+    // A real configuration behind the first remote, **through the import** rather than by attaching bytes.
+    //
+    // It used to attach them with the store's own method, and the difference showed up the moment there
+    // was a devices page to photograph: every tile said "not on this machine", because attaching bytes
+    // does not put the appliances in the library and an import does. The picture was correct about the
+    // state it had been given and wrong about any state the application produces, which is the worst
+    // kind of screenshot to look at.
+    //
+    // The reload below is what makes the window notice, since nothing polls the disk.
     const first = wanted.remotes[0];
     if (wanted.configuration !== undefined && first !== undefined) {
+      // The skin of the model the first remote was seeded with. **The import refuses without one**, which
+      // is the rail doing its job even to a script: a reading always comes out of `inspectAttached`, which
+      // has already established what the remote said it was, so a reading with no skin is one somebody
+      // invented. Hence the requirement rather than a default.
+      const picked = first.model === undefined
+        ? undefined : SUPPORTED.find((m) => m.id === first.model);
+      if (picked === undefined) {
+        throw new Error('--configuration needs the first remote to name a model, as "Name:h600"');
+      }
       const store = new RemoteStore({ root: app.remotes });
-      await store.attachConfiguration(first.name, 'configuration.bin',
-                                      require_(wanted.configuration), 'read-from-device',
-                                      new Date().toISOString());
+      const library = new DeviceLibrary({ root: app.devices });
+      await importReading(store, library, first.name,
+                          { bytes: require_(wanted.configuration), skin: picked.skin,
+                            model: asRemoteModel(picked) },
+                          () => new Date().toISOString());
     }
     if (wanted.remotes.length > 0) await app.reload();
 

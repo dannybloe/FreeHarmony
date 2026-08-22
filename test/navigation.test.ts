@@ -13,7 +13,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { RemoteDocument } from '../src/shared/remote.ts';
-import { afterChoosingModel, NavigationModel, START, type Screen } from '../src/renderer/src/viewmodels/navigation.model.ts';
+import {
+  NavigationModel, REMOTE_SCREENS, START, afterChoosingModel, remoteOn, type RemoteScreen, type Screen,
+} from '../src/renderer/src/viewmodels/navigation.model.ts';
 
 /** A model plus the screens it announced, in order. */
 function record() {
@@ -171,4 +173,49 @@ test('a document with no model recorded matches nothing, so it never blocks addi
   const nameless = remote('Zolder');
   assert.equal(nameless.model, undefined, 'the input');
   assert.equal(afterChoosingModel([nameless], { name: 'Harmony One', skin: 54 }, 'chooser').at, 'name');
+});
+
+test('every screen about a remote follows a rename, not just the remote page itself', () => {
+  // The bug this arrangement was restructured to make impossible. `renamed` used to test `at === 'remote'`
+  // outright, which was right while that was the only screen about a remote and would have gone wrong the
+  // moment there were five: renaming from the devices page would leave every page behind it naming a
+  // folder that is no longer there.
+  //
+  // The list is walked rather than three cases being picked, so a screen added later is covered here on
+  // the day it is added, and `REMOTE_SCREENS_ARE_EXHAUSTIVE` is what stops the list itself drifting.
+  for (const at of REMOTE_SCREENS) {
+    const { nav } = record();
+    const screen = { at, name: 'Woonkamer', ...(at === 'device' ? { slot: 3 } : {}) } as RemoteScreen;
+    nav.go(screen);
+    nav.renamed('Woonkamer', 'Zolder');
+
+    assert.equal(remoteOn(nav.screen), 'Zolder', `${at} did not follow the rename`);
+    // And nothing else about the screen was lost, which is the failure a rebuild would have introduced:
+    // a device page rebuilt as `{ at, name }` lands somebody on a page about device zero.
+    assert.deepEqual(nav.screen, { ...screen, name: 'Zolder' });
+  }
+});
+
+test('every screen about a remote is dropped when it is removed', () => {
+  for (const at of REMOTE_SCREENS) {
+    const { nav } = record();
+    nav.go({ at: 'add' });
+    nav.go({ at, name: 'Woonkamer', ...(at === 'device' ? { slot: 3 } : {}) } as RemoteScreen);
+    nav.removed('Woonkamer');
+
+    assert.deepEqual(nav.screen, { at: 'add' }, `${at} stayed on a remote that is gone`);
+  }
+});
+
+test('a screen about no remote is left alone by both of them', () => {
+  // The control. Without it the two tests above would pass against a `renamed` that rewrote every screen
+  // it could find, which would put a remote's name on the preferences page.
+  for (const screen of [{ at: 'home' } as const, { at: 'add' } as const,
+                        { at: 'connect' } as const, { at: 'preferences' } as const]) {
+    assert.equal(remoteOn(screen), undefined, `${screen.at} claims to be about a remote`);
+    const { nav } = record();
+    nav.go(screen);
+    nav.renamed('Woonkamer', 'Zolder');
+    assert.deepEqual(nav.screen, screen);
+  }
 });

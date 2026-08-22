@@ -245,3 +245,56 @@ export function signatureOf(signal: InfraredSignal): string {
     .join(';');
   return blocks === ';;' ? '' : `${signal.carrierHz ?? 0}:${blocks}`;
 }
+
+/**
+ * What to call an appliance, or `undefined` because nothing here has said.
+ *
+ * **In the shared model rather than beside either caller**, because two things need it and this project's
+ * oldest rule is about exactly that: the import summary says what the library already calls a recognised
+ * appliance, and a device tile says the same thing on a page. Two copies of the answer would be two
+ * answers the day somebody adds a field to it.
+ *
+ * `undefined` is the ordinary case and not a gap. An appliance that only ever came out of a configuration
+ * has no manufacturer and no model, because a configuration states neither, so a screen has to have
+ * something honest to put there rather than a placeholder that reads like a name.
+ */
+export function describeDefinition(definition: DeviceDefinition): string | undefined {
+  const words = [definition.manufacturer, definition.model].filter((one) => one !== undefined);
+  return words.length === 0 ? undefined : words.join(' ');
+}
+
+/**
+ * One appliance being used on one remote, under the name that remote gives it.
+ *
+ * **What makes a shared library navigable before anything in it has a name.** A description that only ever
+ * came out of a configuration has no manufacturer and no model, because a configuration states neither, so
+ * a list of them reads as "81 commands" four times over and nothing in it can be told apart. The documents
+ * know, though: each one calls its appliances something, and those are the words their owner typed.
+ *
+ * So this is derived and never stored. The label belongs to the use and the description belongs to the
+ * appliance; putting a name on the description would be inventing one from whichever remote happened to be
+ * imported first.
+ */
+export interface DeviceUsage {
+  readonly definition: string;
+  /** The document using it. */
+  readonly remote: string;
+  readonly label?: string;
+}
+
+/**
+ * The names one appliance is known by, in the order they were found, without repeats.
+ *
+ * Four identical televisions on four remotes are one description under four names, which is the whole
+ * point of the split, so this is a list rather than a single answer.
+ */
+export function namesUsedFor(
+  usage: readonly DeviceUsage[], definition: string,
+): readonly string[] {
+  const found: string[] = [];
+  for (const one of usage) {
+    if (one.definition !== definition || one.label === undefined) continue;
+    if (!found.includes(one.label)) found.push(one.label);
+  }
+  return found;
+}

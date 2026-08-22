@@ -30,7 +30,10 @@
   display: flex;
   flex-direction: column;
   gap: m.rem(2);
-  max-width: m.rem(440);
+  // Wide enough for the three tiles to stand in one row. It was 440, which is right for a column of
+  // text and wrong the moment the page became three ways in: three of them broke as two and one, which
+  // reads as a fourth being missing rather than as a row of three.
+  max-width: m.rem(660);
 }
 
 .name {
@@ -76,10 +79,13 @@
   }
 }
 
-.actions {
+// The three ways in. They wrap rather than scrolling, because there are three of them and there will
+// not suddenly be nine: this is not the carousel Home needs.
+.sections {
   display: flex;
-  gap: var(--mantine-spacing-xs);
-  margin-block-start: var(--mantine-spacing-xl);
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-md);
+  margin-block-start: var(--mantine-spacing-lg);
 }
 
 .confirm {

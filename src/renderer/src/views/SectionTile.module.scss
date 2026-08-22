@@ -1,0 +1,120 @@
+// The compact tile. Same glass as `RemoteTile`, without the stage a drawing needs.
+
+@use '../mantine' as m;
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: m.rem(2);
+  // Wide enough for two words and a short line, and a fixed height so a tile with no number still
+  // lines up with the ones that have one.
+  width: m.rem(196);
+  min-height: m.rem(126);
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--mantine-radius-lg);
+  background: rgb(255 255 255 / 66%);
+  backdrop-filter: blur(m.rem(12));
+  box-shadow:
+    0 m.rem(1) m.rem(2) rgb(16 24 40 / 4%),
+    0 m.rem(10) m.rem(26) rgb(16 24 40 / 5%);
+  cursor: pointer;
+  text-align: center;
+  transition: translate 140ms ease, box-shadow 140ms ease, border-color 140ms ease,
+              background 140ms ease;
+
+  @include m.hover {
+    translate: 0 m.rem(-3);
+    border-color: var(--mantine-color-indigo-2);
+    background: rgb(255 255 255 / 84%);
+    box-shadow:
+      0 m.rem(2) m.rem(4) rgb(16 24 40 / 5%),
+      0 m.rem(18) m.rem(38) rgb(49 46 129 / 10%);
+  }
+
+  &:active {
+    translate: 0 m.rem(-1);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--mantine-color-indigo-4);
+    box-shadow: 0 0 0 m.rem(3) var(--mantine-color-indigo-1);
+  }
+}
+
+// One of a set, chosen. The same ring `RemoteTile` uses, so choosing looks the same everywhere.
+.selected {
+  border-color: var(--mantine-color-indigo-5);
+  background: rgb(255 255 255 / 92%);
+  box-shadow:
+    0 0 0 m.rem(3) var(--mantine-color-indigo-1),
+    0 m.rem(16) m.rem(34) rgb(49 46 129 / 12%);
+}
+
+// A tile with nowhere to go. It keeps the shape and drops every affordance, so it does not invite a
+// press it cannot answer.
+.flat {
+  cursor: default;
+  background: rgb(255 255 255 / 46%);
+  box-shadow: none;
+
+  @include m.hover {
+    translate: none;
+    border-color: var(--mantine-color-gray-2);
+    background: rgb(255 255 255 / 46%);
+    box-shadow: none;
+  }
+}
+
+// The figure. Large, because it is the answer the press was going to ask for.
+.value {
+  font-size: m.rem(36);
+  line-height: 1;
+  font-weight: 300;
+  color: var(--mantine-color-indigo-6);
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  margin-block-start: m.rem(4);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.caption {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-6);
+  // One line. A device called something long must not make its tile taller than its neighbours.
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add {
+  border-style: dashed;
+  border-color: var(--mantine-color-gray-3);
+  background: rgb(255 255 255 / 42%);
+  box-shadow: none;
+
+  @include m.hover {
+    border-color: var(--mantine-color-indigo-3);
+    background: rgb(255 255 255 / 70%);
+    box-shadow: 0 m.rem(12) m.rem(28) rgb(49 46 129 / 8%);
+  }
+}
+
+.plus {
+  display: grid;
+  place-items: center;
+  width: m.rem(52);
+  height: m.rem(52);
+  border-radius: 50%;
+  color: var(--mantine-color-indigo-5);
+  background: rgb(255 255 255 / 70%);
+  border: 1px solid var(--mantine-color-gray-2);
+}

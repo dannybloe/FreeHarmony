@@ -54,6 +54,7 @@ function fakeApi(options: { contents?: DocumentContents | undefined } = {}) {
     inspectAttached: async () => { throw new Error('not this test'); },
     importFrom: async () => { throw new Error('not this test'); },
     fileDefinitions: async () => ({ added: [], kept: [] }),
+    addDevice: async () => { throw new Error('not this test'); },
   };
   return { api, calls };
 }

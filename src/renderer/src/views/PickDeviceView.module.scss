@@ -1,0 +1,19 @@
+// The picker. A carousel of appliances this machine describes, and a name for the one that is chosen.
+
+@use '../mantine' as m;
+
+.lead {
+  color: var(--mantine-color-gray-6);
+  margin-block-end: var(--mantine-spacing-md);
+}
+
+.label {
+  margin-block-start: var(--mantine-spacing-md);
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--mantine-spacing-sm);
+  margin-block-start: var(--mantine-spacing-lg);
+}

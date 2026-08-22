@@ -13,6 +13,7 @@ import { ipcMain } from 'electron';
 
 import { channelFor, METHODS, type FreeHarmonyApi, type Namespace } from '../shared/api.ts';
 import { contentsOf, fileDefinitionsOf, importInto, inspectAttached } from './configuration.ts';
+import { addDeviceUse, deviceUsage } from './content.ts';
 import { attachedRemotes, readHardware } from './devices.ts';
 import { DeviceLibrary } from './store/library.ts';
 import { RemoteStore } from './store/remotes.ts';
@@ -32,6 +33,7 @@ export function registerHandlers(store: RemoteStore, library: DeviceLibrary): vo
     importFrom: (name, token) => importInto(store, library, name, token, now),
     contents: (name) => contentsOf(store, library, name),
     fileDefinitions: (name) => fileDefinitionsOf(store, library, name, now),
+    addDevice: (name, definition, label) => addDeviceUse(store, name, definition, label),
   });
 
   register('devices', {
@@ -46,6 +48,7 @@ export function registerHandlers(store: RemoteStore, library: DeviceLibrary): vo
     remove: (id) => library.remove(id),
     missingFor: (content) => library.missingFor(content),
     likelyDuplicates: () => library.likelyDuplicates(),
+    usage: () => deviceUsage(store),
   });
 }
 

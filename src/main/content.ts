@@ -21,6 +21,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { RemoteContent } from '../shared/content.ts';
+import type { DeviceUsage } from '../shared/library.ts';
 import type { RemoteStore } from './store/remotes.ts';
 
 const CONTENT = 'content.json';
@@ -67,14 +68,83 @@ export async function writeContent(
  * Change a document's contents: read, apply, write.
  *
  * The one route every edit takes, which is what makes the read and the write impossible to get out of
- * order. It refuses on a document with nothing in it rather than inventing an empty one, because an empty
- * `RemoteContent` is a claim about somebody's equipment and the honest answer for a document nobody has
- * imported into is that there is nothing to change.
+ * order.
+ *
+ * **A document with nothing in it gets contents of its own**, marked `here`, and that is a correction made
+ * on 22 August 2026. It used to refuse, on the reasoning that an empty `RemoteContent` is a claim about
+ * somebody's equipment and there is nothing to change on a document nobody has imported into. Both halves
+ * of that were wrong. The model has `filledFrom` precisely so that contents built here can say so, and the
+ * case the refusal blocked is the one the whole arrangement exists for: you import the living room remote,
+ * then set up a bedroom one and say it drives the same television. That remote has no configuration and
+ * never will until one is compiled for it.
+ *
+ * Found by being asked what a screenshot was showing, which is worth recording: the picker had nothing
+ * useful to offer in the only state it could be photographed in, and the reason was this refusal two
+ * layers down.
  */
 export async function editContent(
   store: RemoteStore, name: string, change: (content: RemoteContent) => RemoteContent,
 ): Promise<RemoteContent> {
-  const held = await storedContentOf(store, name);
-  if (held === undefined) throw new Error(`${name} has no contents to change yet`);
+  const held = await storedContentOf(store, name)
+    ?? { devices: [], activities: [], buttons: [], filledFrom: 'here' as const };
   return writeContent(store, name, change(held));
+}
+
+/**
+ * Put an appliance on a remote: a position, pointing at a description in the library, with a name.
+ *
+ * **The position is ours now**, and that is the change of meaning `DeviceUse.slot` took on 22 August
+ * 2026. It used to be the configuration's own numbering, because that was the only identity a device had
+ * in a file somebody else compiled. Now the document is the source and a configuration is what will be
+ * built from it, so the numbering belongs here and an import fills it from the file rather than owning
+ * it. Three things refer to a position by number, so it has to be stable: a step in an activity, a wanted
+ * state, and a button binding.
+ *
+ * The next free number, and **never the count**, which would collide the moment a position in the middle
+ * had been removed. Nothing removes one yet; writing it this way means nothing has to remember to when
+ * something does.
+ *
+ * On a document with nothing in it this is what creates its contents, marked `here` rather than as coming
+ * from a configuration. That is the case the arrangement exists for: a second remote that drives the
+ * television the first one taught this machine about, before anything has ever been read off it.
+ */
+export async function addDeviceUse(
+  store: RemoteStore, name: string, definition: string, label?: string,
+): Promise<RemoteContent> {
+  return editContent(store, name, (content) => {
+    const taken = content.devices.map((one) => one.slot);
+    const slot = taken.length === 0 ? 0 : Math.max(...taken) + 1;
+    return {
+      ...content,
+      devices: [...content.devices, { slot, definition, ...(label === undefined ? {} : { label }) }],
+    };
+  });
+}
+
+/**
+ * Every appliance every document uses, with the name that document gives it.
+ *
+ * **Derived, on every call, and deliberately so.** The alternative is a name on the description itself,
+ * which would have to come from whichever remote happened to be imported first and would then be wrong for
+ * every other one. The label belongs to the use.
+ *
+ * It reads every document's contents, which is a handful of small files this application wrote. A document
+ * with nothing in it contributes nothing rather than failing, because a machine part way through being set
+ * up is the ordinary state and not an error.
+ */
+export async function deviceUsage(store: RemoteStore): Promise<DeviceUsage[]> {
+  const found: DeviceUsage[] = [];
+  for (const document of await store.list()) {
+    const content = await storedContentOf(store, document.name);
+    if (content === undefined) continue;
+    for (const use of content.devices) {
+      if (use.definition === undefined) continue;
+      found.push({
+        definition: use.definition,
+        remote: document.name,
+        ...(use.label === undefined ? {} : { label: use.label }),
+      });
+    }
+  }
+  return found;
 }

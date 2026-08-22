@@ -68,6 +68,7 @@ function fakeApi(options: {
     remove: async () => {},
     contents: async () => { throw new Error('the import model must not read a document'); },
     fileDefinitions: async () => { throw new Error('the import model must not file definitions'); },
+    addDevice: async () => { throw new Error('the import model must not change a document'); },
     inspectAttached: async (productId, into) => {
       calls.push(`inspect:${productId.toString(16)}:${into ?? '-'}`);
       options.onInspect?.();

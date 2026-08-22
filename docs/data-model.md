@@ -74,6 +74,33 @@ what is on their remote gets the whole answer and leaves no trace. The compatibi
 **before the device is opened**, since holding somebody's hardware for a minute in order to tell them no
 is the wrong order.
 
+### A position on a remote, and who numbers it
+
+`DeviceUse.slot` used to be the configuration's own numbering, because that was the only identity a device
+had in a file somebody else compiled. Now the document is the source and a configuration is what will be
+built from it, so **the numbering is ours** and an import fills it from the file rather than owning it.
+
+It has to be stable, because three things in the model refer to a device by number and nothing else: a
+step in an activity, a wanted state, and a button binding. So a new position takes the next free number
+and never the count, which would collide the first time one in the middle was removed.
+
+### The name of an appliance is not on the appliance
+
+A description read out of a configuration has no manufacturer, no model and not one command name, because a
+configuration states none of the three. So a list of them reads "81 commands" four times over with nothing
+to choose between, which is what a screenshot of the picker showed on 22 August 2026 and what Danny could
+not make sense of.
+
+The words exist, though: **every document calls its appliances something**, and those are what their owner
+typed. `library.usage()` is that join, derived on every call and never stored. Storing a name on the
+description would mean taking it from whichever remote happened to be imported first, and then being wrong
+for every other one.
+
+Which is also why `editContent` creates contents for a document that has none, marked `here`. The case the
+shared library exists for is a second remote driving the television the first one taught this machine
+about, and that remote has no configuration and will not have one until somebody compiles it. That was
+refused until the same screenshot made it obvious.
+
 ### The appliance an import recognises
 
 An appliance already in the library keeps everything a person or Logitech's catalogue put on it, because

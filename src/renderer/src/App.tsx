@@ -15,22 +15,30 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { HardwareReading } from '../../shared/devices.ts';
 import type { RemoteModel } from '../../shared/remote.ts';
+import { api } from './api.ts';
 import { asRemoteModel, isSameModel } from './catalogue.ts';
 import { advanceOn } from './viewmodels/devices.model.ts';
-import { afterChoosingModel } from './viewmodels/navigation.model.ts';
+import { definitionIn } from './viewmodels/library.model.ts';
+import { afterChoosingModel, remoteOn } from './viewmodels/navigation.model.ts';
 import { useContents } from './viewmodels/useContents.ts';
-import { useImport } from './viewmodels/useImport.ts';
 import { useDevices } from './viewmodels/useDevices.ts';
 import { useHardware } from './viewmodels/useHardware.ts';
+import { useImport } from './viewmodels/useImport.ts';
+import { useLibrary } from './viewmodels/useLibrary.ts';
 import { useNavigation } from './viewmodels/useNavigation.ts';
 import { useRemotes } from './viewmodels/useRemotes.ts';
+import { ActivitiesView } from './views/ActivitiesView.tsx';
 import { AddRemoteView } from './views/AddRemoteView.tsx';
 import { AppBar } from './views/AppBar.tsx';
 import { ConnectView } from './views/ConnectView.tsx';
+import { DeviceView } from './views/DeviceView.tsx';
+import { DevicesView } from './views/DevicesView.tsx';
 import { ExistingRemotesView } from './views/ExistingRemotesView.tsx';
 import { HomeView } from './views/HomeView.tsx';
 import { NameRemoteView } from './views/NameRemoteView.tsx';
+import { PickDeviceView } from './views/PickDeviceView.tsx';
 import { RemoteView } from './views/RemoteView.tsx';
+import { SettingsView } from './views/SettingsView.tsx';
 import classes from './App.module.scss';
 
 export function App() {
@@ -47,9 +55,14 @@ export function App() {
   // read the remote it is about, and that offer can only be honest if something is watching the bus.
   // Enumeration opens nothing, so it is the cheap half; the read is a button.
   const devices = useDevices(screen.at === 'connect' || screen.at === 'remote');
-  // What the open document holds. Keyed on the name, so opening a different remote asks about that one.
-  const contents = useContents(screen.at === 'remote' ? screen.name : undefined);
+  // What the open document holds. Keyed on the name, so opening a different remote asks about that one,
+  // and asked for on every screen about a remote rather than only the front one: `remoteOn` is the one
+  // place that says which those are, so a screen added later is covered without this line changing.
+  const contents = useContents(remoteOn(screen));
   const importing = useImport();
+  // The appliances this machine describes, wanted by the two screens that name one.
+  const library = useLibrary(screen.at === 'devices' || screen.at === 'device');
+  const [picking, setPicking] = useState(false);
   // The one thing here that opens a remote. It is a model of its own rather than part of `useDevices`,
   // because that one polls and this one must never be on a timer.
   const hardware = useHardware();
@@ -68,6 +81,13 @@ export function App() {
   const remove = async (name: string) => {
     await remotes.remove(name);
     nav.removed(name);
+  };
+
+  // Putting an appliance on a remote, which changes the document's contents rather than the folder, so
+  // it reloads the contents and not the list. The picker closes itself; this is only the writing.
+  const addDevice = async (name: string, definition: string, label: string) => {
+    await api().remotes.addDevice(name, definition, label);
+    await contents.reload();
   };
 
   // A recognised remote moves the flow on by itself, which is what the sketch asked for: you plug it in
@@ -164,20 +184,71 @@ export function App() {
           />
         )}
 
-        {screen.at === 'remote' && (() => {
+        {/* Every screen about one remote, resolved once.
+            One block rather than five, because all five need the same two things: the document out of the
+            list the main process gave us, and something honest to say when it is not there. Five copies
+            of that would be five chances to forget the second. */}
+        {remoteOn(screen) !== undefined && (() => {
           const remote = nav.resolve(remotes.remotes);
           // The folder was renamed or deleted from outside while this page was open. Saying so beats
           // drawing an empty page, and the way back is in the bar.
           if (remote === undefined) {
             return <Text size="sm">That remote is no longer in your documents.</Text>;
           }
+          const held = contents.contents.status === 'ready' ? contents.contents.contents : undefined;
+
+          if (screen.at === 'remote') {
+            return (
+              <RemoteView
+                remote={remote}
+                busy={remotes.busy}
+                contents={contents}
+                importing={importing}
+                attached={devices.attached}
+                onRename={(to) => void rename(remote.name, to)}
+                onOpen={(section) => nav.go({ at: section, name: remote.name })}
+              />
+            );
+          }
+          if (screen.at === 'devices') {
+            return (
+              <>
+                <DevicesView
+                  remote={remote.name}
+                  contents={held}
+                  library={library.state}
+                  onOpen={(slot) => nav.go({ at: 'device', name: remote.name, slot })}
+                  onAdd={() => setPicking(true)}
+                />
+                <PickDeviceView
+                  opened={picking}
+                  library={library.state}
+                  alreadyHere={(held?.content.devices ?? []).map((one) => one.definition)}
+                  onClose={() => setPicking(false)}
+                  onPick={(definition, label) => void addDevice(remote.name, definition, label)}
+                />
+              </>
+            );
+          }
+          if (screen.at === 'device') {
+            return (
+              <DeviceView
+                remote={remote.name}
+                slot={screen.slot}
+                contents={held}
+                definition={definitionIn(
+                  library.state,
+                  held?.content.devices.find((one) => one.slot === screen.slot)?.definition)}
+              />
+            );
+          }
+          if (screen.at === 'activities') {
+            return <ActivitiesView remote={remote.name} contents={held} />;
+          }
           return (
-            <RemoteView
+            <SettingsView
               remote={remote}
               busy={remotes.busy}
-              contents={contents}
-              importing={importing}
-              attached={devices.attached}
               onRename={(to) => void rename(remote.name, to)}
               onDuplicate={() => void remotes.duplicate(remote.name)}
               onRemove={() => void remove(remote.name)}

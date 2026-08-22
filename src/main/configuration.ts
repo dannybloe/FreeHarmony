@@ -35,6 +35,7 @@ import { HarmonyRemote, openHarmony } from '@harmony/usb';
 import type { DocumentContents, FiledDefinitions } from '../shared/content.ts';
 import type { AppliancePlan, AttachedSummary, ImportOutcome } from '../shared/import.ts';
 import type { DeviceDefinition } from '../shared/library.ts';
+import { describeDefinition } from '../shared/library.ts';
 import { remoteModelForSkin, whyImportIsRefused } from '../shared/models.ts';
 import { matchBySignal, relinkAppliance } from '../shared/relink.ts';
 import type { RemoteModel } from '../shared/remote.ts';
@@ -126,7 +127,7 @@ export async function inspectAttached(
   const appliances: AppliancePlan[] = imported.content.devices.map((use) => {
     const definition = imported.definitions.find((one) => one.id === use.definition);
     const already = use.definition === undefined ? undefined : held.get(use.definition);
-    const knownAs = already === undefined ? undefined : describe(already);
+    const knownAs = already === undefined ? undefined : describeDefinition(already);
     return {
       slot: use.slot,
       ...(use.label === undefined ? {} : { label: use.label }),
@@ -172,19 +173,6 @@ export async function inspectAttached(
       },
     }),
   };
-}
-
-/**
- * What the library already calls an appliance, for a summary to show beside a position on the remote.
- *
- * The reason a person cares whether an appliance was recognised: a configuration offers no manufacturer,
- * no model and no command names at all, so what survives an import is whatever they or Logitech's
- * catalogue put there. `undefined` where nothing has, which is every appliance that only ever came out
- * of a configuration.
- */
-function describe(definition: DeviceDefinition): string | undefined {
-  const words = [definition.manufacturer, definition.model].filter((one) => one !== undefined);
-  return words.length === 0 ? undefined : words.join(' ');
 }
 
 /**

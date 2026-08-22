@@ -1,0 +1,37 @@
+// The devices page. A grid rather than a carousel: these wrap, where remotes on Home scroll sideways.
+
+@use '../mantine' as m;
+
+.devices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-xl) var(--mantine-spacing-lg);
+}
+
+.heading {
+  display: grid;
+  gap: m.rem(4);
+}
+
+.title {
+  font-weight: 700;
+  letter-spacing: m.rem(-0.4);
+}
+
+.lead {
+  max-width: m.rem(560);
+  color: var(--mantine-color-gray-6);
+  font-size: var(--mantine-font-size-sm);
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-md);
+}
+
+.missing {
+  color: var(--mantine-color-gray-6);
+  font-size: var(--mantine-font-size-sm);
+}

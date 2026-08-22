@@ -13,7 +13,7 @@
 import type { DocumentContents, FiledDefinitions, RemoteContent } from './content.ts';
 import type { AttachedSummary, ImportOutcome } from './import.ts';
 import type { AttachedRemote, HardwareReading } from './devices.ts';
-import type { DeviceDefinition } from './library.ts';
+import type { DeviceDefinition, DeviceUsage } from './library.ts';
 import type { RemoteDocument, RemoteModel } from './remote.ts';
 
 /** The name the API is published under on `window`. One constant, so no side spells it by hand. */
@@ -95,6 +95,19 @@ export interface RemotesApi {
    * overwritten**: it may have been corrected by hand since, and a re-import would discard that.
    */
   fileDefinitions(name: string): Promise<FiledDefinitions>;
+
+  /**
+   * Put an appliance from the library onto this remote, as a new position with a name.
+   *
+   * The first method here that **changes a document's contents** rather than reading them or replacing
+   * them wholesale, which is what `content.json` was written for. A document nothing has been imported
+   * into gets contents of its own, marked as built here: that is the case this exists for, a second remote
+   * driving the television the first one taught this machine about.
+   *
+   * The position it gets is the next free number and is permanent: three things in the model refer to a
+   * device by it.
+   */
+  addDevice(name: string, definition: string, label?: string): Promise<RemoteContent>;
 }
 
 /**
@@ -151,6 +164,19 @@ export interface LibraryApi {
    * so it is a decision for a person rather than for a library.
    */
   likelyDuplicates(): Promise<DeviceDefinition[][]>;
+
+  /**
+   * Which remotes use which appliance, and what each one calls it.
+   *
+   * **This is what makes the library readable at all.** A description read out of a configuration has no
+   * manufacturer and no model, so a list of them is four rows saying "81 commands" and nothing that tells
+   * them apart. The documents have the names, because their owner typed them, and this is the only place
+   * that puts the two together.
+   *
+   * Derived on every call and never stored: the name belongs to the use, so putting one on the description
+   * would mean picking whichever remote happened to be imported first.
+   */
+  usage(): Promise<DeviceUsage[]>;
 }
 
 export interface FreeHarmonyApi {
@@ -167,10 +193,11 @@ export type Namespace = keyof FreeHarmonyApi;
  * forgetting to register it is a typecheck failure instead of a channel that answers nothing.
  */
 export const REMOTE_METHODS = ['list', 'create', 'rename', 'duplicate', 'remove',
-                               'inspectAttached', 'importFrom', 'contents', 'fileDefinitions'] as const;
+                               'inspectAttached', 'importFrom', 'contents', 'fileDefinitions',
+                               'addDevice'] as const;
 export const DEVICE_METHODS = ['attached', 'readHardware'] as const;
 export const LIBRARY_METHODS =
-  ['list', 'get', 'put', 'remove', 'missingFor', 'likelyDuplicates'] as const;
+  ['list', 'get', 'put', 'remove', 'missingFor', 'likelyDuplicates', 'usage'] as const;
 
 export type RemoteMethod = (typeof REMOTE_METHODS)[number];
 export type DeviceMethod = (typeof DEVICE_METHODS)[number];

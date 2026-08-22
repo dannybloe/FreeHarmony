@@ -52,6 +52,9 @@ const api: FreeHarmonyApi = {
     fileDefinitions: (name) =>
       call('remotes', 'fileDefinitions', name) as
         ReturnType<FreeHarmonyApi['remotes']['fileDefinitions']>,
+    addDevice: (name, definition, label) =>
+      call('remotes', 'addDevice', name, definition, label) as
+        ReturnType<FreeHarmonyApi['remotes']['addDevice']>,
   },
   devices: {
     attached: () => call('devices', 'attached') as ReturnType<FreeHarmonyApi['devices']['attached']>,
@@ -69,6 +72,7 @@ const api: FreeHarmonyApi = {
       call('library', 'missingFor', content) as ReturnType<FreeHarmonyApi['library']['missingFor']>,
     likelyDuplicates: () =>
       call('library', 'likelyDuplicates') as ReturnType<FreeHarmonyApi['library']['likelyDuplicates']>,
+    usage: () => call('library', 'usage') as ReturnType<FreeHarmonyApi['library']['usage']>,
   },
 };
 

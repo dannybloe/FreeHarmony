@@ -1,0 +1,62 @@
+// One device position. Facts, then every command it holds as a run of chips.
+
+@use '../mantine' as m;
+
+.device {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-xl) var(--mantine-spacing-lg);
+}
+
+.heading {
+  display: grid;
+  gap: m.rem(4);
+}
+
+.title {
+  font-weight: 700;
+  letter-spacing: m.rem(-0.4);
+}
+
+.lead {
+  max-width: m.rem(560);
+  color: var(--mantine-color-gray-6);
+  font-size: var(--mantine-font-size-sm);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: m.rem(200) 1fr;
+  gap: m.rem(6) var(--mantine-spacing-sm);
+  margin: 0;
+  max-width: m.rem(620);
+  font-size: var(--mantine-font-size-sm);
+
+  dt {
+    color: var(--mantine-color-gray-6);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--mantine-color-gray-8);
+  }
+}
+
+// Every command as a chip. Dozens of them, so they wrap and stay small: this is a picture of how much
+// there is rather than a list anybody reads through.
+.commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: m.rem(6);
+  margin-block-start: var(--mantine-spacing-sm);
+}
+
+.command {
+  padding: m.rem(3) m.rem(9);
+  border-radius: var(--mantine-radius-sm);
+  border: 1px solid var(--mantine-color-gray-2);
+  background: var(--mantine-color-gray-0);
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-gray-7);
+}
