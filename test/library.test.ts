@@ -56,19 +56,19 @@ test('an empty machine has an empty library rather than an error', async () => {
 test('a definition is written, read back and corrected, and its file is named after it', async () => {
   const { library: held, root } = await library();
   try {
-    await held.put(television('sony-kd-55', ON));
-    assert.deepEqual(await readdir(root), ['sony-kd-55.json']);
-    assert.equal((await held.get('sony-kd-55')).kind, 'television');
+    await held.put(television('a-television', ON));
+    assert.deepEqual(await readdir(root), ['a-television.json']);
+    assert.equal((await held.get('a-television')).kind, 'television');
 
     // A correction is the same call, because a definition has no state to protect: everything about it
     // can be wrong and its identifier is the only thing that must not move.
-    await held.put({ ...television('sony-kd-55', ON), manufacturer: 'Sony' });
-    assert.equal((await held.get('sony-kd-55')).manufacturer, 'Sony');
-    assert.deepEqual(await readdir(root), ['sony-kd-55.json'], 'a correction is not a second file');
+    await held.put({ ...television('a-television', ON), manufacturer: 'A manufacturer' });
+    assert.equal((await held.get('a-television')).manufacturer, 'A manufacturer');
+    assert.deepEqual(await readdir(root), ['a-television.json'], 'a correction is not a second file');
 
-    await held.remove('sony-kd-55');
+    await held.remove('a-television');
     assert.deepEqual(await readdir(root), []);
-    await assert.rejects(held.get('sony-kd-55'), /no device definition called/);
+    await assert.rejects(held.get('a-television'), /no device definition called/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -80,7 +80,7 @@ test('an identifier that could escape its folder is refused', async () => {
   // name: a value quietly turned into something else is the value the caller meant, lost.
   const { library: held, root } = await library();
   try {
-    for (const bad of ['../escape', 'Sony/KD55', 'has space', 'UPPER', '', '.', 'x'.repeat(121)]) {
+    for (const bad of ['../escape', 'Maker/Model', 'has space', 'UPPER', '', '.', 'x'.repeat(121)]) {
       await assert.rejects(held.put(television(bad, ON)), /not a usable identifier/, bad);
     }
     assert.deepEqual(await readdir(root), [], 'and none of them wrote anything');
@@ -130,7 +130,7 @@ test('two descriptions of one appliance are reported and nothing is merged', asy
     // Two imports of the same television from two remotes, which is exactly what a shared library
     // invites. They are the same appliance because they send the same thing, which is decidable
     // without knowing what either of them is.
-    await held.put({ ...television('from-living-room', ON), model: 'KD-55' });
+    await held.put({ ...television('from-living-room', ON), model: 'A model' });
     await held.put(television('from-bedroom', ON));
     await held.put(television('an-amplifier', OFF));
 
@@ -169,13 +169,13 @@ test('a name is not what makes two appliances the same, and pulses are', async (
   // person calls the same television different things on two remotes, and it is still one television.
   const { library: held, root } = await library();
   try {
-    await held.put({ ...television('one-name', ON), manufacturer: 'Sony', model: 'A' });
-    await held.put({ ...television('other-name', ON), manufacturer: 'Sonny', model: 'B' });
+    await held.put({ ...television('one-name', ON), manufacturer: 'A maker', model: 'A' });
+    await held.put({ ...television('other-name', ON), manufacturer: 'A makr', model: 'B' });
     assert.equal((await held.likelyDuplicates()).length, 1);
 
     // And the control: the same names with different pulses are not one appliance.
     await held.remove('other-name');
-    await held.put({ ...television('other-name', OFF), manufacturer: 'Sony', model: 'A' });
+    await held.put({ ...television('other-name', OFF), manufacturer: 'A maker', model: 'A' });
     assert.deepEqual(await held.likelyDuplicates(), []);
   } finally {
     await rm(root, { recursive: true, force: true });
