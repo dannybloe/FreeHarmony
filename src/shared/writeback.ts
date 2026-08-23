@@ -19,7 +19,8 @@ import type {
   DeviceCommand, DeviceDefinition, DeviceProperty, DeviceTiming, InfraredSignal, StateTransition,
 } from './library.ts';
 import type {
-  Activity, ActivityRole, ButtonBinding, DesiredState, DeviceUse, RemoteContent, Step,
+  Activity, ActivityRole, ButtonBinding, DesiredState, DeviceUse, RemoteContent, Sequence,
+  SequenceItem, Step,
 } from './content.ts';
 
 /** What happens to a field when a configuration is written. */
@@ -51,6 +52,15 @@ export interface Verdict {
   readonly structure?: string;
   /** Why, where the verdict is not obvious from the structure alone. */
   readonly note?: string;
+  /**
+   * The phrase the diagram should print instead of the verdict's own wording.
+   *
+   * There for one case and it should stay rare: `unknown` prints "a config states it somewhere,
+   * unread", which is true of every field that has it except `ButtonBinding.sendsOnLongPress`, where
+   * **no configuration this application can read states it at all**. A generated label is a claim like
+   * any other, and the generator's own rule for those words is the fewest that are still true.
+   */
+  readonly words?: string;
 }
 
 /** One verdict per field of `T`, optional markers included, so the table cannot be half written. */
@@ -77,12 +87,42 @@ export const COMMAND: Verdicts<DeviceCommand> = {
 };
 
 export const TIMING: Verdicts<DeviceTiming> = {
-  // Logitech's editor names all three and base slot 15 is where per device parameters live, but which
-  // group holds which of these has never been read here. Guessing would produce a configuration the
-  // firmware silently replaces with its own defaults, since a group whose length is wrong is discarded.
-  betweenKeysMs: { writeback: 'unknown', structure: 'base slot 15, group unknown' },
-  betweenDevicesMs: { writeback: 'unknown', structure: 'base slot 15, group unknown' },
-  minimumRepeats: { writeback: 'unknown', structure: 'base slot 5 or base slot 15' },
+  // **All three used to say base slot 15 and be unknown, and the guess was wrong.** It read reasonably:
+  // Logitech's editor names all three, and base slot 15 is where per device parameters live. On 23
+  // August 2026 a configuration Logitech compiled to our own specification settled the first one, and
+  // it is not a parameter at all.
+  betweenKeysMs: {
+    writeback: 'rebuilt',
+    structure: "base slot 10, as pause instructions inside every list that sends this appliance two "
+      + 'codes in a row',
+    // Measured rather than reasoned, and against the obvious reading. The compiler stores no number:
+    // it emits the delay as pauses, in **tenths of a second**, with the appliance's own infrared group
+    // in the operand's high byte. Six devices carried three distinct delays, 100, 200 and 400 ms with
+    // multiplicities 3, 2 and 1, and the compiled file has one group with 0.4 s pauses, two with 0.2 s
+    // and 0.1 s everywhere, with nothing fitted to make that line up. So this is reachable, and it is
+    // reachable the same way `Activity.powerOnOrder` is: not a field to overwrite but a consequence
+    // spread across every list that sends to this appliance, and a writer has to change all of them.
+    note: 'not a stored number: pauses in tenths of a second, spread over every list for this appliance',
+  },
+  // Left as it was, deliberately. The same mechanism is the obvious guess and it is **not** measured:
+  // five of the six devices carry the same 500 ms, so the corpus has no multiplicity to match against,
+  // and one second pauses also appear as authored sequence delays, which would swamp the signal. A
+  // device set to a value nobody else has would settle it in one compile.
+  betweenDevicesMs: { writeback: 'unknown', structure: 'probably the same pauses, unmeasured' },
+  // Narrowed rather than answered on 23 August 2026, and the negatives are worth carrying because each
+  // one cost a search: it is **not** a code following itself in an action list (no send in 482 lists is
+  // followed by itself, in any group), **not** a repetition inside the code's own first duration block
+  // (no block of 475 is the same pattern two, three or four times), and **not** a byte in the infrared
+  // record header that is constant within a group (only two of 21 are, and both are 1 everywhere).
+  minimumRepeats: { writeback: 'unknown', structure: 'not found; the record header, the lists and the '
+    + 'block contents are all ruled out' },
+  // The three hold values, added on 23 August 2026 when Logitech's own appliance records turned out to
+  // carry six timings where this model had three. Unknown, and for a harder reason than the three above:
+  // those have a value that varies between appliances for a compiled file to be searched for, and these
+  // are 100, 0 and 0 on every appliance of the only account read, so there is nothing to search for.
+  heldBetweenKeysMs: { writeback: 'unknown', structure: 'unmeasured; constant across the corpus' },
+  heldBetweenDevicesMs: { writeback: 'unknown', structure: 'unmeasured; constant across the corpus' },
+  heldMinimumRepeats: { writeback: 'unknown', structure: 'unmeasured; constant across the corpus' },
 };
 
 export const TRANSITION: Verdicts<StateTransition> = {
@@ -149,7 +189,11 @@ export const ROLE: Verdicts<ActivityRole> = {
   // is why it can be written back at all.
   powerOnOrder: { writeback: 'rebuilt', structure: "the order of base slot 9's enter handler" },
   powerOffOrder: { writeback: 'rebuilt', structure: "the order of base slot 9's leave handler" },
-  delayAfterMs: { writeback: 'unknown', structure: 'base slot 15, group unknown' },
+  // Same standing as `TIMING.betweenDevicesMs` since 23 August 2026: base slot 15 was a guess and
+  // the one timing that has been measured turned out to be pauses in an action list instead.
+  // Their `NextDevicePowerOnDelay`, null on all 22 roles read, which is why it stays unmeasured: the
+  // pause it would compile to has no value in the corpus to be recognised by.
+  delayAfterMs: { writeback: 'unknown', structure: 'probably a pause in a list, no value in the corpus' },
 };
 
 export const ACTIVITY: Verdicts<Activity> = {
@@ -169,6 +213,18 @@ export const ACTIVITY: Verdicts<Activity> = {
     note: 'what an activity really is; reading it waits on which handler is the enter one',
   },
   devices: { writeback: 'rebuilt', structure: "base slot 9, what the set's bindings send to" },
+  // Rebuilt, and the verdict is about writing rather than reading, like `wants` above it. What a sequence
+  // compiles to is fully read: an action list per binding, with pauses as `0x7C` in tenths of a second.
+  // What cannot be read is the other direction, and that is guaranteed rather than pending, so an import
+  // leaves this empty for good.
+  sequences: {
+    writeback: 'rebuilt',
+    structure: 'base slot 10, one action list per binding, pauses inline',
+    note: 'writable and never readable: the compiler expands a copy per binding and the copies differ',
+  },
+  // The mode an activity enters is in the file and which of Logitech's three named screens it is is not
+  // established, so this is `unknown` in the ordinary sense: something states it and nobody has found it.
+  opensOn: { writeback: 'unknown', structure: 'base slot 6, the mode an activity enters' },
 };
 
 export const BUTTON: Verdicts<ButtonBinding> = {
@@ -178,6 +234,56 @@ export const BUTTON: Verdicts<ButtonBinding> = {
   inActivity: { writeback: 'rebuilt', structure: "base slot 9's handler sets" },
   inDeviceMode: { writeback: 'rebuilt', structure: "base slot 6's mode table" },
   sends: { writeback: 'rebuilt', structure: 'base slot 10, an action list' },
+  sendsOnLongPress: {
+    writeback: 'unknown',
+    structure: 'no configuration here holds one, so no structure is known',
+    // Not the usual admission this verdict records. The others say a configuration states something and
+    // nobody has found where; this says no configuration we can read states it at all, because no model
+    // we can read has the feature. Logitech's product data gives a long press to the Touch generation
+    // and the 350 and to none of the family this application reads, and `test/import.test.ts` asserts
+    // the field is absent over every binding of every sample. So `unknown` is right for the reason it
+    // is normally wrong: there is nothing to look for until a model that has one can be read.
+    note: 'no model this application reads offers a long press, so there is nothing to write back yet',
+    words: 'no model we read has one',
+  },
+  // Ours, and it is the interesting kind: the file states the scan code, so this name is what the
+  // compiler resolved that code **from**. The joining table is measured for 68 keys of two models and
+  // for nothing else, so deriving it is possible in patches and is not attempted.
+  key: { writeback: 'ours', note: 'the file states a scan code; the name is what it was resolved from' },
+  // Unknown rather than ours, and the distinction matters: a screen page certainly belongs to something
+  // in the file, since the remote has to know which appliance a pad drives. Which page belongs to which
+  // appliance is the reading nobody has made, and `inDeviceMode` is the page number in the meantime.
+  forDevice: { writeback: 'unknown', structure: 'base slot 6, a page of the mode table' },
+  // The reference is ours; what it points at is rebuilt. A configuration holds the expanded list on the
+  // binding and no handle at all, so this field is how the document keeps something the file dissolves.
+  runsSequence: { writeback: 'ours', note: 'a configuration holds the expanded list and no handle' },
+  // Rebuilt, and it takes four sections rather than a binding: a record per appliance in the number
+  // sender, a list per channel, the state variable values whose transitions run those lists, and a screen
+  // page. A channel with a leading zero takes a different route again, spelled out digit by digit.
+};
+
+export const SEQUENCE: Verdicts<Sequence> = {
+  // Ours, like a description's identifier and for the same reason: the name is what a person edits.
+  id: { writeback: 'ours', note: 'a configuration offers no handle for a sequence' },
+  // The one field of a sequence that never reaches a remote at all. A sequence is expanded into
+  // instructions and its name is drawn nowhere, so this is the field the whole reference shape exists
+  // for: without it, two buttons running one sequence would be indistinguishable from two copies.
+  name: { writeback: 'ours', note: 'a sequence is expanded into instructions and its name is drawn nowhere' },
+  items: { writeback: 'rebuilt', structure: 'base slot 10, an action list per binding' },
+};
+
+export const SEQUENCE_ITEM: Verdicts<SequenceItem> = {
+  // Not a field in the file: a send is an instruction and a wait is a different instruction, so which of
+  // the two an item is comes out of the opcode. Rebuilt, because that is what emitting one decides.
+  does: { writeback: 'rebuilt', structure: 'base slot 10, which opcode the instruction carries' },
+  step: { writeback: 'rebuilt', structure: 'base slot 10, a send instruction' },
+  // The one place the model is finer than Logitech's own editor: their records hold whole seconds and the
+  // file holds tenths, exact on five authored values from one second to twenty.
+  waitMs: {
+    writeback: 'rebuilt',
+    structure: 'base slot 10, opcode 0x7C, in tenths of a second',
+    note: 'a multiple of 100 ms reaches a remote exactly; anything finer cannot be written',
+  },
 };
 
 export const CONTENT: Verdicts<RemoteContent> = {
@@ -201,7 +307,7 @@ export const CONTENT: Verdicts<RemoteContent> = {
 /** Every table, so a check can walk them without naming them one at a time. */
 export const TABLES: Readonly<Record<string, Readonly<Record<string, Verdict>>>> = {
   SIGNAL, COMMAND, TRANSITION, PROPERTY, DESIRED, TIMING, DEFINITION, DEVICE_USE, STEP, ROLE,
-  ACTIVITY, BUTTON, CONTENT,
+  ACTIVITY, SEQUENCE, SEQUENCE_ITEM, BUTTON, CONTENT,
 };
 
 /**

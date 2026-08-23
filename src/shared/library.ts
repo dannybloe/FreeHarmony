@@ -208,6 +208,28 @@ export interface DeviceTiming {
   readonly betweenDevicesMs?: number;
   /** How many times a press has to be repeated before the appliance believes it. */
   readonly minimumRepeats?: number;
+  /**
+   * The same three numbers again, for a key somebody is **holding** rather than pressing.
+   *
+   * Logitech has six timing fields and this model had three, which was found on 23 August 2026 by reading
+   * an account's own appliance records: `HoldInterKeyDelay`, `HoldInterDeviceDelay` and `HoldMinRepeats`
+   * sit beside the three above, per appliance. They are here so that a document can hold what their
+   * editor held; what they do is **not** established.
+   *
+   * **The one measurement says they do not vary**: across the six appliances read, the hold delay between
+   * keys is 100 ms on every one, the hold delay between appliances is 0 on every one and the hold repeat
+   * count is 0 on every one. So there is no multiplicity to match a compiled file against, which is the
+   * same reason `betweenDevicesMs` is unmeasured, and an appliance set to a value nobody else has is what
+   * would settle all four at once.
+   *
+   * Not to be confused with a **long press**, which is a second action on a button and lives on the
+   * binding, or with whether a code **repeats** at all, which is a property of the code and lives in
+   * `InfraredSignal.held`. Three different things get called holding a key and this is the slowest of the
+   * three: how fast a held key's repeats are allowed to leave the remote.
+   */
+  readonly heldBetweenKeysMs?: number;
+  readonly heldBetweenDevicesMs?: number;
+  readonly heldMinimumRepeats?: number;
 }
 
 /** What kind of appliance it is, in plain words rather than in a vendor's enumeration. */

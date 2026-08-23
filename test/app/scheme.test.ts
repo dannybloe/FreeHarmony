@@ -53,12 +53,18 @@ test('the window is light, and a system that prefers dark does not change it', a
   t.after(() => app.close());
 
   const asStarted = await app.evaluate<Observed>(OBSERVED);
-  assert.deepEqual(asStarted, {
+  // **The machine's own preference is deliberately not asserted here**, and it was until 23 August 2026,
+  // as `systemPrefersDark: false`. That is a fact about the desk rather than about the application: this
+  // machine switched to dark and the test failed with the application behaving exactly as it should. The
+  // claim in the title is carried by the control below, where the preference is emulated and therefore
+  // known, so pinning it in the baseline bought nothing and made the suite fail on a dark machine.
+  const { systemPrefersDark, ...drawn } = asStarted;
+  assert.deepEqual(drawn, {
     stated: 'light',
-    systemPrefersDark: false,
     background: 'rgb(255, 255, 255)',
     text: 'rgb(0, 0, 0)',
   }, 'the light scheme, stated by Mantine and drawn by it');
+  assert.equal(typeof systemPrefersDark, 'boolean', 'the page can see the preference either way');
 
   // The control, and the reason this test is in a window at all: the page is reloaded with the system
   // preferring dark, which is the situation of somebody who starts the application on such a machine.

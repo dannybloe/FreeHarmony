@@ -53,7 +53,7 @@ test('a reference follows its code when the new description orders its commands 
   const to = commands([300, 100, 200]);
   const content: RemoteContent = {
     devices: [{ slot: 0 }],
-    activities: [{ slot: 0, roles: [], onStart: [{ device: 0, command: 2 }], onStop: [], wants: [], devices: [0] }],
+    activities: [{ slot: 0, roles: [], onStart: [{ device: 0, command: 2 }], onStop: [], wants: [], sequences: [], devices: [0] }],
     buttons: [{ surface: 'keypad', sends: [{ device: 0, command: 0 }, { device: 0, command: 1 }] }],
     filledFrom: 'a-configuration',
   };

@@ -329,7 +329,7 @@ async function aRemoteWithTwoActivities(at: Bench, buttons: ButtonBinding[] = []
   await at.store.create('bedroom');
   await writeContent(at.store, 'bedroom', {
     devices: [{ slot: 0 }, { slot: 1 }],
-    activities: [0, 1].map((slot) => ({ slot, roles: [], onStart: [], onStop: [], wants: [],
+    activities: [0, 1].map((slot) => ({ slot, roles: [], onStart: [], onStop: [], wants: [], sequences: [],
                                         devices: [0, 1] })),
     buttons, filledFrom: 'here',
   });
@@ -419,7 +419,7 @@ test('a position this remote does not have is the only refusal there is', async 
     await at.store.create('bedroom');
     await writeContent(at.store, 'bedroom', {
       devices: [{ slot: 0 }, { slot: 1 }],
-      activities: [{ slot: 0, roles: [], onStart: [], onStop: [], wants: [], devices: [0] }],
+      activities: [{ slot: 0, roles: [], onStart: [], onStop: [], wants: [], sequences: [], devices: [0] }],
       buttons: [], filledFrom: 'here',
     });
 

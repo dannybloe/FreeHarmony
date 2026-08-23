@@ -69,6 +69,16 @@ erDiagram
     number device "reaches a remote"
     number command "reaches a remote"
   }
+  SequenceItem {
+    SequenceItemKind does "reaches a remote"
+    Step step "optional, reaches a remote"
+    number waitMs "optional, reaches a remote"
+  }
+  Sequence {
+    string id "ours, never in a config"
+    string name "ours, never in a config"
+    SequenceItem_list items "reaches a remote"
+  }
   DesiredState {
     number device "reaches a remote"
     string property "reaches a remote"
@@ -83,14 +93,20 @@ erDiagram
     Step_list onStop "reaches a remote"
     DesiredState_list wants "reaches a remote"
     number_list devices "reaches a remote"
+    Sequence_list sequences "reaches a remote"
+    ActivityStartScreen opensOn "optional, a config states it somewhere, unread"
   }
   ButtonBinding {
     ButtonSurface surface "reaches a remote"
     number scan "optional, reaches a remote"
+    string key "optional, ours, never in a config"
     string label "optional, reaches a remote, same length only"
     number inActivity "optional, reaches a remote"
     number inDeviceMode "optional, reaches a remote"
     Step_list sends "reaches a remote"
+    Step_list sendsOnLongPress "optional, no model we read has one"
+    number forDevice "optional, a config states it somewhere, unread"
+    string runsSequence "optional, ours, never in a config"
   }
   RemoteContent {
     DeviceUse_list devices "reaches a remote"
@@ -110,11 +126,15 @@ erDiagram
   StoredRemote |o--|| RemoteModel : model
   StoredRemote |o--|| BaseConfiguration : baseConfiguration
   StoredRemote ||--|| RemoteDocument : "is also"
+  SequenceItem |o--|| Step : step
+  Sequence }o--|| SequenceItem : items
   Activity }o--|| ActivityRole : roles
   Activity }o--|| Step : onStart
   Activity }o--|| Step : onStop
   Activity }o--|| DesiredState : wants
+  Activity }o--|| Sequence : sequences
   ButtonBinding }o--|| Step : sends
+  ButtonBinding }o--|| Step : sendsOnLongPress
   RemoteContent }o--|| DeviceUse : devices
   RemoteContent }o--|| Activity : activities
   RemoteContent }o--|| ButtonBinding : buttons
@@ -128,9 +148,11 @@ erDiagram
 | `RemoteModel` | Which remote a document is about. |
 | `StoredRemote` | remote.json: everything about a remote that its folder name cannot carry. |
 | `RemoteDocument` | A remote as the application handles it: what is stored, plus the name its folder carries. |
-| `DeviceUse` | One of the appliances this remote drives. |
+| `DeviceUse` | One of the appliances this remote drives./ One of the appliances this remote drives. |
 | `ActivityRole` | What one appliance does in one activity, and what state it has to be in to do it. |
 | `Step` | Send one command to one device. |
+| `SequenceItem` | One step of a sequence: a command going out, or time passing. |
+| `Sequence` | A named run of commands and pauses, belonging to one activity. |
 | `DesiredState` | What an activity wants one appliance to be doing. |
 | `Activity` | Something the remote can be switched into: watching television, listening to music. |
 | `ButtonBinding` | One button doing one thing, in one context. |
@@ -175,9 +197,12 @@ erDiagram
     StateTransition_list transitions "reaches a remote"
   }
   DeviceTiming {
-    number betweenKeysMs "optional, a config states it somewhere, unread"
+    number betweenKeysMs "optional, reaches a remote"
     number betweenDevicesMs "optional, a config states it somewhere, unread"
     number minimumRepeats "optional, a config states it somewhere, unread"
+    number heldBetweenKeysMs "optional, a config states it somewhere, unread"
+    number heldBetweenDevicesMs "optional, a config states it somewhere, unread"
+    number heldMinimumRepeats "optional, a config states it somewhere, unread"
   }
   DeviceDefinition {
     string id "ours, never in a config"
@@ -231,7 +256,9 @@ erDiagram
 |---|---|
 | `Provenance` | `read-from-device`, `duplicated`, `created-empty` |
 | `ActivityKind` | `watch-tv`, `watch-a-film`, `listen-to-music`, `play-a-game`, `other` |
-| `RoleKind` | `picture`, `sound`, `channels`, `film`, `other` |
+| `RoleKind` | `picture`, `sound`, `channels`, `film`, `game`, `media`, `other` |
+| `SequenceItemKind` | `send`, `wait` |
+| `ActivityStartScreen` | `commands`, `number-pad`, `gesture-pad` |
 | `ButtonSurface` | `keypad`, `screen` |
 | `DefinitionOrigin` | `learned-here`, `from-logitech`, `from-a-configuration`, `typed-here` |
 | `DeviceKind` | `television`, `receiver`, `player`, `recorder`, `set-top-box`, `game-console`, `computer`, `lighting`, `other` |
@@ -386,13 +413,44 @@ the same sequence would be two identical lists, so the model could not tell that
 happen to send the same codes, and renaming or editing the sequence would have to find every copy. That
 is this project's oldest neighbouring rule, one derivation in one place, arriving in a data model.
 
-The authored shape that follows, and it is a proposal until the activity editor is built rather than a
-decision taken:
+The authored shape that follows. **It was a proposal for a day and it is built now**, on 23 August 2026,
+because Logitech's own records turned out to state every part of it:
 
-* `Activity.sequences`, an ordered list. A sequence carries a **name** and its own ordered items.
+* `Activity.sequences`, an ordered list. A `Sequence` carries a **name** and its own ordered items. Their
+  records agree: sequences hang off the button map of an **activity**, never off the map of a device, and
+  each carries a name and a list of actions.
 * An item is a send or a **wait**, because a sequence has pauses in it: Danny's is channel two, zero,
   zero, then red, then red, with five seconds in it. So it is not a list of `Step`.
 * A binding **refers** to one of its activity's sequences rather than containing it.
+
+**The convenient shape is refuted, and that is the one thing measurement changed.** "A send with an
+optional wait after it" needs no invariant policing and would have been the obvious way to avoid a pair of
+optional fields. Their two sequences hold 31 items, 26 sends and 5 waits, and two of those 5 make the
+shape impossible: one pair of waits is **adjacent**, three seconds then twenty, and one sequence **ends**
+on a wait. So a wait is an item in its own right, a sequence may hold a pause that achieves nothing, and
+`SequenceItem` carries `does` with two optionals. `sequenceItemIsWellFormed` is the check that owes,
+since the alternative shape, a union of two interfaces, can be neither covered by the writeback table nor
+drawn by the generated diagram.
+
+**The unit disagrees between their editor and the file, and the model takes the finer one.** Their records
+hold whole seconds; the compiled file holds **tenths** of a second, exact on five authored values from one
+second to twenty. So `waitMs` is milliseconds, a multiple of 100 ms reaches a remote exactly, and anything
+finer cannot be written. The file is ten times finer than their editor ever let anybody ask for.
+
+**Two limits, and they are not the same number.** Their editor stops at 25 items counting waits, and the
+longest sequence in the corpus is exactly 25, with 21 sends and 4 waits. That sequence **hangs a Harmony
+One for good** when its touch panel is tapped heavily while it runs, three times out of three with the
+batteries out each time, against five gentle or untouched runs that all completed. So their own stated
+maximum is not a safe bound, and a writer should refuse an oversized sequence rather than warn about it,
+bounding it by the expanded instruction count rather than the item count. That is a config the remote
+accepts, whose checksums verify, which this project accounts for to the byte, and which can leave a remote
+unusable without writing anywhere it should not.
+
+**How their records join a button to a sequence was not captured**, and it is the one loose end here. The
+activity map holds both sequences and no button in it refers to either, although both were bound to keys
+on the remote at the moment it was read. So `ButtonBinding.runsSequence` is ours by decision rather than by
+imitation. It changes nothing about the shape, because a reference is what the two constraints above
+demand whatever they called theirs.
 
 **An import cannot produce that form, and that asymmetry is already in this model twice.** A
 configuration holds the expanded list of sends on the binding and nothing else: no name, and no way to
@@ -841,3 +899,219 @@ decision for a person.
 
 Whether that library is ever shared with other people is still open, and nothing above depends on
 it.
+
+## Holding a key is two different things, and only one of them is a button's business
+
+Danny put this together on 23 August 2026 from the Logitech interface: there are keys that do nothing
+extra when you hold them, keys that keep firing while you hold them, and keys that do something
+**different** when you hold them. Three behaviours, and it is tempting to model them as three kinds of
+key. They are not. They are two independent mechanisms and only one of them belongs to a button.
+
+**Repeating while held is a property of the code**, so it belongs to the device definition and not to
+the binding. An infrared record in a configuration carries three parts: what is sent once on a press,
+what is sent for as long as the key stays down, and a tail. The library next door reads all three.
+The volume key repeats because the middle part is filled in, and the interval you feel is that part's
+own length. So one appliance can have a repeating volume command and a non repeating power command,
+and no button anywhere had to say so.
+
+**A long press is a property of the button**, and it is a second action selected by how long you hold
+it. `ButtonBinding.sendsOnLongPress` carries it. The two cannot coexist on one key, and the reason is
+mechanical rather than a rule somebody wrote: a firmware that must decide between two actions has to
+wait to see which one you meant, and a key that is waiting cannot also be repeating. So Danny's third
+kind of key is not a kind at all, it is a key whose long press has taken its repeat away.
+
+**No model this application can read has a long press**, and the field is therefore always absent
+after an import, asserted over 1555 bindings in `test/import.test.ts`. Logitech's own product records
+say where the feature lives: the 950, the Touch, the Ultimate One, the 350 and the nine products of
+the Elite and Smart Control families declare it, and the Harmony One, 600, 650, 665, 700, 300 and 200
+do not. It is a generation boundary, not a price tier.
+
+The field is here anyway, and that was a decision rather than an omission of caution. It costs one
+line now against a change to everything hanging off a binding later, and the two models most likely
+to be supported next both have it. Which brings the reason it is worth carrying at all:
+
+**On the 350 the long press is what the device count is made of.** Four device buttons times two
+presses is exactly its stated maximum of eight devices. The 300 has four buttons, no long press, and
+allows four. The 200 has three, no long press, and allows three. One mechanism explains three numbers
+that otherwise look like entries in a table, and a model that could not express a long press would
+have to treat the 350's eight as arbitrary.
+
+**A double press is deliberately not modelled.** Logitech's own button record carries a third field
+for it, beside the press and the hold, so the concept certainly exists in their software. What is
+missing is anything that uses it: no product record advertises it, and no configuration in the corpus
+holds one. A field with no evidence behind it is a guess wearing a type, and the note here is worth
+more than the field would be, because it says where to look if one ever turns up.
+
+## Which models this could grow to, and the one that decides it
+
+Written down on 23 August 2026 because the question came up as "why would we not support the long
+press models", and the honest answer is that the long press is not what decides it. Reading the
+configuration is.
+
+Three groups, and they are not alike:
+
+**The 200, 300 and 350 are reachable through a different door.** They are ordinary USB devices and the
+transport in the library next door already reaches them. What they do not have is an address space: a
+configuration is fetched as a **named file** rather than read address by address, and every request
+about memory or firmware is refused. The end marker the existing tooling expects from them is the same
+one our own remotes use, so the container appears to have survived into that generation and a reader
+may need very little. Nobody here has ever seen one of those files.
+
+**The Touch, the Ultimate One and the 950 sit in that same family** by the same classification, so the
+same door. Unknown beyond that, and one compiled configuration would settle whether the format is
+shared.
+
+**The Elite and Smart Control families stay outside the promise**, and this is a scope decision rather
+than a technical limit. Their configuration lives on Logitech's servers and reaches a hub over the
+internet; there is nothing on a desk to read or to write. Supporting them means reimplementing a cloud
+service, which is a different product. They also still work, which is the problem this application
+exists to solve and the one they do not have.
+
+What none of those groups gives is **firmware or live memory**, both refused. So they can consume what
+is already understood and they cannot settle anything new, and any question that needs the firmware as
+its authority has to be answered on a remote from the older family first.
+
+## A button does one of two things here, and one of three in Logitech's model
+
+Read out of their own button records on 23 August 2026, for three of the models this application reads.
+Their division is three ways: a button **sends** commands, it **runs** one of its activity's sequences, or
+it **tunes** to a favourite channel. Of 654 buttons across 10 button maps, 651 carry a command action and 3
+carry a channel action, with the sequences held on the activity beside them.
+
+This model takes two of the three, and the section below says why the third is deliberately missing. So
+`ButtonBinding.sends` may be empty on an authored binding, which it could not be before, and exactly one of
+`sends` and `runsSequence` says what a button is for. Only the first survives an import.
+
+**Decided: there are no favourites in this model, because a sequence is one.** Their records split a
+button's action three ways and this model has two. The third is a **favourite channel**, a channel put on a
+screen pad, and Danny's answer on 23 August 2026 was that he has never used the feature, does not know how
+to switch it on, and never understood the need for it, since a sequence does the same thing. That premise
+holds: tuning to channel 100 is sending that appliance's one, zero and zero, which is exactly the shape of
+the sequence he authored, and a second way to say one thing is a second thing to keep right.
+
+**It was built first and taken out the same afternoon**, and the sequence of mistakes is worth keeping
+because each was found by him looking rather than by a test. The first version had the channel as a bare
+string on the binding, so the word "favourite" appeared nowhere in the generated diagram. He asked why, and
+the question about the drawing turned out to be about the model twice over: a favourite has a **title** and
+an optional **picture**, neither of which can live on a channel number, and the field claiming to name the
+appliance being tuned, `forDevice`, could not do it either, because their favourites sit in a menu named
+after no appliance while a device's commands sit in a menu named after the device. So an entity was built.
+Then he pointed out it was redundant, and it went. `forDevice` stays and its wrong reading does not.
+
+**Three things a sequence cannot do, none of which changed the answer.** A favourite belongs to the
+appliance, so it is reachable in device mode and from any activity, where a sequence belongs to one activity
+and would have to be repeated in each. A favourite can carry a **picture**, and a sequence cannot, which on
+a colour touch panel is arguably the whole point of the feature. And a favourite compiles through the
+number sender, a record per appliance plus a short list per channel, where a sequence is spelled out per
+binding, so a wall of channels is much smaller in the file the vendor's way; their own capability table caps
+favourites at eighteen on some models, which suggests they cared.
+
+The last of those is a **compiler** concern rather than a model one, and that is what makes the decision
+cheap: anything emitting a configuration can notice that a sequence is nothing but one appliance's digits
+and choose the compact form, with nothing in the model saying so. The first is real and small. The second
+is the one that would bring the question back, and if pictures on pads ever matter the field belongs on the
+**pad**, which is where Logitech puts theirs: a screen button of theirs carries an image key, a path and an
+image id, all three unset on all 318 screen buttons in their records. So the picture is available and
+unevidenced, and it is not modelled.
+
+**What is not lost is the knowledge**, and it lives next door in `how-a-harmony-works.md` because it is
+about the product rather than about this model: what a favourite is, that the channel is text because
+channel 1 and channel 001 are different channels and a configuration takes two entirely different routes
+for them, and that it reaches the file as instructions in four separate sections with nothing saying a
+channel was ever typed. So a favourite could never have been read back anyway, which means dropping the
+entity costs an import exactly nothing.
+
+## A key has a name, and the name is the identity everywhere except in the file
+
+All 336 keypad buttons in their records carry a `ButtonKey`, a word: `VolumeUp`, `Menu`, `Number1`. None
+carries a scan code. The sibling repository's reading of the firmware says why, since a host named a
+button and the firmware resolved the name to hardware, which is also why neither of Logitech's own
+applications ever held the scan code map.
+
+**This matters for more than tidiness.** A scan code is a position in one model's wiring, so a document
+whose bindings are scan codes cannot be carried to another remote: every binding would point at the
+wrong key. A name is the same key on every remote that has one. Given that this application intends to
+support a dozen models, `ButtonBinding.key` is what makes moving a configuration between them thinkable
+at all, and it costs one optional field now.
+
+Their spelling, deliberately. It is the one vocabulary that already covers every model, it is what a
+fetched button map speaks, and inventing our own would mean a translation table nobody could check.
+
+**Absent after an import, and the joining table is why.** The file states the scan code; the name is what
+the compiler resolved it from. That join is measured for 32 keys of a Harmony One and 36 of a Harmony
+600 and for nothing else, so filling it in is possible for some keys of some models and is not
+attempted. `reference/button-maps.md` next door is that table, and it is honest about the scans two keys
+share by listing them as sets rather than assigning them.
+
+## Which appliance a screen button is for, stated at last on one side
+
+Every one of the 318 screen buttons in their records sits in a **named menu**, and the names are of three
+shapes: `Device.<id>` on 314 of them, `Activity.<id>` on one, and `FavoriteChannels` on three. So their
+model puts a screen button on an appliance, which is exactly the question this document has had open
+under "Where the remote keeps a device's map is open".
+
+**It closes the authored half and not the read half, and the two must not be confused.**
+`ButtonBinding.forDevice` is the appliance an author chose. `inDeviceMode` is still the page number the
+configuration states, and which page belongs to which appliance is still a reading nobody has made.
+Nothing may derive one from the other until it exists. This is the same asymmetry as `roles` against
+`wants` and as `sequences` against `sends`, and it now appears three times, which is a sign it is the
+shape of this model rather than an accident of one field.
+
+**Their `IndexInMenu` gets no field, and the reason is a decision already taken here.** A screen button
+carries its position in its menu. Under "the order you see is the array's, and the slot is the machine's"
+that position is the order of `RemoteContent.buttons`, and adding a number beside it would be a second
+statement of the same thing, which is the copy that rots. So the position is the array's and the import
+preserves it.
+
+## The activity vocabulary was a sample and is now complete
+
+`RoleKind` had four names, taken from the two activities that produced our calibration configurations,
+and said out loud that four observations are not a vocabulary and that a games console would need
+something. Reading a whole account's activity records produced exactly that. 22 roles across 7
+activities carry **six** distinct names, and the four were right: a display doing the picture, a volume
+role doing the sound, a channel changing role and a play movie role, plus `PlayGameActivityRole` and
+`PlayMediaActivityRole`. So a games console was landing on `other` in a model that now has a name for it,
+and `media` is worth telling apart from `film` because a streaming box and a disc player are both playing
+something and Logitech separates them.
+
+`other` stays and its standing has changed: it is a hedge against a seventh name rather than against the
+four being wrong, and nothing in the corpus uses it.
+
+**`ActivityKind` needed no change at all, which is the calibration worth recording.** Its five values were
+chosen from their editor's wording and their records carry five activity types: `WatchTV`, `WatchDvd`,
+`PlayGame`, `ListenToMusic` and `Custom`. Five for five, with `other` being their `Custom`. A guessed
+vocabulary matching the real one exactly is the sort of thing that only counts when it was checkable, so
+it is recorded here rather than assumed to have been obvious.
+
+**An activity opens on a named screen**, `ActivityStartScreen`, which is their `StartScreen` and is stated
+on all 7 activities read, three distinct values appearing: their `Commands` four times, `Numpad` twice and
+`Gesturepad` once. It is a real per activity setting rather than a default nobody touched. Absent on an
+import: the mode an activity enters is in the file and which of the three named screens that mode is, is
+not established, so filling it in would be a guess about the one field whose value is visible the second an
+activity starts.
+
+**`ActivityRole.delayAfterMs` is confirmed as belonging on the role and is still unmeasured.** Their field
+is called `NextDevicePowerOnDelay` and it sits on the role exactly where this model put it, which settles
+that it is a property of one appliance's job in one activity rather than of the appliance. It is null on
+all 22 roles, and that is why no compiled file can be searched for it: there is no value in the corpus for
+a pause in an action list to be recognised by. One activity with a delay nobody else has would settle it in
+a single compile.
+
+## Six timing numbers, not three, and three of them are unmeasurable today
+
+`DeviceTiming` had the three an appliance record shows in their editor's timing panel. It has six, and the
+three that were missing are the **held** variants: `HoldInterKeyDelay`, `HoldInterDeviceDelay` and
+`HoldMinRepeats`, per appliance, beside the three we had.
+
+They are here so a document can hold what their editor held, and what they do is not established. The one
+measurement says they do not vary: across the six appliances read, the hold delay between keys is 100 ms on
+every one, the hold delay between appliances is 0 on every one and the hold repeat count is 0 on every one.
+So there is no multiplicity for a compiled file to be matched against, which is the same obstacle
+`betweenDevicesMs` has, and one appliance set to a value nobody else has would settle four fields at once.
+
+**Three different things get called holding a key**, and the model keeps them apart in three places, which
+is worth stating once because the names invite confusion. Whether a code **repeats** at all is a property
+of the code, `InfraredSignal.held`, because an infrared record carries a block sent once and a block sent
+for as long as the key is down. A **long press** is a second action on a button, `sendsOnLongPress`, and a
+button with one cannot repeat because the firmware has to wait to find out which you meant. And how fast a
+held key's repeats may leave the remote is these three fields, on the appliance.

@@ -139,6 +139,63 @@ test('every configuration fills the model, and what it cannot say it leaves abse
   }
 });
 
+// **The negative that keeps `sendsOnLongPress` honest.** None of the models this project can read
+// offers a long press: Logitech's own product data gives it to the Touch generation and the 350, and
+// to none of the One, 600, 650, 665, 700, 300 or 200. So an importer that ever populates this field
+// is inventing it, and that is the failure this asserts against. The count is stated rather than
+// bounded, because zero of a known total is the only useful form here: a bound of "at most a few"
+// would pass on an importer that filled one in.
+test('no imported binding carries a long press, because no readable model has one',
+  skipUnless(...NAMES), () => {
+    let bindings = 0;
+    for (const { name } of SAMPLES) {
+      const { content } = importConfiguration(require_(name), { now: NOW, idPrefix: name });
+      for (const one of content.buttons) {
+        bindings += 1;
+        assert.equal(one.sendsOnLongPress, undefined,
+          `${name} invented a long press on scan ${String(one.scan)}`);
+      }
+    }
+    // The population, so the assertion above cannot pass by looking at nothing.
+    assert.equal(bindings, 1555);
+  });
+
+test('an import fills what a configuration states and nothing an author chose',
+  skipUnless(...NAMES), () => {
+    // **The one test that covers a whole class of field rather than a field.** Every absence asserted here
+    // is a different reason, and the reasons are what stop somebody quietly filling one in later:
+    //
+    //   sequences   the compiler expands one action list per binding and the copies differ, so a shared
+    //               sequence is indistinguishable from two equal lists, and the name was never in the file
+    //   runsSequence  the same thing seen from the binding
+    //   key         the file states a scan code; the name is what the compiler resolved it from, and the
+    //               joining table is measured for 68 keys of two models and nothing else
+    //   forDevice   which appliance a screen page belongs to is a reading nobody has made, and
+    //               `inDeviceMode` is the page number in the meantime
+    //   opensOn     the mode an activity enters is in the file and which named screen it is, is not
+    let bindings = 0;
+    let activities = 0;
+    for (const { name } of SAMPLES) {
+      const { content } = importConfiguration(require_(name), { now: NOW, idPrefix: name });
+      for (const one of content.activities) {
+        activities += 1;
+        assert.deepEqual(one.sequences, [], `${name} invented a sequence on activity ${one.slot}`);
+        assert.equal(one.opensOn, undefined, `${name} named a start screen for activity ${one.slot}`);
+      }
+      for (const one of content.buttons) {
+        bindings += 1;
+        const where = `${name} scan ${String(one.scan)}`;
+        assert.equal(one.runsSequence, undefined, `${where}: a sequence cannot be recovered`);
+        assert.equal(one.key, undefined, `${where}: a key name is not in a configuration`);
+        assert.equal(one.forDevice, undefined, `${where}: which appliance a page is for is unread`);
+      }
+    }
+    // Both populations, exact. The activity count is the one that could go to zero unnoticed, since a
+    // sample with no activities at all would satisfy every assertion above it.
+    assert.equal(activities, 16);
+    assert.equal(bindings, 1555);
+  });
+
 test('a step never names a command the device has not got', skipUnless(...NAMES), () => {
   // The check that would have caught the failure mode section 117 demonstrates from the other side: a
   // configuration whose every infrared command addressed the wrong place still parsed, rendered and

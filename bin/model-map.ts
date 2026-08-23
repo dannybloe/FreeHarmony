@@ -154,7 +154,10 @@ function verdictsByStructure(source: ts.SourceFile): Map<string, Map<string, str
         const field = property.name.getText(source).replace(/['"]/g, '');
         const written = property.initializer.getText(source);
         const verdict = /writeback:\s*'([a-z]+)'/.exec(written)?.[1];
-        if (verdict !== undefined) verdicts.set(field, verdict);
+        // A verdict may override the wording, for the one field where the generic phrase would state
+        // something false. Read from the same text as the verdict itself, so the two cannot drift.
+        const words = /\bwords:\s*'([^']*)'/.exec(written)?.[1];
+        if (verdict !== undefined) verdicts.set(field, words ?? verdict);
       }
       found.set(describes, verdicts);
     }

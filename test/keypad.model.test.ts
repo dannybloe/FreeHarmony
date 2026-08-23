@@ -28,7 +28,7 @@ const H600 = MODELS.h600!;
 
 /** Two activities, both using both devices, which is what an activity question needs. */
 const ACTIVITIES: readonly Activity[] = [0, 1].map((slot) => ({
-  slot, roles: [], onStart: [], onStop: [], wants: [], devices: [0, 1],
+  slot, roles: [], onStart: [], onStop: [], wants: [], sequences: [], devices: [0, 1],
 }));
 
 /** A device map binding: on the keypad, and with no activity, which is what makes it device mode's. */
@@ -162,9 +162,9 @@ test('which activities use a device is about the appliance, and never about a ke
   // The one thing on a device page that names an activity, and it answers "where is this appliance used on
   // this remote". Nothing about a key comes from it, which is the correction of 22 August 2026.
   const declared: readonly Activity[] = [
-    { slot: 0, roles: [], onStart: [], onStop: [], wants: [], devices: [0] },
-    { slot: 1, roles: [], onStart: [], onStop: [], wants: [], devices: [0, 1] },
-    { slot: 2, roles: [], onStart: [], onStop: [], wants: [], devices: [] },
+    { slot: 0, roles: [], onStart: [], onStop: [], wants: [], sequences: [], devices: [0] },
+    { slot: 1, roles: [], onStart: [], onStop: [], wants: [], sequences: [], devices: [0, 1] },
+    { slot: 2, roles: [], onStart: [], onStop: [], wants: [], sequences: [], devices: [] },
   ];
   assert.deepEqual(activitiesUsing(declared, 0), [0, 1]);
   assert.deepEqual(activitiesUsing(declared, 1), [1]);

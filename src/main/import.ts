@@ -249,6 +249,10 @@ function activitiesOf(c: Container): Activity[] {
     // activity as running. Establishing that belongs next door, with a measurement behind it.
     wants: [],
     devices: one.devices,
+    // Empty for a third reason again, and this one is settled rather than open: the compiler expands a
+    // sequence into one action list per binding and the copies differ, so no reading can tell a shared
+    // sequence from two buttons that send the same codes, and the name was never in the file at all.
+    sequences: [],
   } satisfies Activity));
 }
 

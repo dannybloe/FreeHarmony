@@ -9,6 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { sequenceItemIsWellFormed, type SequenceItem } from '../src/shared/content.ts';
 import { mayBeShared, type DefinitionOrigin } from '../src/shared/library.ts';
 import { canReachARemote, TABLES, type Verdict } from '../src/shared/writeback.ts';
 
@@ -49,9 +50,51 @@ test('every table covers a field and the count is exact', () => {
     Object.entries(TABLES).map(([name, fields]) => [name, Object.keys(fields).length]),
   );
   assert.deepEqual(counted, {
-    SIGNAL: 7, COMMAND: 5, TRANSITION: 3, PROPERTY: 3, DESIRED: 3, TIMING: 3, DEFINITION: 11,
-    DEVICE_USE: 3, STEP: 2, ROLE: 6, ACTIVITY: 8, BUTTON: 6, CONTENT: 5,
+    SIGNAL: 7, COMMAND: 5, TRANSITION: 3, PROPERTY: 3, DESIRED: 3, TIMING: 6, DEFINITION: 11,
+    DEVICE_USE: 3, STEP: 2, ROLE: 6, ACTIVITY: 10, SEQUENCE: 3, SEQUENCE_ITEM: 3, BUTTON: 10,
+    CONTENT: 5,
   });
+});
+
+test('a sequence item sends or waits, and never both or neither', () => {
+  // The invariant a union of two interfaces would have enforced for free. It is spelled out here because
+  // the model deliberately took the other shape, so that the writeback table can cover the fields and the
+  // generated diagram can draw the box, and both of those need one interface.
+  assert.ok(sequenceItemIsWellFormed({ does: 'send', step: { device: 0, command: 3 } }));
+  assert.ok(sequenceItemIsWellFormed({ does: 'wait', waitMs: 5000 }));
+  // The four ways to get it wrong, and the last two are the ones a careless editor would produce: a
+  // send with a duration on it looks harmless and would silently lose the pause.
+  assert.equal(sequenceItemIsWellFormed({ does: 'send' }), false, 'a send with nothing to send');
+  assert.equal(sequenceItemIsWellFormed({ does: 'wait' }), false, 'a wait with no duration');
+  assert.equal(
+    sequenceItemIsWellFormed({ does: 'send', step: { device: 0, command: 3 }, waitMs: 100 }),
+    false,
+    'a send carrying a duration: the pause would be dropped rather than emitted',
+  );
+  assert.equal(
+    sequenceItemIsWellFormed({ does: 'wait', waitMs: 100, step: { device: 0, command: 3 } }),
+    false,
+    'a wait carrying a send: the command would never go out',
+  );
+});
+
+test('a wait is its own item, because Logitech let somebody author two in a row', () => {
+  // Not a shape question, a measurement. The convenient model is "a send with an optional wait after
+  // it", and the two sequences read out of Logitech's own records on 23 August 2026 refute it: 31 items,
+  // 26 sends and 5 waits, with one adjacent pair of waits and one sequence ending on a wait. Both of
+  // those are unrepresentable in the convenient shape, so this is the test that says why the model
+  // carries an invariant at all.
+  const adjacent: SequenceItem[] = [
+    { does: 'send', step: { device: 0, command: 1 } },
+    { does: 'wait', waitMs: 3000 },
+    { does: 'wait', waitMs: 20000 },
+  ];
+  const trailing: SequenceItem[] = [
+    { does: 'send', step: { device: 0, command: 1 } },
+    { does: 'wait', waitMs: 5000 },
+  ];
+  assert.ok(adjacent.every(sequenceItemIsWellFormed), 'three seconds then twenty, as authored');
+  assert.ok(trailing.every(sequenceItemIsWellFormed), 'a sequence may end on a pause that does nothing');
 });
 
 test('the fields an editor would offer first can all reach a remote', () => {

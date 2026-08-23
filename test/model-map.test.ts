@@ -38,11 +38,19 @@ test('the diagram in the document is the one the interfaces describe', () => {
 
 test('every structure in the model is drawn, on one side or the other', () => {
   const drawn = committed();
-  // 22 boxes and 28 captions: the six extra rows are structures whose fields are all plain values, so
-  // they are captioned and have nothing to point at. Exact, because a structure that stopped being
-  // drawn would leave a document describing less of the model than it used to and say nothing.
-  assert.equal((drawn.match(/^ {2}\w+ \{$/gm) ?? []).length, 22);
-  assert.equal((drawn.match(/^\| `\w+` \|/gm) ?? []).length, 28);
+  // 24 structures, each drawn as a box and captioned in a table. Exact, because a structure that stopped
+  // being drawn would leave a document describing less of the model than it used to and say nothing.
+  const boxes = drawn.match(/^ {2}\w+ \{$/gm) ?? [];
+  assert.equal(boxes.length, 24);
+  // **The second number counted something else and its comment said so wrongly.** It read "the six extra
+  // rows are structures whose fields are all plain values", and the six were the **choice** table's rows,
+  // which the same pattern matches. So a caption going missing could have been absorbed by a choice being
+  // added, which is what happened on 23 August 2026: two choices arrived and two structures did, and one
+  // number moved by four. Counted separately now, so each says what it is a count of.
+  const rows = (drawn.match(/^\| `\w+` \|/gm) ?? []).length;
+  const choices = (drawn.match(/^\| `\w+` \| `/gm) ?? []).length;
+  assert.equal(choices, 8, 'the fixed sets of words');
+  assert.equal(rows - choices, boxes.length, 'every structure drawn is captioned, and nothing else is');
   // Both halves, named rather than counted, since the split between them is the load bearing decision
   // this diagram exists to show.
   assert.match(drawn, /### What a remote document holds/);
@@ -52,13 +60,16 @@ test('every structure in the model is drawn, on one side or the other', () => {
   assert.match(drawn, /DeviceUse \}o--\|\| DeviceDefinition/);
 });
 
-test('the writeback notes reached the diagram, all 65 of them', () => {
+test('the writeback notes reached the diagram, all 80 of them', () => {
   const drawn = committed();
-  const noted = drawn.match(/"[^"]*(reaches a remote|ours, never|unread)[^"]*"/g) ?? [];
+  // `no model we read has one` is a verdict's own override of the wording, which exists for one
+  // field because the generic phrase for `unknown` would have stated something false there.
+  const noted = drawn.match(
+    /"[^"]*(reaches a remote|ours, never|unread|no model we read has one)[^"]*"/g) ?? [];
   // Exact rather than a floor. A floor here would be the worst kind: the join could break for one table
   // of thirteen, thirteen fields would quietly lose their answer, and any bound under the total would
   // still pass. The number moves when somebody adds a field to the model, and then it moves in the diff.
-  assert.equal(noted.length, 65);
+  assert.equal(noted.length, 80);
   // All four verdicts appear, so the vocabulary itself is exercised rather than one arm of it. The
   // unread one matters most: it is the only one that says a person cannot change this yet.
   for (const wording of ['reaches a remote', 'reaches a remote, same length only',
