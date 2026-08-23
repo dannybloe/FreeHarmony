@@ -416,6 +416,30 @@ opens with, where a whole screen was built around a keypad map that belonged to 
 worth noticing that it presented itself the same way both times, as a plausible property of an
 appliance.
 
+### A command appears once on an activity's screen, and that is an editor rule
+
+Danny established this on 23 August 2026 by trying it: Logitech's software refuses to put the same
+command or sequence on a second pad of the touch panel, on any page. It holds for sequences and for
+plain commands alike, and a sequence counts as one thing rather than as the codes it sends.
+
+**This is a rule about editing, not about the document**, and that distinction decides where it lives.
+Nothing in a configuration records it, so an import can neither check it nor break it, and the model
+gains no field. What gains something is the editor: offering a command for a screen page has to refuse
+one already placed on another page of that activity, and the message has to say **where** it already is,
+because a refusal that does not is a dead end rather than a guide.
+
+The scope is the activity, which took two facts to establish rather than one. The library next door
+measured the corpus: no screen page anywhere holds the same send twice, 0 of 1319 pages over 3122
+bindings, but a whole config commonly repeats a send across its pages, 39 of 110 distinct sends on one
+Harmony One. So the rule cannot mean once per remote, and since the tool really refuses a second pad,
+what it counts within is narrower than the remote. `docs/how-a-harmony-works.md` over there carries the
+argument.
+
+**One thing to keep straight when this is built.** The rule is per activity's screen, so the same
+command may sit on a screen page of two different activities, and it may also sit on a **key** while
+being on the screen, since those are different maps. A check that forgets either would refuse things
+the product allows.
+
 ### Where the remote keeps a device's map is open
 
 **No keypad map in any configuration here sends an infrared code outside an activity.** Counted rather than
