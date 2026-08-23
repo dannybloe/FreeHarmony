@@ -435,10 +435,15 @@ Harmony One. So the rule cannot mean once per remote, and since the tool really 
 what it counts within is narrower than the remote. `docs/how-a-harmony-works.md` over there carries the
 argument.
 
-**One thing to keep straight when this is built.** The rule is per activity's screen, so the same
-command may sit on a screen page of two different activities, and it may also sit on a **key** while
-being on the screen, since those are different maps. A check that forgets either would refuse things
-the product allows.
+**The keypad is explicitly the other way, and that is measured rather than assumed.** Danny said it and
+the library checked it: within one activity the same command or sequence may go on as many **keys** as
+you like. Two bindings sending the same thing appear in **20 of 44** keypad sets in the corpus and in
+**0 of 1319** screen pages. So the check belongs to the screen and must never be applied to a keymap,
+and the contrast is what makes the screen's zero evidence rather than coincidence.
+
+Two more things a naive check would refuse that the product allows: the same command on a screen page of
+two **different** activities, and the same command on a key while it is also on the screen, since those
+are separate maps whose scan codes do not even overlap.
 
 ### Where the remote keeps a device's map is open
 
