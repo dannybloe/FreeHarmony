@@ -361,6 +361,37 @@ commands at a time, for the functions the keypad has no room for. `inDeviceMode`
 own page index and nothing may treat it as a device until the reading that says which device a page
 belongs to exists.
 
+### A sequence belongs to an activity, and there is no such thing as a device sequence
+
+Said by Danny on 23 August 2026, after checking it in Logitech's own software and finding it was not
+what he had assumed either: **a sequence is a property of an activity**, and the only places it can be
+reached from are a button or a screen button. It is not a property of an appliance, so there is no
+device level sequence to model and none to import.
+
+That fact is not derivable from the files, which is why it is recorded here rather than measured. A
+configuration holds an ordered list of sends on a binding and says nothing about who authored it or
+where it was offered, so the corpus would agree with either answer.
+
+In this model a sequence is already the shape it needs: `ButtonBinding.sends` is an ordered list of
+`Step`, and the order matters. What the rule adds is a **constraint the model currently permits the
+breach of**. A binding on a device's own map has no activity, per the table above, so a multi step
+`sends` on such a binding would be a device sequence, which does not exist. Nothing enforces that yet
+and nothing should until the device map reading in the section below exists, because refusing it now
+would refuse something no import can produce anyway.
+
+**Writing it down found one real gap**, in the table above rather than in the rule. A key the screen
+speaks for records the page and **not** the activity, so a sequence bound to a screen button has
+nowhere to record which activity it belongs to, and by Danny's rule every sequence has one. Either the
+screen row gains an activity or the page implies it, and which of those is true is a reading nobody has
+made. Recorded as open rather than resolved, since guessing here is what the section below is a warning
+about.
+
+**Why this matters beyond the field.** The interface follows the model: a sequence editor belongs on
+the activity, not on the device page. That is the same mistake as the one `CLAUDE.md`'s first section
+opens with, where a whole screen was built around a keypad map that belonged to an activity, and it is
+worth noticing that it presented itself the same way both times, as a plausible property of an
+appliance.
+
 ### Where the remote keeps a device's map is open
 
 **No keypad map in any configuration here sends an infrared code outside an activity.** Counted rather than

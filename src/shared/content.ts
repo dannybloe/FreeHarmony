@@ -200,6 +200,13 @@ export type ButtonSurface = 'keypad' | 'screen';
  * `sends` is a list because a button may send several codes in an order that matters, which the corpus
  * does 85 times. And a binding is **on the press**: nothing in any configuration here sends a code on
  * a release or on a repeat, so this model does not offer the choice.
+ *
+ * **A sequence of several sends belongs to an activity**, said by Danny on 23 August 2026 after checking
+ * Logitech's own software: it is a property of an activity, offered on a button or a screen button, and
+ * there is no device level sequence. So a multi step `sends` should always have an activity context. It
+ * is not enforced, because a device's own map is not read yet and refusing it would refuse something no
+ * import can currently produce. `docs/data-model.md` carries the argument and the one gap it exposed,
+ * that a screen key records its page and not its activity.
  */
 export interface ButtonBinding {
   readonly surface: ButtonSurface;
