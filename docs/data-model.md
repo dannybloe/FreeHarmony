@@ -445,6 +445,33 @@ Two more things a naive check would refuse that the product allows: the same com
 two **different** activities, and the same command on a key while it is also on the screen, since those
 are separate maps whose scan codes do not even overlap.
 
+### Decided: the order you see is the array's, and the slot is the machine's
+
+Danny, 23 August 2026, giving one of his reasons for not using MyHarmony: **it cannot reorder the
+activities or the devices**. So this application must, and saying that out loud settles a modelling
+question that would be expensive to answer later.
+
+The trap is that `DeviceUse.slot` and `Activity.slot` are the configuration's own numbering, and every
+binding, every step and every wanted state refers to them. So reordering by **renumbering** would rewrite
+most of the document, and a renumbering that goes half right produces a document that still parses and
+sends the wrong codes, which is section 117's lesson in a different language.
+
+**The decision is that the two orders are allowed to disagree.** `RemoteContent.devices` and
+`.activities` are arrays, and their order is the order a person arranged them in. `slot` stays the
+identity the configuration knows, untouched by any reordering. Moving a device up the list is then a
+permutation of one array and changes nothing else at all: no binding, no step, no wanted state.
+
+**The rule that follows, and it needs to be stated because it is the kind of thing code drifts into:**
+nothing may assume `devices[i].slot === i`. It is true of a fresh import and false the moment somebody
+drags a row.
+
+Checked rather than asserted, on the day this was written: every lookup in the codebase already goes
+through `find((one) => one.slot === x)` and nothing indexes either array by position, so the decision
+costs no rewrite. **One place leaks the numbering into the interface** and will read wrongly once
+reordering exists: `views/ActivitiesView.tsx` falls back to `position ${slot + 1}` when a device has no
+label, which would show a device as "position 3" while it sits first in the list. It wants a name that
+does not come from the slot, or the row's own index.
+
 ### Where the remote keeps a device's map is open
 
 **No keypad map in any configuration here sends an infrared code outside an activity.** Counted rather than
