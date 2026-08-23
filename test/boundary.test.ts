@@ -90,11 +90,14 @@ const LIBRARIES: readonly {
     // could reuse it rather than copy it. 381 since 23 August 2026, for the other direction: the same
     // module encodes now, so a command this product fetched from Logitech as a protocol name and a bare
     // number can be turned into the rhythm a device actually sees, using the timings of any code of the
-    // same appliance a configuration already holds. The number moving is this row doing its job: a
-    // boundary whose surface drifts unwatched is the one that surprises somebody later.
+    // same appliance a configuration already holds. And 392 later the same day, for base slot 16, the
+    // one section of the format that had never been exercised by a file: a configuration was made with
+    // three favourite channels on it, so the reader, its record type and its constants exist now. The
+    // number moving is this row doing its job: a boundary whose surface drifts unwatched is the one
+    // that surprises somebody later.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 381,
+    exports: 392,
     entry: ['packages', 'codec', 'src', 'index.ts'],
     // These are named rather than left to the count, because they are what this repository reaches for
     // from its own model's shape: a count moving says the surface changed and a name says the thing we
