@@ -372,19 +372,43 @@ That fact is not derivable from the files, which is why it is recorded here rath
 configuration holds an ordered list of sends on a binding and says nothing about who authored it or
 where it was offered, so the corpus would agree with either answer.
 
-In this model a sequence is already the shape it needs: `ButtonBinding.sends` is an ordered list of
-`Step`, and the order matters. What the rule adds is a **constraint the model currently permits the
-breach of**. A binding on a device's own map has no activity, per the table above, so a multi step
-`sends` on such a binding would be a device sequence, which does not exist. Nothing enforces that yet
-and nothing should until the device map reading in the section below exists, because refusing it now
-would refuse something no import can produce anyway.
+**An activity owns its sequences**, which Danny stated the same day and which is the part that decides
+the shape: an activity defines zero or more of them, a key or a screen button **inside that activity**
+may use one, and it can be used nowhere else. Only "TV kijken" has a Netflix sequence and it appears in
+no other activity.
 
-**Writing it down found one real gap**, in the table above rather than in the rule. A key the screen
-speaks for records the page and **not** the activity, so a sequence bound to a screen button has
-nowhere to record which activity it belongs to, and by Danny's rule every sequence has one. Either the
-screen row gains an activity or the page implies it, and which of those is true is a reading nobody has
-made. Recorded as open rather than resolved, since guessing here is what the section below is a warning
-about.
+So the first version of this section was wrong about the model, and the correction is worth stating
+because it was wrong in the direction of doing nothing. It said a sequence was already the shape it
+needed, `ButtonBinding.sends` being an ordered list of `Step`. That list is the right shape for **what a
+button does** and it cannot be the sequence itself, for two reasons. It has nowhere to put the
+sequence's **name**, which is a thing the user types and sees. And two buttons in one activity running
+the same sequence would be two identical lists, so the model could not tell that from two buttons that
+happen to send the same codes, and renaming or editing the sequence would have to find every copy. That
+is this project's oldest neighbouring rule, one derivation in one place, arriving in a data model.
+
+The authored shape that follows, and it is a proposal until the activity editor is built rather than a
+decision taken:
+
+* `Activity.sequences`, an ordered list. A sequence carries a **name** and its own ordered items.
+* An item is a send or a **wait**, because a sequence has pauses in it: Danny's is channel two, zero,
+  zero, then red, then red, with five seconds in it. So it is not a list of `Step`.
+* A binding **refers** to one of its activity's sequences rather than containing it.
+
+**An import cannot produce that form, and that asymmetry is already in this model twice.** A
+configuration holds the expanded list of sends on the binding and nothing else: no name, and no way to
+tell two buttons sharing one sequence from two buttons with equal lists. So an import fills `sends` and
+leaves `sequences` empty, exactly as it fills `wants` and leaves `roles` empty, and for the same reason.
+The named form exists only in a document somebody authors here. Whether an editor can ever recover a
+name from an imported binding is not a reverse engineering question, it is a "no" the format guarantees.
+
+**Two things the rule constrains that this model still permits.** A binding on a device's own map has no
+activity, per the table above, so a multi step `sends` there would be a device sequence, which does not
+exist. Unenforced on purpose until the device map reading in the section below exists, since refusing it
+now would refuse something no import can produce anyway. And a key the screen speaks for records its
+page and **not** its activity, so a sequence on a screen button has nowhere to name the activity that
+owns it, which by this rule every sequence has. Either the screen row gains an activity or the page
+implies it, and which is true is a reading nobody has made. Both recorded as open rather than resolved,
+since guessing here is what the section below is a warning about.
 
 **Why this matters beyond the field.** The interface follows the model: a sequence editor belongs on
 the activity, not on the device page. That is the same mistake as the one `CLAUDE.md`'s first section

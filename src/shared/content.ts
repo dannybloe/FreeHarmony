@@ -201,12 +201,18 @@ export type ButtonSurface = 'keypad' | 'screen';
  * does 85 times. And a binding is **on the press**: nothing in any configuration here sends a code on
  * a release or on a repeat, so this model does not offer the choice.
  *
- * **A sequence of several sends belongs to an activity**, said by Danny on 23 August 2026 after checking
- * Logitech's own software: it is a property of an activity, offered on a button or a screen button, and
- * there is no device level sequence. So a multi step `sends` should always have an activity context. It
- * is not enforced, because a device's own map is not read yet and refusing it would refuse something no
- * import can currently produce. `docs/data-model.md` carries the argument and the one gap it exposed,
- * that a screen key records its page and not its activity.
+ * **This is what a button does, and it is not a sequence**, which took a correction to get right. A
+ * sequence in Logitech's sense is defined by an **activity**, carries a name the user types, may be put
+ * on a key or a screen button of that activity, and can be used in no other activity. Danny established
+ * that on 23 August 2026. Two things follow that this field cannot express: the name, and two buttons of
+ * one activity running the **same** sequence rather than two equal lists of codes. So the authored form
+ * is a list on the activity that bindings refer to, and it also has to hold **waits**, since a sequence
+ * has pauses in it.
+ *
+ * This field stays as it is, because it is what an **import** can produce: a configuration holds the
+ * expanded sends on the binding, with no name and no way to tell sharing from coincidence. That is the
+ * same split as `Activity.roles` against `Activity.wants`. `docs/data-model.md` carries the shape and
+ * the two constraints this model still permits the breach of.
  */
 export interface ButtonBinding {
   readonly surface: ButtonSurface;
