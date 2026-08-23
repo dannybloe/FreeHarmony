@@ -87,16 +87,21 @@ const LIBRARIES: readonly {
     // 361 until 21 August 2026, then 374 for a reader of what a length change would move, then 377 for
     // the language reader this product asked for, then 378 for `framesOfPulses`, which is the frame
     // decoder given an entry point that takes durations instead of a container so that this repository
-    // could reuse it rather than copy it. The number moving is this row doing its job: a boundary whose
-    // surface drifts unwatched is the one that surprises somebody later.
+    // could reuse it rather than copy it. 381 since 23 August 2026, for the other direction: the same
+    // module encodes now, so a command this product fetched from Logitech as a protocol name and a bare
+    // number can be turned into the rhythm a device actually sees, using the timings of any code of the
+    // same appliance a configuration already holds. The number moving is this row doing its job: a
+    // boundary whose surface drifts unwatched is the one that surprises somebody later.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 378,
+    exports: 381,
     entry: ['packages', 'codec', 'src', 'index.ts'],
-    // `framesOfPulses` is named here rather than left to the count, because it is the one export this
-    // repository reaches for from its own model's shape: a count moving says the surface changed and
-    // a name says the thing we depend on is still there.
-    functions: ['parse', 'inventory', 'devices', 'activities', 'trailerChecksum', 'framesOfPulses'],
+    // These are named rather than left to the count, because they are what this repository reaches for
+    // from its own model's shape: a count moving says the surface changed and a name says the thing we
+    // depend on is still there. `pulsesOfFrame` is named before anything here calls it, deliberately,
+    // since it is the whole reason a catalogue import can produce a code a remote can send.
+    functions: ['parse', 'inventory', 'devices', 'activities', 'trailerChecksum', 'framesOfPulses',
+      'timingsOfFrame', 'pulsesOfFrame'],
   },
   {
     name: '@harmony/silhouettes',
