@@ -921,20 +921,26 @@ wait to see which one you meant, and a key that is waiting cannot also be repeat
 kind of key is not a kind at all, it is a key whose long press has taken its repeat away.
 
 **No model this application can read has a long press**, and the field is therefore always absent
-after an import, asserted over 1555 bindings in `test/import.test.ts`. Logitech's own product records
-say where the feature lives: the 950, the Touch, the Ultimate One, the 350 and the nine products of
-the Elite and Smart Control families declare it, and the Harmony One, 600, 650, 665, 700, 300 and 200
-do not. It is a generation boundary, not a price tier.
+after an import, asserted over 1555 bindings in `test/import.test.ts`. It is a generation boundary
+rather than a price tier: the feature arrives with the Touch generation and no earlier model declares
+it.
+
+**Which models have it is not written down here**, and that is deliberate since 24 August 2026. It is a
+per model capability, so it belongs in the library next door with the rest of them:
+`reference/capabilities.md` carries the list and the standing, and `hasLongPress` in `@harmony/usb` is
+its executable form, with a test asserting that no model this application can reach is on it. A list of
+models in this file would be the same fact twice, in the repository that does not own it and cannot test
+it, which is how it started.
 
 The field is here anyway, and that was a decision rather than an omission of caution. It costs one
 line now against a change to everything hanging off a binding later, and the two models most likely
 to be supported next both have it. Which brings the reason it is worth carrying at all:
 
 **On the 350 the long press is what the device count is made of.** Four device buttons times two
-presses is exactly its stated maximum of eight devices. The 300 has four buttons, no long press, and
-allows four. The 200 has three, no long press, and allows three. One mechanism explains three numbers
-that otherwise look like entries in a table, and a model that could not express a long press would
-have to treat the 350's eight as arbitrary.
+presses is exactly its stated maximum of eight devices, where the 300 has four buttons, no long press
+and a maximum of four. One mechanism explains numbers that otherwise look like entries in a table, and
+a model that could not express a long press would have to treat the 350's eight as arbitrary. The
+counts are the vendor's and are recorded with the capability, next door.
 
 **A double press is deliberately not modelled.** Logitech's own button record carries a third field
 for it, beside the press and the hold, so the concept certainly exists in their software. What is

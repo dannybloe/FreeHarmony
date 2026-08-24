@@ -239,10 +239,10 @@ export const BUTTON: Verdicts<ButtonBinding> = {
     structure: 'no configuration here holds one, so no structure is known',
     // Not the usual admission this verdict records. The others say a configuration states something and
     // nobody has found where; this says no configuration we can read states it at all, because no model
-    // we can read has the feature. Logitech's product data gives a long press to the Touch generation
-    // and the 350 and to none of the family this application reads, and `test/import.test.ts` asserts
-    // the field is absent over every binding of every sample. So `unknown` is right for the reason it
-    // is normally wrong: there is nothing to look for until a model that has one can be read.
+    // we can read has the feature. `hasLongPress` in `@harmony/usb` is the measured form of that, and
+    // `test/import.test.ts` asserts the field is absent over every binding of every sample. So
+    // `unknown` is right for the reason it is normally wrong: there is nothing to look for until a
+    // model that has one can be read.
     note: 'no model this application reads offers a long press, so there is nothing to write back yet',
     words: 'no model we read has one',
   },

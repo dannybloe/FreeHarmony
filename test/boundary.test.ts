@@ -94,10 +94,13 @@ const LIBRARIES: readonly {
     // one section of the format that had never been exercised by a file: a configuration was made with
     // three favourite channels on it, so the reader, its record type and its constants exist now. The
     // number moving is this row doing its job: a boundary whose surface drifts unwatched is the one
-    // that surprises somebody later.
+    // that surprises somebody later. **395 since 24 August 2026**, and it caught the drift it exists for:
+    // the sibling grew a biphase frame reader and its encoder, three exports, and nothing here noticed
+    // until this test ran a day later. A biphase code puts the bit in which half of a cell carries, so
+    // none of the five durations a pulse distance frame is made of applies to it.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 392,
+    exports: 395,
     entry: ['packages', 'codec', 'src', 'index.ts'],
     // These are named rather than left to the count, because they are what this repository reaches for
     // from its own model's shape: a count moving says the surface changed and a name says the thing we
@@ -123,7 +126,8 @@ const LIBRARIES: readonly {
     // runs under Node. `test/app/devices.test.ts` is where that is measured, in a real window.
     name: '@harmony/usb',
     module: usb as unknown as Record<string, unknown>,
-    exports: 93,
+    // 95 since 24 August 2026, the same two the models subpath row below gained.
+    exports: 95,
     entry: ['packages', 'usb', 'src', 'index.ts'],
     functions: ['listHarmony', 'skinId', 'openHarmony'],
   },
@@ -162,9 +166,11 @@ const LIBRARIES: readonly {
     name: '@harmony/usb/models',
     pkg: '@harmony/usb',
     module: usbModels as unknown as Record<string, unknown>,
-    exports: 6,
+    // 8 since 24 August 2026: the long press, which was a list of model names in a docstring in this
+    // repository and is a capability with a test in that one.
+    exports: 8,
     entry: ['packages', 'usb', 'src', 'models.ts'],
-    functions: ['modelForSkin', 'architectureHasTouch'],
+    functions: ['modelForSkin', 'architectureHasTouch', 'hasLongPress'],
   },
 ];
 

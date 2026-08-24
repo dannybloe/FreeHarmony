@@ -419,16 +419,14 @@ export interface ButtonBinding {
    * the two you meant.
    *
    * **No model FreeHarmony can read today has it**, which is why this is always absent after an
-   * import and `test/import.test.ts` asserts that. Logitech's own product data says the feature
-   * arrives with the Touch generation: the 950, the Touch, the Ultimate One, the 350 and the nine
-   * products in the Elite and Smart Control families declare it, and the One, 600, 650, 665, 700,
-   * 300 and 200 do not. The field is here anyway because it costs one line now and a migration
-   * later, and because the two models most likely to be supported next, the 350 and the Touch, both
-   * have it.
+   * import and `test/import.test.ts` asserts that. Which models do is a per model capability and
+   * lives next door, in `reference/capabilities.md` and as `hasLongPress` in `@harmony/usb`: the
+   * feature arrives with the Touch generation and every skin that declares it is outside the table
+   * of models this application can reach. That list used to be written out here, which made it a
+   * fact with no test in the repository that owns the capability table; it moved on 24 August 2026.
    *
-   * On the 350 it is load bearing rather than a nicety: four device buttons times two presses is
-   * exactly its stated maximum of eight devices, where the 300 has four buttons and no long press
-   * and allows four, and the 200 has three and allows three.
+   * The field is here anyway because it costs one line now and a migration later, and because the
+   * two models most likely to be supported next, the 350 and the Touch, both have it.
    *
    * A **double** press exists too, as a third field on Logitech's own button record, and it is
    * deliberately not modelled, and that is a measurement now rather than an impression: of the 654
