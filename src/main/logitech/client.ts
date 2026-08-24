@@ -17,7 +17,8 @@
  * call after it carries it. That is the whole of the authentication, which is why there is no token
  * handling here and nothing to refresh.
  */
-import { CATEGORY_OF_DEVICE_TYPE, DEVICES, SEARCH_EXACT, SECURITY, ANY_DEVICE_TYPE, statedCode }
+import { statedCode } from '@harmony/codec';
+import { CATEGORY_OF_DEVICE_TYPE, DEVICES, SEARCH_EXACT, SECURITY, ANY_DEVICE_TYPE }
   from './protocol.ts';
 
 /** What a search turns up: enough to show a person a list and to ask for one of them. */
@@ -35,12 +36,49 @@ export interface CatalogueDevice {
   readonly commandsId: number;
 }
 
-/** One command as Logitech states it: a word, and a code we can compare but not send. */
+/** One command as Logitech states it: a word, and the code their catalogue spells out for it. */
 export interface CatalogueCommand {
   readonly name: string;
   readonly protocol?: string;
+  /** The width of the first frame, from the family's own name. */
   readonly bits?: number;
+  /**
+   * The whole command's single frame, lower case hexadecimal, **present only where the code states one
+   * frame and no words**.
+   *
+   * That condition is the point of the field. 1476 of the 2921 distinct codes in the census state more
+   * than one frame or name one with a word like `Repeat`, and a reader that took the first value and
+   * called it the command would send half of one: `G:Pioneer 32 Bit 2:(0xC53A9966)(0xF50A5DA2)():3` is
+   * two frames and the old reader here emitted the second alone. So a multi frame code arrives with its
+   * family, its width and `frames`, and no `frame` at all, which is what stops anything downstream
+   * believing it holds a whole command.
+   */
   readonly frame?: string;
+  /** Every value the code states, in the order it states them, which is the order they are sent. */
+  readonly frames?: readonly string[];
+  /** The words the code uses in place of a frame: `Start`, `Repeat`, `Trailer`. */
+  readonly words?: readonly string[];
+}
+
+/**
+ * The code fields of one command, read through the library's own grammar.
+ *
+ * Exported for the tests, which is deliberate: the conversion is where a parser change shows up, and
+ * `commandsFor` cannot be called without the network.
+ */
+export function catalogueCode(keyCode: unknown): Omit<CatalogueCommand, 'name'> | undefined {
+  if (typeof keyCode !== 'string') return undefined;
+  const code = statedCode(keyCode);
+  if (code === undefined) return undefined;
+  const frames = code.frames.map((one) => one.value.toString(16));
+  const whole = code.frames.length === 1 && code.words.length === 0;
+  return {
+    protocol: code.family,
+    bits: code.bits,
+    frames,
+    ...(code.words.length === 0 ? {} : { words: [...code.words] }),
+    ...(whole ? { frame: frames[0]! } : {}),
+  };
 }
 
 /**
@@ -154,7 +192,7 @@ async function commandsFor(cookie: CookieJar, commandsId: number): Promise<Catal
     // always populated and is the word their own software shows.
     const name = asText(command['Name']);
     if (name === '') continue;
-    const code = statedCode(command['KeyCode'] as string | null | undefined);
+    const code = catalogueCode(command['KeyCode']);
     found.push({ name, ...(code === undefined ? {} : code) });
   }
   return found;

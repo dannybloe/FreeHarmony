@@ -98,16 +98,25 @@ const LIBRARIES: readonly {
     // the sibling grew a biphase frame reader and its encoder, three exports, and nothing here noticed
     // until this test ran a day later. A biphase code puts the bit in which half of a cell carries, so
     // none of the five durations a pulse distance frame is made of applies to it.
+    //
+    // **401 since 24 August 2026, and the six are the reason step 1 of the sibling's add-a-device
+    // checklist exists.** `protocols.ts` and `stated.ts` were reachable only by file path, so the barrel
+    // offered no way to read Logitech's catalogue notation, and this repository carried its own reader
+    // that took 1221 of 5219 commands where theirs takes 2852 of 2921 distinct codes. A library that
+    // does not export a reader is part of why a second one gets written, which is why the export matters
+    // and not only the reader.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 395,
+    exports: 401,
     entry: ['packages', 'codec', 'src', 'index.ts'],
     // These are named rather than left to the count, because they are what this repository reaches for
     // from its own model's shape: a count moving says the surface changed and a name says the thing we
     // depend on is still there. `pulsesOfFrame` is named before anything here calls it, deliberately,
     // since it is the whole reason a catalogue import can produce a code a remote can send.
+    // `statedCode` is named because this repository calls it now, in `src/main/logitech/client.ts`, and
+    // it is the export whose absence let a second reader exist here for weeks.
     functions: ['parse', 'inventory', 'devices', 'activities', 'trailerChecksum', 'framesOfPulses',
-      'timingsOfFrame', 'pulsesOfFrame'],
+      'timingsOfFrame', 'pulsesOfFrame', 'statedCode', 'statedProtocol'],
   },
   {
     name: '@harmony/silhouettes',

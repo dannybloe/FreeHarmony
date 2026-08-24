@@ -102,18 +102,24 @@ export const CATEGORY_OF_DEVICE_TYPE: Readonly<Record<number, string>> = {
 };
 
 /**
- * What a command's code looks like, and what it does **not** contain.
+ * What a command's code looks like, and where it is read.
  *
- * `G:Sony 12 Bit:()(0x910)():3`. A protocol family and a frame value, and that is the whole of it: `Raw`
- * was null on all 419 commands fetched across six devices, and `IsLearned` false on every one. So Logitech
- * stores a protocol plus a number and the pulse blocks a configuration holds are the **compiled** form of
- * that, produced by their own server.
+ * `G:Sony 12 Bit:()(0x910)():3`. A protocol family and one or more frame values, and that is the whole of
+ * it: `Raw` was null on all 419 commands fetched across six devices, and on all 5219 the wider census
+ * fetched later, with `IsLearned` false on every one. So Logitech stores a protocol plus a number, and the
+ * pulse blocks a configuration holds are the **compiled** form of that, produced by their own server.
  *
- * **Which means a name can be carried across and a code cannot.** Turning `Sony 12 Bit` and `0x910` back
- * into a rhythm needs an encoder per protocol family, which nothing here has and which is a real piece of
- * work: six devices gave nine distinct family names. So a device fetched from here is a list of **named
- * codes we cannot send**, and it is useful for exactly one thing, which is putting words on the codes a
- * remote already has.
+ * **Reading that string is `statedCode` in `@harmony/codec` and is deliberately not here any more.** This
+ * file carried its own reader from before the sibling repository had one, and it understood a single shape:
+ * one empty slot, one value, one empty slot. Measured against the census of 5219 commands it read 1221 of
+ * them, and on 60 of 102 appliances it read nothing at all, including every `Toshiba 32 Bit` code, which is
+ * the family the most appliances use. The library's reader takes 2852 of the 2921 distinct codes.
+ *
+ * Two claims this docstring used to make are dead and are named here so nobody writes them again. That a
+ * code cannot be carried across: a family's rhythm is measured and tabled now, `protocols.ts` in the
+ * sibling, so a stated code is emittable. And that turning a name and a number into a rhythm would need
+ * one encoder per family, which was a real piece of work nobody had priced: five durations read off any
+ * record of the same appliance rebuild a frame exactly, and the table removes even that dependency.
  *
  * **The value is in transmission order, which is the same order our own decoder produces**, and that is
  * measured rather than assumed. 52 of the 58 commands Logitech states for one Panasonic television are
@@ -121,39 +127,9 @@ export const CATEGORY_OF_DEVICE_TYPE: Readonly<Record<number, string>> = {
  * **different** model of the same family, so a name can be carried across by comparing numbers and nothing
  * has to be turned round first.
  *
- * That corrects a claim written here earlier the same day, taken from the sibling repository: that the
- * values are bit reversed, on the evidence of the Sony digits, where 1 is `0x010`, 2 is `0x810` and 3 is
- * `0x410`. Those really are reversed, and what they are reversed relative to is the **logical** digit,
- * because Sony's protocol transmits least significant bit first. Our decoder reads the order the pulses
- * arrive in, so it produces `0x010` for that digit as well. Reversed relative to a command number,
- * unreversed relative to a rhythm, and only the second matters here.
- *
- * Established on one 48 bit family. Whether every family agrees is not established, which is why anything
- * built on this states its evidence: a family whose order differs would produce no matches rather than
- * wrong ones, since a frame either equals another frame or does not.
+ * That corrects a claim written here earlier: that the values are bit reversed, on the evidence of the Sony
+ * digits, where 1 is `0x010`, 2 is `0x810` and 3 is `0x410`. Those really are reversed, and what they are
+ * reversed relative to is the **logical** digit, because Sony's protocol transmits least significant bit
+ * first. Our decoder reads the order the pulses arrive in, so it produces `0x010` for that digit as well.
+ * Reversed relative to a command number, unreversed relative to a rhythm, and only the second matters here.
  */
-const KEY_CODE = /^G:([^:]+):\(\)\(0x([0-9A-Fa-f]+)\)\(\)/;
-
-export interface StatedCode {
-  readonly protocol: string;
-  /** From the family name, where it states one, since the value alone cannot say how wide it is. */
-  readonly bits?: number;
-  /** Lower case hexadecimal, no prefix, as `frame` is spelled in our own model. */
-  readonly frame: string;
-}
-
-/** One command's code, or nothing where the string is not the shape above. */
-export function statedCode(keyCode: string | null | undefined): StatedCode | undefined {
-  if (typeof keyCode !== 'string') return undefined;
-  const found = KEY_CODE.exec(keyCode);
-  if (found === null) return undefined;
-  const protocol = found[1]!.trim();
-  // "Sony 12 Bit" and "Sharp 48 Bit 2" both state a width; a family that does not is left without one
-  // rather than given a width counted off the hexadecimal, which would be wrong by up to three bits.
-  const width = /(\d+)\s*Bit/i.exec(protocol);
-  return {
-    protocol,
-    ...(width === null ? {} : { bits: Number(width[1]) }),
-    frame: found[2]!.toLowerCase(),
-  };
-}

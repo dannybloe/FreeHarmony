@@ -59,6 +59,13 @@ export function asDefinition(
  *
  * The position is the position in the list Logitech returned. It has no meaning outside this definition,
  * which is true of every definition here: a document refers to a command by where it sits.
+ *
+ * **A code stating several frames arrives with none stored, on purpose.** `CatalogueCommand.frame` is set
+ * only where the code is a single frame with no words, and `InfraredSignal` has one frame field, so a
+ * multi frame command keeps its family and its width and no value. Storing the first value would be a
+ * command that looks complete and sends half of itself. Widening the stored shape is step 4 of
+ * `docs/adding-a-device.md` in the sibling repository, where the whole model gets audited at once rather
+ * than one field at a time.
  */
 function asCommand(command: CatalogueCommand, slot: number): DeviceCommand {
   return {

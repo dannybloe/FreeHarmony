@@ -15,11 +15,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { LAB } from '@harmony/lab';
+
 import type { DeviceDefinition } from '../src/shared/library.ts';
-import { statedCode } from '../src/main/logitech/protocol.ts';
+import { catalogueCode } from '../src/main/logitech/client.ts';
 import { asDefinition } from '../src/main/logitech/convert.ts';
 import { matchNames } from '../src/main/logitech/match.ts';
 import { Settings, type Cipher } from '../src/main/preferences.ts';
@@ -50,18 +53,71 @@ async function settings(): Promise<{ store: Settings; cipher: ReturnType<typeof 
 }
 
 test('a command\'s code is read out of the string Logitech states it in', () => {
-  // `G:<family>:()(<value>)():3`, copied from real replies. The width comes from the family name, because
-  // the value alone cannot say it: 0x910 is three characters and twelve bits.
-  assert.deepEqual(statedCode('G:Sony 12 Bit:()(0x910)():3'),
-                   { protocol: 'Sony 12 Bit', bits: 12, frame: '910' });
-  assert.deepEqual(statedCode('G:PanasonicV2 48 Bit:()(0x40040D00808D)():3'),
-                   { protocol: 'PanasonicV2 48 Bit', bits: 48, frame: '40040d00808d' });
-  // A family whose name states no width keeps its value and gets no width, rather than one counted off the
-  // hexadecimal, which would be wrong by up to three bits and wrong silently.
-  assert.deepEqual(statedCode('G:Nec1:()(0x20DF10EF)():3'),
-                   { protocol: 'Nec1', frame: '20df10ef' });
-  assert.equal(statedCode(null), undefined, 'a command with no code stated has none');
-  assert.equal(statedCode('something else entirely'), undefined);
+  // `G:<family>:(<A>)(<B>)(<C>):3`, copied from real replies. The width comes from the family name,
+  // because the value alone cannot say it: 0x910 is three characters and twelve bits.
+  assert.deepEqual(catalogueCode('G:Sony 12 Bit:()(0x910)():3'),
+                   { protocol: 'Sony 12 Bit', bits: 12, frames: ['910'], frame: '910' });
+  assert.deepEqual(catalogueCode('G:PanasonicV2 48 Bit:()(0x40040D00808D)():3'),
+                   { protocol: 'PanasonicV2 48 Bit', bits: 48,
+                     frames: ['40040d00808d'], frame: '40040d00808d' });
+  assert.equal(catalogueCode(null), undefined, 'a command with no code stated has none');
+  assert.equal(catalogueCode('something else entirely'), undefined);
+});
+
+test('a code stating more than one frame keeps them all and offers no single frame', () => {
+  // **The two shapes the reader here used to get wrong, and they failed differently.** Toshiba names its
+  // second frame with a word instead of stating it, and the old regex demanded a value where the word is,
+  // so it refused the family the most appliances in the catalogue use. Pioneer states two values, and the
+  // old regex matched the second one alone and called it the command, which parses, looks right and sends
+  // half of a command.
+  // The absence is asserted before the shape, because `deepEqual` narrows its argument to the literal it
+  // was compared against, and a later question about a field that literal does not carry stops compiling.
+  const repeat = catalogueCode('G:Toshiba 32 Bit:(0x20DF10EF)(Repeat)():3');
+  assert.equal(repeat?.frame, undefined, 'a word names a frame, so the command is not one frame');
+  assert.deepEqual(repeat, { protocol: 'Toshiba 32 Bit', bits: 32,
+                             frames: ['20df10ef'], words: ['Repeat'] });
+  const two = catalogueCode('G:Pioneer 32 Bit 2:(0xC53A9966)(0xF50A5DA2)():3');
+  assert.equal(two?.frame, undefined, 'two frames are not one frame');
+  assert.deepEqual(two, { protocol: 'Pioneer 32 Bit 2', bits: 32,
+                          frames: ['c53a9966', 'f50a5da2'] });
+});
+
+test('a family whose name states no width is refused, and the catalogue has none', () => {
+  // The library's reader takes its widths from the family name and refuses a name without one, where the
+  // reader this file used to import accepted it and left the width out. Neither behaviour costs anything
+  // measurable: every one of the 33 families in the census states a width, so the refusal has no
+  // population. It is asserted because it is a real difference between the two readers, and because a
+  // family arriving without one would be a new shape rather than a command to store half of.
+  assert.equal(catalogueCode('G:Nec1:()(0x20DF10EF)():3'), undefined);
+});
+
+/**
+ * The whole recorded catalogue, which is the only check that can see a family being missed.
+ *
+ * The counts are the point. The reader this file used to import took 1221 of the 5219 commands and read
+ * nothing at all on 60 of the 102 appliances, and every test in this file passed the whole time, because a
+ * test written from one family's shape cannot see a family it does not mention.
+ */
+test('the recorded catalogue reads whole, and the one refusal is named', () => {
+  const census = LAB === undefined
+    ? undefined
+    : join(LAB, 'work', 'myharmony', 'responses', 'ProtocolCensusWide.json');
+  if (census === undefined || !existsSync(census)) return;
+  const rows = JSON.parse(readFileSync(census, 'utf8')).rows as
+    { family: string; keyCode: string }[];
+  const distinct = new Map<string, string>();
+  for (const row of rows) distinct.set(row.keyCode, row.family);
+  const refused = new Set<string>();
+  let read = 0;
+  for (const [keyCode, family] of distinct) {
+    if (catalogueCode(keyCode) === undefined) refused.add(family);
+    else read += 1;
+  }
+  assert.equal(distinct.size, 2921, 'the distinct codes in the recorded census');
+  assert.equal(read, 2852, 'read, against 1221 for the reader this file used to carry');
+  // Named rather than counted, because which family is refused is the finding: its values are quaternary
+  // digits, so reading them as hexadecimal overstates them threefold and the refusal is correct.
+  assert.deepEqual([...refused], ['Galaxis 16 Bit Quad Toggle']);
 });
 
 test('a catalogue device becomes a definition with names and no signals at all', () => {
