@@ -99,15 +99,19 @@ const LIBRARIES: readonly {
     // until this test ran a day later. A biphase code puts the bit in which half of a cell carries, so
     // none of the five durations a pulse distance frame is made of applies to it.
     //
-    // **401 since 24 August 2026, and the six are the reason step 1 of the sibling's add-a-device
-    // checklist exists.** `protocols.ts` and `stated.ts` were reachable only by file path, so the barrel
+    // **403 since 24 August 2026**, the last two being `frameSegments` and `framesOfSegments`: a command
+    // is often several frames and the reader cuts the pulse train on the long space between them, which
+    // is what took the sibling's rhythm table from 27 entries to 30. Counted rather than described, so a
+    // library growing a reader shows up here as a number to look at.
+    //
+    // **The six before them are the reason step 1 of the sibling's add-a-device checklist exists.** `protocols.ts` and `stated.ts` were reachable only by file path, so the barrel
     // offered no way to read Logitech's catalogue notation, and this repository carried its own reader
-    // that took 1221 of 5219 commands where theirs takes 2852 of 2921 distinct codes. A library that
+    // that took 1221 of 5219 commands where theirs takes all 2921 distinct codes. A library that
     // does not export a reader is part of why a second one gets written, which is why the export matters
     // and not only the reader.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 401,
+    exports: 403,
     entry: ['packages', 'codec', 'src', 'index.ts'],
     // These are named rather than left to the count, because they are what this repository reaches for
     // from its own model's shape: a count moving says the surface changed and a name says the thing we

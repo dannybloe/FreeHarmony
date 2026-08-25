@@ -113,7 +113,7 @@ export const CATEGORY_OF_DEVICE_TYPE: Readonly<Record<number, string>> = {
  * file carried its own reader from before the sibling repository had one, and it understood a single shape:
  * one empty slot, one value, one empty slot. Measured against the census of 5219 commands it read 1221 of
  * them, and on 60 of 102 appliances it read nothing at all, including every `Toshiba 32 Bit` code, which is
- * the family the most appliances use. The library's reader takes 2852 of the 2921 distinct codes.
+ * the family the most appliances use. The library's reader takes all 2921 distinct codes.
  *
  * Two claims this docstring used to make are dead and are named here so nobody writes them again. That a
  * code cannot be carried across: a family's rhythm is measured and tabled now, `protocols.ts` in the

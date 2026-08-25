@@ -114,10 +114,12 @@ test('the recorded catalogue reads whole, and the one refusal is named', () => {
     else read += 1;
   }
   assert.equal(distinct.size, 2921, 'the distinct codes in the recorded census');
-  assert.equal(read, 2852, 'read, against 1221 for the reader this file used to carry');
-  // Named rather than counted, because which family is refused is the finding: its values are quaternary
-  // digits, so reading them as hexadecimal overstates them threefold and the refusal is correct.
-  assert.deepEqual([...refused], ['Galaxis 16 Bit Quad Toggle']);
+  assert.equal(read, 2921, 'read, against 1221 for the reader this file used to carry');
+  // **Named rather than counted, and now empty.** It held `Galaxis 16 Bit Quad Toggle` until 24 August
+  // 2026, whose values are quaternary digits: reading them as hexadecimal overstated them threefold, so
+  // refusing was right and reading them as base 4 is righter. Kept as a set rather than a count because
+  // which family falls out is the finding, and a count of 2920 would not say which one.
+  assert.deepEqual([...refused], []);
 });
 
 test('a catalogue device becomes a definition with names and no signals at all', () => {
