@@ -104,6 +104,11 @@ const LIBRARIES: readonly {
     // is what took the sibling's rhythm table from 27 entries to 30. Counted rather than described, so a
     // library growing a reader shows up here as a number to look at.
     //
+    // **409 since 25 August 2026**, phase 3 next door finishing: the whole block emitters, `pulsesOfBlock`
+    // and `blockOfStatedCode` among them, which is what `pulsesOf` in `src/main/frames.ts` derives a
+    // catalogue command's pulses with. The first growth of this number that this repository consumed on
+    // the same day it appeared.
+    //
     // **The six before them are the reason step 1 of the sibling's add-a-device checklist exists.** `protocols.ts` and `stated.ts` were reachable only by file path, so the barrel
     // offered no way to read Logitech's catalogue notation, and this repository carried its own reader
     // that took 1221 of 5219 commands where theirs takes all 2921 distinct codes. A library that
@@ -111,7 +116,7 @@ const LIBRARIES: readonly {
     // and not only the reader.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 403,
+    exports: 409,
     entry: ['packages', 'codec', 'src', 'index.ts'],
     // These are named rather than left to the count, because they are what this repository reaches for
     // from its own model's shape: a count moving says the surface changed and a name says the thing we

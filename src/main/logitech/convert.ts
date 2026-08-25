@@ -1,14 +1,17 @@
 /**
  * A device out of Logitech's catalogue, as one of ours.
  *
- * **What arrives is names and numbers, not signals**, and that decides everything here. Logitech stores a
- * protocol family and a frame value per command, never the pulses: `Raw` was null on all 419 commands
- * fetched across six devices. Turning `Sony 12 Bit` and `0x910` back into a rhythm a lamp can blink needs
- * an encoder per family, which nothing in this project has.
+ * **What arrives is names and numbers, not signals.** Logitech stores a protocol family and a frame
+ * value per command, never the pulses: `Raw` was null on all 419 commands fetched across six devices.
+ * For a long time that read as a dead end, and it is not: the sibling repository measured a rhythm per
+ * protocol family off Logitech's own compiler, so a code kept whole derives into the pulses a lamp
+ * blinks for 32 of the catalogue's 33 families. The definition therefore keeps the code exactly as the
+ * catalogue spells it, on `signal.stated`, and the derivation is `pulsesOf` in `../frames.ts`, beside
+ * the decoder, because the shared model imports no library.
  *
- * So a definition made here **cannot send anything**, and saying that plainly is the point of this file.
- * It is worth having for exactly one reason: it is a list of Logitech's own words attached to Logitech's
- * own codes, which is what lets the nameless codes on somebody's remote be recognised.
+ * A definition made here is still worth having with no derivation at all: it is a list of Logitech's
+ * own words attached to Logitech's own codes, which is what lets the nameless codes on somebody's
+ * remote be recognised.
  *
  * `origin` is `from-logitech`, so `mayBeShared` is false. Not out of caution: this is somebody else's
  * database and none of it was measured here.
@@ -53,19 +56,20 @@ export function asDefinition(
 /**
  * One command: the word, and the code as a claim rather than as something sendable.
  *
- * `signal` carries the protocol, the bit count and the frame, and **no pulses at all**, which is exactly
- * the half of `InfraredSignal` that exists for this. A reader that needs to send has to check for `once`
- * and find it missing, which is the honest failure: the alternative is inventing a rhythm.
+ * `signal` carries the protocol, the bit count, the frame and the stated code, and **no pulses at
+ * all**, which is exactly the half of `InfraredSignal` that exists for this. A reader that needs to
+ * send derives from the stated code, `pulsesOf` in `../frames.ts`, and a family the rhythm table
+ * cannot emit comes back with nothing, which is the honest failure: the alternative is inventing a
+ * rhythm.
  *
  * The position is the position in the list Logitech returned. It has no meaning outside this definition,
  * which is true of every definition here: a document refers to a command by where it sits.
  *
- * **A code stating several frames arrives with none stored, on purpose.** `CatalogueCommand.frame` is set
- * only where the code is a single frame with no words, and `InfraredSignal` has one frame field, so a
- * multi frame command keeps its family and its width and no value. Storing the first value would be a
- * command that looks complete and sends half of itself. Widening the stored shape is step 4 of
- * `docs/adding-a-device.md` in the sibling repository, where the whole model gets audited at once rather
- * than one field at a time.
+ * **A code stating several frames arrives with no single frame value, on purpose.**
+ * `CatalogueCommand.frame` is set only where the code is one frame with no words, so a multi frame
+ * command keeps its family, its width and its stated code, and no value: reading the first value as
+ * the command would be a command that looks complete and sends half of itself. The stated code is what
+ * such a command sends from, since it is the only form that keeps the frames and words interleaved.
  */
 function asCommand(command: CatalogueCommand, slot: number): DeviceCommand {
   return {
@@ -75,6 +79,7 @@ function asCommand(command: CatalogueCommand, slot: number): DeviceCommand {
       ...(command.protocol === undefined ? {} : { protocol: command.protocol }),
       ...(command.bits === undefined ? {} : { bits: command.bits }),
       ...(command.frame === undefined ? {} : { frame: command.frame }),
+      ...(command.stated === undefined ? {} : { stated: command.stated }),
     },
     origin: 'from-logitech',
   };

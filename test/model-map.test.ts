@@ -60,7 +60,7 @@ test('every structure in the model is drawn, on one side or the other', () => {
   assert.match(drawn, /DeviceUse \}o--\|\| DeviceDefinition/);
 });
 
-test('the writeback notes reached the diagram, all 80 of them', () => {
+test('the writeback notes reached the diagram, all 82 of them', () => {
   const drawn = committed();
   // `no model we read has one` is a verdict's own override of the wording, which exists for one
   // field because the generic phrase for `unknown` would have stated something false there.
@@ -69,7 +69,7 @@ test('the writeback notes reached the diagram, all 80 of them', () => {
   // Exact rather than a floor. A floor here would be the worst kind: the join could break for one table
   // of thirteen, thirteen fields would quietly lose their answer, and any bound under the total would
   // still pass. The number moves when somebody adds a field to the model, and then it moves in the diff.
-  assert.equal(noted.length, 80);
+  assert.equal(noted.length, 82);
   // All four verdicts appear, so the vocabulary itself is exercised rather than one arm of it. The
   // unread one matters most: it is the only one that says a person cannot change this yet.
   for (const wording of ['reaches a remote', 'reaches a remote, same length only',

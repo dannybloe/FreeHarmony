@@ -99,6 +99,22 @@ export interface InfraredSignal {
   readonly bits?: number;
   readonly frame?: string;
   /**
+   * The code exactly as Logitech's catalogue spells it: `G:Sony 12 Bit:()(0x910)():3`.
+   *
+   * **The field the pulses derive from, and the reason a wider frame field was not the fix.** 1476 of
+   * the 2921 distinct codes in the catalogue state more than one frame or name one with a word like
+   * `Repeat`, and the library next door needs the code whole to emit a duration block, because a
+   * block's tail may replay the code's own second frame. So `bits` and `frame` above stay a display of
+   * the simple case, and this is the source.
+   *
+   * **Deriving is the default and storing is for a measurement**, decided 25 August 2026 in phase 4 of
+   * the sibling repository's `docs/adding-a-device.md`. The measured position is that a family's
+   * durations reproduce every one of its corpus records byte for byte, so one authority is kept and a
+   * definition stays portable. The pulse fields below are for a **learned** code, which has pulses and
+   * no notation, and a stored block outranks a derived one, since a measurement outranks a table.
+   */
+  readonly stated?: string;
+  /**
    * The carrier, in hertz.
    *
    * Stored as a frequency because that is what a person and a datasheet talk about. The configuration
@@ -204,6 +220,14 @@ export interface DeviceProperty {
  * up. The values live on the appliance because that is what they are a property of.
  */
 export interface DeviceTiming {
+  /**
+   * Every field here is optional, and **absent means the firmware's defaults rather than unknown to the
+   * model**. A device written into a configuration without them takes what the firmware compiled in,
+   * which is how a remote treats a parameter group it does not recognise anyway, so a caller reading
+   * `undefined` reads "default" and never has to guess. Stated here, 25 August 2026, because phase 4 of
+   * the sibling repository's checklist found callers would otherwise have to decide it each for
+   * themselves.
+   */
   readonly betweenKeysMs?: number;
   readonly betweenDevicesMs?: number;
   /** How many times a press has to be repeated before the appliance believes it. */
@@ -276,6 +300,18 @@ export interface DeviceDefinition {
   /** What can be in more than one state about it, and how to change each one. */
   readonly properties: readonly DeviceProperty[];
   readonly timing: DeviceTiming;
+  /**
+   * Answers to the questions Logitech's client asks about an appliance, kept verbatim: their account
+   * records carry `IsScartCableSupported` and four more flags of that kind beside the timings.
+   *
+   * **Carried rather than refused, decided 25 August 2026**, because dropping one silently would make a
+   * device whose inputs are wrong in a way nobody can see: the catalogue lists `InputScart1` among that
+   * appliance's commands, so the answer plausibly decides which input command an activity uses. What
+   * each flag **does** is untested, so nothing here may act on one yet; the field keeps the answer
+   * under Logitech's own spelling so that the day the meaning is measured, the data was kept. Absent
+   * means nobody asked, which is every definition today.
+   */
+  readonly options?: Readonly<Record<string, boolean>>;
   readonly origin: DefinitionOrigin;
   /** ISO 8601, so ordering never depends on a file system timestamp. */
   readonly addedAt: string;

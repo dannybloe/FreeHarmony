@@ -54,6 +54,12 @@ export interface CatalogueCommand {
    * believing it holds a whole command.
    */
   readonly frame?: string;
+  /**
+   * The code exactly as the catalogue spells it, kept whole because that is what the emitter next door
+   * takes: a duration block's tail may replay the code's second frame, so the frames and words alone,
+   * with their interleaving lost, are not enough to send from.
+   */
+  readonly stated?: string;
   /** Every value the code states, in the order it states them, which is the order they are sent. */
   readonly frames?: readonly string[];
   /** The words the code uses in place of a frame: `Start`, `Repeat`, `Trailer`. */
@@ -75,6 +81,7 @@ export function catalogueCode(keyCode: unknown): Omit<CatalogueCommand, 'name'> 
   return {
     protocol: code.family,
     bits: code.bits,
+    stated: keyCode,
     frames,
     ...(code.words.length === 0 ? {} : { words: [...code.words] }),
     ...(whole ? { frame: frames[0]! } : {}),

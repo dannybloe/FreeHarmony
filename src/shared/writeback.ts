@@ -72,6 +72,9 @@ export const SIGNAL: Verdicts<InfraredSignal> = {
   protocol: { writeback: 'ours' },
   bits: { writeback: 'ours' },
   frame: { writeback: 'ours' },
+  // Ours in the letter, since no configuration stores a protocol name or a notation. It is the source
+  // in practice: the pulses a composer writes into base slot 5 derive from it, per the note on the field.
+  stated: { writeback: 'ours', note: 'what reaches a remote is the pulses derived from it' },
   carrierHz: { writeback: 'rebuilt', structure: 'base slot 5, a record header' },
   once: { writeback: 'rebuilt', structure: 'base slot 5, a duration block' },
   held: { writeback: 'rebuilt', structure: 'base slot 5, a duration block' },
@@ -159,6 +162,10 @@ export const DEFINITION: Verdicts<DeviceDefinition> = {
   commands: { writeback: 'rebuilt', structure: 'base slot 5' },
   properties: { writeback: 'rebuilt', structure: 'base slot 13 and base slot 0' },
   timing: { writeback: 'unknown', structure: 'base slot 15' },
+  // Logitech's own appliance flags, verbatim and untested. Ours in the plain sense: no configuration
+  // stores a flag, and if one turns out to select an input command it shapes a compile rather than
+  // landing as bytes.
+  options: { writeback: 'ours', note: "Logitech's appliance flags, kept verbatim, meaning untested" },
   origin: { writeback: 'ours' },
   addedAt: { writeback: 'ours' },
   // Ours, and the one field here that is **about** a configuration without coming out of one: it records

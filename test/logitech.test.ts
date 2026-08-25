@@ -22,6 +22,7 @@ import { join } from 'node:path';
 import { LAB } from '@harmony/lab';
 
 import type { DeviceDefinition } from '../src/shared/library.ts';
+import { mayBeShared } from '../src/shared/library.ts';
 import { catalogueCode } from '../src/main/logitech/client.ts';
 import { asDefinition } from '../src/main/logitech/convert.ts';
 import { matchNames } from '../src/main/logitech/match.ts';
@@ -56,9 +57,11 @@ test('a command\'s code is read out of the string Logitech states it in', () => 
   // `G:<family>:(<A>)(<B>)(<C>):3`, copied from real replies. The width comes from the family name,
   // because the value alone cannot say it: 0x910 is three characters and twelve bits.
   assert.deepEqual(catalogueCode('G:Sony 12 Bit:()(0x910)():3'),
-                   { protocol: 'Sony 12 Bit', bits: 12, frames: ['910'], frame: '910' });
+                   { protocol: 'Sony 12 Bit', bits: 12, stated: 'G:Sony 12 Bit:()(0x910)():3',
+                     frames: ['910'], frame: '910' });
   assert.deepEqual(catalogueCode('G:PanasonicV2 48 Bit:()(0x40040D00808D)():3'),
                    { protocol: 'PanasonicV2 48 Bit', bits: 48,
+                     stated: 'G:PanasonicV2 48 Bit:()(0x40040D00808D)():3',
                      frames: ['40040d00808d'], frame: '40040d00808d' });
   assert.equal(catalogueCode(null), undefined, 'a command with no code stated has none');
   assert.equal(catalogueCode('something else entirely'), undefined);
@@ -75,10 +78,12 @@ test('a code stating more than one frame keeps them all and offers no single fra
   const repeat = catalogueCode('G:Toshiba 32 Bit:(0x20DF10EF)(Repeat)():3');
   assert.equal(repeat?.frame, undefined, 'a word names a frame, so the command is not one frame');
   assert.deepEqual(repeat, { protocol: 'Toshiba 32 Bit', bits: 32,
+                             stated: 'G:Toshiba 32 Bit:(0x20DF10EF)(Repeat)():3',
                              frames: ['20df10ef'], words: ['Repeat'] });
   const two = catalogueCode('G:Pioneer 32 Bit 2:(0xC53A9966)(0xF50A5DA2)():3');
   assert.equal(two?.frame, undefined, 'two frames are not one frame');
   assert.deepEqual(two, { protocol: 'Pioneer 32 Bit 2', bits: 32,
+                          stated: 'G:Pioneer 32 Bit 2:(0xC53A9966)(0xF50A5DA2)():3',
                           frames: ['c53a9966', 'f50a5da2'] });
 });
 
@@ -122,27 +127,33 @@ test('the recorded catalogue reads whole, and the one refusal is named', () => {
   assert.deepEqual([...refused], []);
 });
 
-test('a catalogue device becomes a definition with names and no signals at all', () => {
-  // **The shape of what Logitech serves, and the limit that comes with it.** They state a protocol family
-  // and a frame value per command and never the pulses: `Raw` was null on all 419 commands fetched across
-  // six devices. So this definition cannot send anything, and that has to be visible in the data rather
-  // than written in a comment: every signal here has a frame and no `once`.
+test('a catalogue device becomes a definition with names and no stored pulses', () => {
+  // **The shape of what Logitech serves.** They state a protocol family and a frame value per command
+  // and never the pulses: `Raw` was null on all 419 commands fetched across six devices. So a signal
+  // here holds a frame, the stated code, and no `once`: what it sends is **derived** from the stated
+  // code, `pulsesOf` in `frames.ts`, which is the store or derive decision of phase 4 next door.
   const made = asDefinition(
     { manufacturer: 'Sony', model: 'KDL-32W705B', kind: 'television', commandsId: 71913 },
-    [{ name: 'ChannelUp', protocol: 'Sony 12 Bit', bits: 12, frame: '090' },
-     { name: 'Football', protocol: 'Sony 15 Bit', bits: 15, frame: '3758' }],
+    [{ name: 'ChannelUp', protocol: 'Sony 12 Bit', bits: 12, frame: '090',
+       stated: 'G:Sony 12 Bit:()(0x090)():3' },
+     { name: 'Football', protocol: 'Sony 15 Bit', bits: 15, frame: '3758',
+       stated: 'G:Sony 15 Bit:()(0x3758)():3' }],
     '2026-08-22T12:00:00.000Z');
 
   assert.equal(made.origin, 'from-logitech');
+  // Decision 11 next door, not negotiable: this is somebody else's database, so it never leaves this
+  // machine, and the rule is asserted where the origin is minted rather than remembered at call sites.
+  assert.equal(mayBeShared(made.origin), false);
   assert.equal(made.manufacturer, 'Sony');
   assert.equal(made.model, 'KDL-32W705B');
   assert.equal(made.name, undefined, 'no name of its own, so the make and model are what a screen shows');
   assert.deepEqual(made.commands.map((one) => one.name), ['ChannelUp', 'Football']);
   assert.deepEqual(made.commands.map((one) => one.slot), [0, 1]);
   for (const command of made.commands) {
-    assert.equal(command.signal.once, undefined, 'nothing here can be sent');
+    assert.equal(command.signal.once, undefined, 'no pulses are stored; sending derives from the code');
     assert.equal(command.signal.held, undefined);
     assert.ok(command.signal.frame !== undefined, 'and every one of them states a code');
+    assert.ok(command.signal.stated !== undefined, 'kept whole, which is what the emitter takes');
   }
   // Their category translated into ours. Their enumeration has sixty values and ours nine, so the mapping
   // is lossy on purpose and in one direction only.

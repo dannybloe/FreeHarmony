@@ -200,6 +200,26 @@ test('a name is not what makes two appliances the same, and pulses are', async (
   }
 });
 
+test('an input list survives the store whole, transitions and all', async () => {
+await withLibrary(async (held) => {
+    // Phase 4 of the sibling repository's `docs/adding-a-device.md`, the inputs box: a configuration
+    // models a device's inputs as a state variable with values and transitions, section 86 next door,
+    // and this model holds them as `DeviceProperty`. Every store test so far wrote `properties: []`, so
+    // nothing had ever shown a filled list coming back, and a serialiser that dropped one would have
+    // passed everything here.
+    const definition: DeviceDefinition = {
+      ...television('appliance-with-inputs', ON),
+      properties: [
+        { name: 'Power', values: 2, transitions: [{ from: 0, to: 1, sends: [0] }] },
+        { name: 'Input', values: 4,
+          transitions: [{ from: -1, to: 2, sends: [0, 1] }, { from: 1, to: 3, sends: [1] }] },
+      ],
+    };
+    await held.put(definition);
+    assert.deepEqual(await held.get(definition.id), definition,
+                     'names, value counts and transitions are identical after the disk');});
+});
+
 // Writing one down by hand, and copying one. Both are composed in `src/main/library.ts` out of the
 // store's own `get` and `put`, so what is worth testing is the policy they add: the origin, the words,
 // and above all the identifiers, because an identifier is the one thing about a definition that can never

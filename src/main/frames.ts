@@ -21,9 +21,9 @@
  * one: a frame a catalogue stated and a frame we decoded ourselves are different claims, and a store that
  * holds both in one field loses the difference. So it is computed where it is needed, which is cheap.
  */
-import { framesOfPulses } from '@harmony/codec';
+import { blockOfStatedCode, framesOfPulses } from '@harmony/codec';
 
-import type { InfraredSignal } from '../shared/library.ts';
+import type { InfraredSignal, Pulse } from '../shared/library.ts';
 
 export interface Frame {
   readonly bits: number;
@@ -60,4 +60,32 @@ export function frameOf(signal: InfraredSignal): Frame | undefined {
 export function frameKeyOf(signal: InfraredSignal): string | undefined {
   const found = frameOf(signal);
   return found === undefined ? undefined : `${found.bits}:${found.frame}`;
+}
+
+/**
+ * What one command sends, as pulses: the stored block where one was measured, else derived from the
+ * code the catalogue states.
+ *
+ * **The other direction from `frameOf` above, and the reason both live in this file**: it is the
+ * adapter to the one codec, and a second reading of either direction is the thing the sibling
+ * repository's oldest rule forbids. The stored block wins because a measurement outranks a table: a
+ * learned code has pulses and no notation, a catalogue code has notation and no pulses, and a
+ * definition may hold both.
+ *
+ * A signal with neither comes back `undefined`, and that refusal is the model's own rail: a command
+ * that cannot say what it sends must not be composed into a configuration as a device that sends
+ * nothing. The derivation itself is next door, measured per protocol family off Logitech's own
+ * compiler, and a family the rhythm table cannot emit refuses there for the same reason.
+ *
+ * `held` is what repeats while the key is down. Whether a given command repeats at all is a fact the
+ * catalogue does not state, phase 4's audit names it, so a caller asking for `held` gets the family's
+ * repeat block and decides for itself whether this command uses one.
+ */
+export function pulsesOf(
+  signal: InfraredSignal, which: 'once' | 'held' = 'once',
+): readonly Pulse[] | undefined {
+  const stored = which === 'held' ? signal.held : signal.once;
+  if (stored !== undefined) return stored;
+  if (signal.stated === undefined) return undefined;
+  return blockOfStatedCode(signal.stated, undefined, which);
 }
