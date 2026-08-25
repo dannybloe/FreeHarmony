@@ -109,6 +109,10 @@ const LIBRARIES: readonly {
     // catalogue command's pulses with. The first growth of this number that this repository consumed on
     // the same day it appeared.
     //
+    // **412 since 25 August 2026 as well**, phase 5 next door: `relocate`, `relocationFloor` and their
+    // error type, the pass that lets a configuration change length. Nothing here calls it yet; it is
+    // what composing a device into a configuration will ride on.
+    //
     // **The six before them are the reason step 1 of the sibling's add-a-device checklist exists.** `protocols.ts` and `stated.ts` were reachable only by file path, so the barrel
     // offered no way to read Logitech's catalogue notation, and this repository carried its own reader
     // that took 1221 of 5219 commands where theirs takes all 2921 distinct codes. A library that
@@ -116,7 +120,7 @@ const LIBRARIES: readonly {
     // and not only the reader.
     name: '@harmony/codec',
     module: codec as unknown as Record<string, unknown>,
-    exports: 409,
+    exports: 412,
     entry: ['packages', 'codec', 'src', 'index.ts'],
     // These are named rather than left to the count, because they are what this repository reaches for
     // from its own model's shape: a count moving says the surface changed and a name says the thing we
